@@ -1,0 +1,5936 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
+using Unity.VisualScripting;
+using UnityEngine;
+using static Move;
+using static MoveGeneratorInfoEntry;
+using static UnityEngine.GraphicsBuffer;
+
+public class GlobalPieceManager : MonoBehaviour
+{
+    private static GlobalPieceManager intInstance;
+    public static GlobalPieceManager Instance
+    {
+        get
+        {
+            if (intInstance == null)
+            {
+                intInstance = FindAnyObjectByType<GlobalPieceManager>();
+            }
+            return intInstance;
+        }
+    }
+
+    public PieceTableEntry[] pieceTable;
+
+    public float[] pieceSquareTableCenter;  //for most pieces
+    public float[] pieceSquareTableCorner;   //for king
+    public float[] pieceSquareTableTopCenter;   //for promotable things
+
+    public int[][] orbiterDeltas;
+    public Dir[][] orbiterDirections;
+    public Dir[][] orbiterDirectionsRadial;
+
+    //King value is given a big number as a flag to easily get a king count
+    //I don't necessarily want to put this in a separate variable as that would be a lot of "if type == king" checks everywhere which is annoying and potentially slows things down
+    //This is an easier way
+    //Note that the game will break if you put too many kings on the board at the same time as it will overflow the short counter
+    //1024 might also be reachable if the board is filled with highly valued pieces? So I chose 2048 instead
+    public const short KING_VALUE_BONUS = 2048;
+    public const short KING_VALUE_BONUS_MINUS_ONE = 2047;
+
+    public MoveGeneratorInfoEntry defensiveModifierMove;
+
+    public void Start()
+    {
+        LoadPieceTable();
+        LoadPieceSquareTables();
+        LoadOrbiterDirections();
+
+        defensiveModifierMove = new MoveGeneratorInfoEntry();
+        defensiveModifierMove.atom = MoveGeneratorAtom.R;
+        defensiveModifierMove.modifier |= MoveGeneratorPreModifier.m;
+        defensiveModifierMove.modifier |= MoveGeneratorPreModifier.b;
+    }
+
+    public void LoadOrbiterDirections()
+    {
+        orbiterDeltas = new int[8][];
+        orbiterDeltas[0] = new int[2] { 0, 1 };
+        orbiterDeltas[1] = new int[2] { 1, 1 };
+        orbiterDeltas[2] = new int[2] { 1, 0 };
+        orbiterDeltas[3] = new int[2] { 1, -1 };
+        orbiterDeltas[4] = new int[2] { 0, -1 };
+        orbiterDeltas[5] = new int[2] { -1, -1 };
+        orbiterDeltas[6] = new int[2] { -1, 0 };
+        orbiterDeltas[7] = new int[2] { -1, 1 };
+
+        orbiterDirections = new Dir[8][];
+        orbiterDirections[0] = new Dir[2] { Dir.Right, Dir.Left };
+        orbiterDirections[1] = new Dir[2] { Dir.DownRight, Dir.UpLeft };
+        orbiterDirections[2] = new Dir[2] { Dir.Down, Dir.Up };
+        orbiterDirections[3] = new Dir[2] { Dir.DownLeft, Dir.UpRight };
+        orbiterDirections[4] = new Dir[2] { Dir.Left, Dir.Right };
+        orbiterDirections[5] = new Dir[2] { Dir.UpLeft, Dir.DownRight };
+        orbiterDirections[6] = new Dir[2] { Dir.Up, Dir.Down };
+        orbiterDirections[7] = new Dir[2] { Dir.UpRight, Dir.DownLeft };
+
+        orbiterDirectionsRadial = new Dir[8][];
+        for (int i = 0; i < 8; i++)
+        {
+            orbiterDirectionsRadial[i] = new Dir[2];
+            orbiterDirectionsRadial[i][0] = Move.DeltaToDir(orbiterDeltas[i][0], orbiterDeltas[i][1]);
+            orbiterDirectionsRadial[i][1] = Move.ReverseDir(orbiterDirectionsRadial[i][0]);
+        }
+    }
+
+    public void LoadPieceTable()
+    {
+        string[][] rawTable = MainManager.CSVParse(Resources.Load<TextAsset>("Data/PieceData").text);
+
+        pieceTable = new PieceTableEntry[rawTable.Length - 2];
+
+        for (int i = 1; i < rawTable.Length - 1; i++)
+        {
+            pieceTable[i - 1] = PieceTableEntry.Parse((Piece.PieceType)(i), rawTable[i]);
+
+            //Debug.Log((Piece.PieceType)i);
+        }
+    }
+
+    public static PieceTableEntry GetPieceTableEntry(uint piece)
+    {
+        return Instance.GetPieceTableEntry(Piece.GetPieceType(piece));
+    }
+    /*
+    public static PieceTableEntry GetPieceTableEntry(Piece.PieceType pieceType)
+    {
+        return Instance.GetPieceTableEntry(pieceType);
+    }
+    */
+    /*
+    public static PieceTableEntry GetPieceTableEntry(Piece.PieceType pieceType)
+    {
+        return Instance.GetPieceTableEntry(pieceType);
+    }
+    */
+    public PieceTableEntry GetPieceTableEntry(Piece.PieceType pieceType)
+    {
+        if (pieceTable == null || pieceTable.Length < 2)
+        {
+            LoadPieceTable();
+        }
+
+        if (pieceType == Piece.PieceType.Null)
+        {
+            return null;
+        }
+
+        return pieceTable[((int)pieceType - 1)];
+    }
+
+    public void LoadPieceSquareTables()
+    {
+        pieceSquareTableCenter = new float[64];
+        pieceSquareTableCorner = new float[64];
+        pieceSquareTableTopCenter = new float[64];
+
+        int tempX = 0;
+        int tempY = 0;
+        int symX = 0;
+        int symY = 0;
+        int symC = 0;
+        for (int i = 0; i < 64; i++)
+        {
+            tempX = i & 7;
+            tempY = i >> 3;
+
+            symX = tempX;
+            if (tempX > 3)
+            {
+                symX = 7 - symX;
+            }
+            symY = tempY;
+            if (tempY > 3)
+            {
+                symY = 7 - symY;
+            }
+
+            symC = symX;
+            if (symC > symY)
+            {
+                symC = symY;
+            }
+
+            //bias towards x center?
+            pieceSquareTableCenter[i] = symX * symX * 0.005f + symY * symY * 0.005f + symC * symC * 0.02f;
+            pieceSquareTableCorner[i] = (3 - symX) * (3 - symX) * (3 - symX) * 0.02f + (3 - symY) * (3 - symY) * (3 - symY) * 0.035f;
+
+            pieceSquareTableTopCenter[i] = pieceSquareTableCenter[i];
+            if (tempY > 4)
+            {
+                pieceSquareTableTopCenter[i] = pieceSquareTableCenter[i] + (tempY - 3) * 0.2f;
+            }
+            //Get a fat bonus
+            if (tempY == 7 || tempY == 6)
+            {
+                pieceSquareTableTopCenter[i] = pieceSquareTableCenter[i] + 0.6f;
+            }
+        }
+    }
+    public float ReadPSTCenter(Piece.PieceAlignment pa, int index)
+    {
+        if (pa == Piece.PieceAlignment.Black)
+        {
+            return pieceSquareTableCenter[63 - index];
+        } else
+        {
+            return pieceSquareTableCenter[index];
+        }
+    }
+    public float ReadPSTEdge(Piece.PieceAlignment pa, int index)
+    {
+        if (pa == Piece.PieceAlignment.Black)
+        {
+            return pieceSquareTableCorner[63 - index];
+        }
+        else
+        {
+            return pieceSquareTableCorner[index];
+        }
+    }
+    public float ReadPSTTopCenter(Piece.PieceAlignment pa, int index)
+    {
+        if (pa == Piece.PieceAlignment.Black)
+        {
+            return pieceSquareTableTopCenter[63 - index];
+        }
+        else
+        {
+            return pieceSquareTableTopCenter[index];
+        }
+    }
+}
+
+[System.Serializable]
+public class PieceTableEntry
+{
+    //Redundant but potentially useful to save a few Piece.GetPieceType calls?
+    public Piece.PieceType type;
+
+    public short pieceValueX2;
+
+    //Some move generator data
+    public List<MoveGeneratorInfoEntry> moveInfo;
+    public List<MoveGeneratorInfoEntry> enhancedMoveInfo;
+
+    [HideInInspector]
+    public Piece.PieceProperty pieceProperty;
+    public Piece.PieceType promotionType;   //Null or Rock = no promotion
+
+    public bool hasAdvancedMagic;
+
+    public bool wingedCompatible;
+    public Piece.PieceClass pieceClass;
+
+    public static PieceTableEntry Parse(Piece.PieceType target, string[] tableRow)
+    {
+        //Debug.Log(target);
+        PieceTableEntry output = new PieceTableEntry();
+
+        Piece.PieceType pt;
+        if (tableRow.Length > 0)
+        {
+            Enum.TryParse(tableRow[0], out pt);
+            if (pt != target)
+            {
+                Debug.LogWarning("Mismatched piece table entry got " + tableRow[0] + " parsed as " + pt + " when should be " + target);
+            }
+
+            output.type = pt;
+        }
+
+        if (tableRow.Length > 1)
+        {
+            float.TryParse(tableRow[1], out float floatValue);
+
+            output.pieceValueX2 = (byte)(floatValue * 2);
+
+            if (output.type == Piece.PieceType.King)
+            {
+                output.pieceValueX2 += GlobalPieceManager.KING_VALUE_BONUS;
+            }
+        }
+
+        if (tableRow.Length > 2)
+        {
+            //Parse piece movement
+            output.moveInfo = MoveGeneratorInfoEntry.ParseMovement(tableRow[2]);
+        }
+
+        if (tableRow.Length > 3)
+        {
+            //Parse piece movement
+            output.enhancedMoveInfo = MoveGeneratorInfoEntry.ParseMovement(tableRow[3]);
+        }
+
+        if (tableRow.Length > 4)
+        {
+            //Parse piece flags
+            string[] pieceFlags = tableRow[4].Split("|");
+
+            for (int i = 0; i < pieceFlags.Length; i++)
+            {
+                if (pieceFlags[i].Length < 1)
+                {
+                    continue;
+                }
+
+                Piece.PieceProperty pp = Piece.PieceProperty.None;
+                Enum.TryParse(pieceFlags[i], out pp);
+
+                if (pp == Piece.PieceProperty.None)
+                {
+                    MoveGeneratorAtom mga;
+                    if (pieceFlags[i].Length > 1)
+                    {
+                        Enum.TryParse(pieceFlags[i], out mga);
+                        if (SpecialMoveShouldBeFirst(mga))
+                        {
+                            output.moveInfo.Insert(0, new MoveGeneratorInfoEntry(mga));
+                        }
+                        else
+                        {
+                            output.moveInfo.Add(new MoveGeneratorInfoEntry(mga));
+                        }
+                    }
+                } else
+                {
+                    output.pieceProperty |= (pp);
+                }
+
+                /*
+                if (MoveGeneratorInfoEntry.PropertyHasSpecialMove(pp))
+                {
+                    if (MoveGeneratorInfoEntry.PropertySpecialMoveShouldBeFirst(pp))
+                    {
+                        output.moveInfo.Insert(0, MoveGeneratorInfoEntry.PropertySpecialMove(pp));
+                    }
+                    else
+                    {
+                        output.moveInfo.Add(MoveGeneratorInfoEntry.PropertySpecialMove(pp));
+                    }
+                }
+                */
+            }
+        }
+
+        bool allowWinged = false;
+        bool forbidWinged = false;
+        switch (output.type)
+        {
+            case Piece.PieceType.Locust:
+                forbidWinged = true;
+                break;
+        }
+        for (int i = 0; i < output.moveInfo.Count; i++)
+        {
+            if ((output.moveInfo[i].range > 1 || output.moveInfo[i].range == 0) && (output.moveInfo[i].modifier & MoveGeneratorPreModifier.i) == 0)
+            {
+                allowWinged = true;
+            }
+
+            switch (output.moveInfo[i].atom)
+            {
+                case MoveGeneratorAtom.C:
+                case MoveGeneratorAtom.Z:
+                    forbidWinged = true;
+                    break;
+            }
+        }
+        for (int i = 0; i < output.enhancedMoveInfo.Count; i++)
+        {
+            if ((output.enhancedMoveInfo[i].range > 1 || output.enhancedMoveInfo[i].range == 0) && (output.enhancedMoveInfo[i].modifier & MoveGeneratorPreModifier.i) == 0)
+            {
+                allowWinged = true;
+            }
+
+            switch (output.enhancedMoveInfo[i].atom)
+            {
+                case MoveGeneratorAtom.C:
+                case MoveGeneratorAtom.Z:
+                    forbidWinged = true;
+                    break;
+            }
+        }
+        if ((output.pieceProperty & Piece.PieceProperty.Giant) != 0)
+        {
+            forbidWinged = true;
+        }
+
+        if (allowWinged && !forbidWinged)
+        {
+            output.wingedCompatible = true;
+        }
+
+        //Has advanced magic
+        //Stuff I didn't make properties for
+        //(i.e. special moves or area of effect stuff)
+        if (tableRow.Length > 5 && tableRow[5].Length > 1)
+        {
+            bool.TryParse(tableRow[5], out output.hasAdvancedMagic);
+        }
+
+        if (tableRow.Length > 6 && tableRow[5].Length > 1)
+        {
+            Enum.TryParse(tableRow[6], out Piece.PieceType proType);
+
+            if (proType == Piece.PieceType.Null && tableRow[6].Length > 1)
+            {
+                Debug.LogWarning("Failed to parse promotion type " + tableRow[6] + " parsed as " + proType);
+            }
+
+            output.promotionType = proType;
+        }
+
+        if (tableRow.Length > 7 && tableRow[5].Length > 1)
+        {
+            Enum.TryParse(tableRow[7], out Piece.PieceClass pclass);
+
+            if (pclass == Piece.PieceClass.None && tableRow[7].Length > 1 && !tableRow[7].Equals("None"))
+            {
+                Debug.LogWarning("Failed to parse piece class " + tableRow[7] + " parsed as " + pclass);
+            }
+
+            output.pieceClass = pclass;
+        }
+
+        return output;
+    }
+}
+
+[System.Serializable]
+public class MoveGeneratorInfoEntry
+{
+    public enum MoveGeneratorAtom
+    {
+        W,  //wazir
+        R,  //rook
+        F,  //ferz
+        B,  //bishop
+
+        K,  //King shorthand (= WF)
+        Q,  //Queen shorthand (= RB)
+
+        Z,  //crooked bishop (Not using the "Z" modifier because it is hard to do)
+        C,  //crooked rook
+        I,  //rhino
+
+        G, //gryphon
+        M, //manticore
+
+        H, //Wheel movement
+
+        O, //Orbiter
+
+        Leaper,  //(leaper / rider placeholder)
+
+        SpecialMoveDivider,     //Used to check for special moves
+
+        //Special kinds of movement
+        Castling,
+        AllyKingTeleport,
+        EnemyKingTeleport,
+        PawnSwapTeleport,
+        AllySwapTeleport,
+        AllyBehindTeleport,
+        AnywhereTeleport,
+        KingSwapTeleport,
+        HomeRangeTeleport,
+        MirrorTeleport,
+
+        LensRook,
+    }
+
+    //Not the range modifiers
+    [Flags]
+    public enum MoveGeneratorPreModifier 
+    {
+        None = 0,
+        m = 1<<0,  //Move only
+        c = 1<<1,  //Capture only
+
+        f = 1<<2,  //Forward
+        b = 1<<3,  //Back
+        v = 1<<4,  //Vertical
+        h = 1<<5,  //Horizontal
+
+        DirectionModifiers = f | b | v | h,     //All directions bitmask
+
+        i = 1<<6,  //Initial (first 2 rows only)
+        r = 1<<7,  //rifle capture
+        l = 1<<8,  //leaper capture
+        j = 1<<9,   //forced leaper
+        y = 1<<10,   //flying move only
+
+        a = 1<<11,  //Ally ability
+        n = 1<<12,  //Special ability that targets empty squares (Similar effect to "m")
+        e = 1<<13,  //Special ability that targets enemy squares (Similar effect to "c")
+        o = 1<<14,  //"bonus" movement flag (unit specific stuff to distinguish slip moves from regular moves?)
+        p = 1<<15,  //passive ability (does not generate moves but does flag attack/defense so I can make range bitboards quickly)
+
+        MoveLike = m | a,
+        CaptureLike = c | e,
+        TypeRestrictors = MoveLike | CaptureLike,
+    }
+
+    public enum RangeType
+    {
+        Normal, //0 = infinite,
+        AntiRange,  //Move maximum distance (or maximum up to X range)  (to make this less annoying to code I only let you move max distance?)
+        Minimum,    //Move minimum X units
+        Exact,      //Exactly X units
+    }
+
+    public MoveGeneratorAtom atom;
+    public MoveGeneratorPreModifier modifier;
+
+    public int x, y;    //For leapers (but sliders also use it)
+    public int range;
+    public RangeType rangeType;
+
+    public const ulong BITBOARD_PATTERN_AFILE = 0x0101010101010101;
+    public const ulong BITBOARD_PATTERN_RANK1 = 0x00000000000000ff;
+    public const ulong BITBOARD_PATTERN_QUEEN3 = 0x00492a1c7f1c2a49;        //shift left 3 down 3
+    public const ulong BITBOARD_PATTERN_QUEEN2 = 0x000000150e1f0e15;        //shift left 2 down 2 
+    public const ulong BITBOARD_PATTERN_ROOK2 = 0x00000004041f0404;         //shift left 2 down 2
+    public const ulong BITBOARD_PATTERN_BISHOP2 = 0x000000110a040a11;       //shift left 2 down 2
+    public const ulong BITBOARD_PATTERN_DIAMOND = 0x000000040e1f0e04;       //shift left 2 down 2
+    public const ulong BITBOARD_PATTERN_ADJACENT = 0x0000000000070707;      //shift left 1 down 1
+    public const ulong BITBOARD_PATTERN_ROOK1 = 0x0000000000020702;      //shift left 1 down 1
+    public const ulong BITBOARD_PATTERN_BISHOP1 = 0x0000000000050205;      //shift left 1 down 1
+    public const ulong BITBOARD_PATTERN_RANGE2 = 0x0000001f1f1f1f1f;        //shift left 2 down 2
+    public const ulong BITBOARD_PATTERN_RANGE2ONLY = 0x0000001f1111111f;        //shift left 2 down 2
+    public const ulong BITBOARD_PATTERN_SATURN = 0x0000001500110015;        //shift left 2 down 2
+    public const ulong BITBOARD_PATTERN_TAURUS_WHITE = 0x0000000000050500;  //shift left 1
+    public const ulong BITBOARD_PATTERN_TAURUS_BLACK = 0x0000000000000505;  //shift left 1 down 2
+
+    public const ulong BITBOARD_PATTERN_DIAGONAL = 0x8040201008040201;
+    public const ulong BITBOARD_PATTERN_ANTIDIAGONAL = 0x0102040810204080;
+
+    public const ulong BITBOARD_PATTERN_MIDDLEFILES = 0x3c3c3c3c3c3c3c3c;
+    public const ulong BITBOARD_PATTERN_NOCORNERS = 0x183c7effff7e3c18;
+    public const ulong BITBOARD_PATTERN_NOCENTER = 0xffffc3c3c3c3ffff;
+    public const ulong BITBOARD_PATTERN_HALFBOARD = 0x00000000ffffffff;
+
+    public MoveGeneratorInfoEntry()
+    {
+
+    }
+
+    public MoveGeneratorInfoEntry(MoveGeneratorAtom atom)
+    {
+        this.atom = atom;
+    }
+
+    public MoveGeneratorInfoEntry(MoveGeneratorInfoEntry mgie)
+    {
+        atom = mgie.atom;
+        modifier = mgie.modifier;
+        x = mgie.x;
+        y = mgie.y;
+        range = mgie.range;
+        rangeType = mgie.rangeType;
+    }
+
+    public static List<MoveGeneratorInfoEntry> ParseMovement(string movement)
+    {
+        int parseIndex = 0;
+        List<MoveGeneratorInfoEntry> output = new List<MoveGeneratorInfoEntry>();
+
+        //Parse loop
+        while (parseIndex < movement.Length)
+        {
+            //Scan index ahead until the current atom ends
+            MoveGeneratorInfoEntry newEntry;
+            (newEntry, parseIndex) = ScanOneAtom(movement, parseIndex);
+            output.Add(newEntry);
+        }
+
+        //K = WF
+        //Q = RB
+        for (int i = 0; i < output.Count; i++)
+        {
+            if (output[i].atom == MoveGeneratorAtom.K)
+            {
+                MoveGeneratorInfoEntry newEntry = new MoveGeneratorInfoEntry(output[i]);
+                output[i].atom = MoveGeneratorAtom.W;
+                newEntry.atom = MoveGeneratorAtom.F;
+                output.Insert(i, newEntry);
+                continue;
+            }
+            if (output[i].atom == MoveGeneratorAtom.Q)
+            {
+                MoveGeneratorInfoEntry newEntry = new MoveGeneratorInfoEntry(output[i]);
+                output[i].atom = MoveGeneratorAtom.R;
+                newEntry.atom = MoveGeneratorAtom.B;
+                output.Insert(i, newEntry);
+                continue;
+            }
+        }
+
+        return output;
+    }
+
+    public static (MoveGeneratorInfoEntry, int) ScanOneAtom(string movement, int startIndex)
+    {
+        //Index returned is the start index of the next atom
+        int index = startIndex;
+        MoveGeneratorInfoEntry nextEntry = new MoveGeneratorInfoEntry();
+
+        //State 0 = parsing modifiers
+        //State 1 = parsing atom (Mandatory)
+        //State 2 = parsing range number
+        //State 3 = parsing range symbol (+ or -)
+        int state = 0;
+
+        //int iteration = 0;
+
+        while (index < movement.Length)
+        {
+            /*
+            iteration++;
+            if (iteration > 10000)  //No real movement thing should reach this
+            {
+                Debug.LogError("Parse infinite loop at index " + index + " state " + state + " parsing " + movement);
+                break;
+            }
+            */
+            switch (state)
+            {
+                case 0:
+                    //If a state 1 thing is seen: skip to state 1
+                    if (movement[index] == '(')
+                    {
+                        state = 1;
+                        continue;
+                    }
+                    if (!int.TryParse(movement[index].ToString(), out _) && Enum.TryParse(movement[index].ToString(), out MoveGeneratorAtom _))
+                    {
+                        state = 1;
+                        continue;
+                    }
+
+                    if (!int.TryParse(movement[index].ToString(), out _) && Enum.TryParse(movement[index].ToString(), out MoveGeneratorPreModifier m))
+                    {
+                        nextEntry.modifier |= m;
+                        index++;
+                        continue;
+                    }
+
+                    //Fallthrough: error
+                    throw new ArgumentException("Failed to parse movement (modifier parsing failed, last character seen = " + movement[index] + ") string = " + movement);
+                case 1:
+                    //Try to parse a state 1 thing
+                    if (movement[index] == '(')
+                    {
+                        int closeIndex = index;
+                        while (closeIndex < movement.Length)
+                        {
+                            if (movement[closeIndex] == ')')
+                            {
+                                break;
+                            }
+                            closeIndex++;
+                        }
+                        if (closeIndex > movement.Length)
+                        {
+                            throw new ArgumentException("Failed to parse movement (leaper atom parsing failed, no matching ')' found)");
+                        }
+
+                        //Parse stuff between
+                        string insideParenthesis = movement.Substring(index + 1, closeIndex - index - 1);
+
+                        string[] parenthesisSplit = insideParenthesis.Split(",");
+
+                        if (parenthesisSplit.Length != 2)
+                        {
+                            throw new ArgumentException("Failed to parse movement (leaper atom parsing failed, found + " + parenthesisSplit.Length + " elements parenthesized, expected 2)");
+                        }
+
+                        int x;
+                        int y;
+                        if (!int.TryParse(parenthesisSplit[0], out x))
+                        {
+                            throw new ArgumentException("Failed to parse movement (leaper atom parsing failed, found + " + parenthesisSplit[0] + " for element 1 when a number was expected)");
+                        }
+                        if (!int.TryParse(parenthesisSplit[1], out y))
+                        {
+                            throw new ArgumentException("Failed to parse movement (leaper atom parsing failed, found + " + parenthesisSplit[1] + " for element 1 when a number was expected)");
+                        }
+
+                        nextEntry.x = x;
+                        nextEntry.y = y;
+                        nextEntry.range = 1;
+                        nextEntry.atom = MoveGeneratorAtom.Leaper;
+
+                        index = closeIndex + 1;
+                        state = 2;
+                        continue;
+                    }
+                    if (!int.TryParse(movement[index].ToString(), out _) && Enum.TryParse(movement[index].ToString(), out MoveGeneratorAtom a))
+                    {
+                        nextEntry.atom = a;
+
+                        switch (a)
+                        {
+                            case MoveGeneratorAtom.W:
+                            case MoveGeneratorAtom.F:
+                            case MoveGeneratorAtom.K:
+                                nextEntry.range = 1;
+                                break;
+                        }
+
+                        index++;
+                        state = 2;
+                        //Debug.Log("Move to phase 2 with atom = " + movement[index - 1]);
+                        continue;
+                    }
+
+                    //Fallthrough: error
+                    throw new ArgumentException("Failed to parse movement (atom parsing failed, last character seen = " + movement[index] + ")");
+                case 2:
+                    //If state 0 or state 1 thing is seen: you've gone past this current atom
+                    if (movement[index] == '(')
+                    {
+                        state = 1;
+                        return (nextEntry, index);
+                    }
+                    if (!int.TryParse(movement[index].ToString(), out _) && Enum.TryParse(movement[index].ToString(), out MoveGeneratorAtom _))
+                    {
+                        state = 1;
+                        return (nextEntry, index);
+                    }
+                    if (!int.TryParse(movement[index].ToString(), out _) && Enum.TryParse(movement[index].ToString(), out MoveGeneratorPreModifier _))
+                    {
+                        return (nextEntry, index);
+                    }
+
+                    //state 3 -
+                    if (movement[index] == '-')
+                    {
+                        state = 3;
+                        continue;
+                    }
+
+                    //Parse a number
+                    int numberEndIndex = index;
+                    while (numberEndIndex < movement.Length)
+                    {
+                        numberEndIndex++;
+
+                        if (numberEndIndex >= movement.Length)
+                        {
+                            break;
+                        }
+                        if (movement[numberEndIndex] < '0' || movement[numberEndIndex] > '9')
+                        {
+                            break;
+                        }
+                    }
+                    string numberToParse = movement.Substring(index, numberEndIndex - index);
+                    //Debug.Log("Parse number " + numberToParse);
+
+                    int range;
+                    if (!int.TryParse(numberToParse, out range))
+                    {
+                        throw new ArgumentException("Failed to parse movement (range parsing failed, number to parse = " + numberToParse + ")");
+                    } else
+                    {
+                        nextEntry.range = range;
+                        index = numberEndIndex;
+                        state = 3;
+                        continue;
+                    }
+
+                    //Fallthrough: error
+                    throw new ArgumentException("Failed to parse movement (range parsing failed, last character seen = " + movement[index] + ")");
+                case 3:
+                    //If state 0 or state 1 thing is seen: you've gone past this current atom
+                    if (movement[index] == '(')
+                    {
+                        state = 1;
+                        return (nextEntry, index);
+                    }
+                    if (!int.TryParse(movement[index].ToString(), out _) && Enum.TryParse(movement[index].ToString(), out MoveGeneratorAtom _))
+                    {
+                        state = 1;
+                        return (nextEntry, index);
+                    }
+                    if (!int.TryParse(movement[index].ToString(), out _) && Enum.TryParse(movement[index].ToString(), out MoveGeneratorPreModifier _))
+                    {
+                        return (nextEntry, index);
+                    }
+
+                    //Parse a symbol
+                    if (movement[index] == '+')
+                    {
+                        nextEntry.rangeType = RangeType.Minimum;
+                        index++;
+                        continue;
+                    }
+                    if (movement[index] == '-')
+                    {
+                        nextEntry.rangeType = RangeType.AntiRange;
+                        index++;
+                        continue;
+                    }
+                    if (movement[index] == '=')
+                    {
+                        nextEntry.rangeType = RangeType.Exact;
+                        index++;
+                        continue;
+                    }
+
+                    //Fallthrough: error
+                    throw new ArgumentException("Failed to parse movement (range symbol parsing failed, last character seen = " + movement[index] + ") movement = " + movement);
+            }
+        }
+
+
+        return (nextEntry, index);
+    }
+
+    public bool IsSpecialMove()
+    {
+        return atom >= MoveGeneratorAtom.SpecialMoveDivider;
+    }
+
+    /*
+    public static bool PropertyHasSpecialMove(Piece.PieceProperty pp)
+    {
+        switch (pp)
+        {
+            //case Piece.PieceProperty.Castling:
+            case Piece.PieceProperty.AllyKingTeleport:
+            case Piece.PieceProperty.EnemyKingTeleport:
+            case Piece.PieceProperty.PawnSwapTeleport:
+            case Piece.PieceProperty.AllySwapTeleport:
+            case Piece.PieceProperty.AllyBehindTeleport:
+            case Piece.PieceProperty.AnywhereTeleport:
+            case Piece.PieceProperty.KingSwapTeleport:
+            case Piece.PieceProperty.HomeRangeTeleport:
+                return true;
+        }
+
+        return false;
+    }
+    public static bool PropertySpecialMoveShouldBeFirst(Piece.PieceProperty pp) //the ally swaps get overshadowed by other move gen stuff?
+    {
+        switch (pp)
+        {
+            case Piece.PieceProperty.PawnSwapTeleport:
+            case Piece.PieceProperty.AllySwapTeleport:
+            case Piece.PieceProperty.KingSwapTeleport:
+            case Piece.PieceProperty.AllyBehindTeleport:
+                //case Piece.PieceProperty.AnywhereTeleport:  //let you teleport anywhere instead of blocking out the capture only range?
+                return true;
+        }
+
+        return false;
+    }
+    public static MoveGeneratorInfoEntry PropertySpecialMove(Piece.PieceProperty pp)
+    {
+        switch (pp)
+        {
+            //case Piece.PieceProperty.Castling:
+            case Piece.PieceProperty.AllyKingTeleport:
+            case Piece.PieceProperty.EnemyKingTeleport:
+            case Piece.PieceProperty.PawnSwapTeleport:
+            case Piece.PieceProperty.AllySwapTeleport:
+            case Piece.PieceProperty.AllyBehindTeleport:
+            case Piece.PieceProperty.AnywhereTeleport:
+            case Piece.PieceProperty.KingSwapTeleport:
+            case Piece.PieceProperty.HomeRangeTeleport:
+                return new MoveGeneratorInfoEntry(Enum.Parse<MoveGeneratorAtom>(pp.ToString()));
+        }
+
+        return null;
+    }
+    */
+    public static bool SpecialMoveShouldBeFirst(MoveGeneratorAtom m)
+    {
+        switch (m) {
+            case MoveGeneratorAtom.PawnSwapTeleport:
+            case MoveGeneratorAtom.AllySwapTeleport:
+            case MoveGeneratorAtom.KingSwapTeleport:
+            case MoveGeneratorAtom.AllyBehindTeleport:
+                //case Piece.PieceProperty.AnywhereTeleport:  //let you teleport anywhere instead of blocking out the capture only range?
+                return true;
+        }
+
+        return false;
+    }
+
+
+    public static void GenerateMovesForPlayer(List<uint> moves, ref Board b, Piece.PieceAlignment pa)
+    {
+        //Debug.Log("Generate for " + pa);
+        //Future thing to do: pieces need to cast ability ranges with a third move range pass before the first 2 (for passive ability ranges)
+        MoveBitTable mbtP = b.globalData.mbtpassive;
+        if (b.globalData.mbtpassive == null)
+        {
+            b.globalData.mbtpassive = new MoveBitTable();
+            mbtP = b.globalData.mbtpassive;
+        }
+        GenerateAreaBitboards(ref b);
+        if (b.globalData.mbtpassiveInverse == null)
+        {
+            b.globalData.mbtpassiveInverse = new MoveBitTable();
+        }
+        b.globalData.mbtpassiveInverse.MakeInverse(mbtP);
+
+        //MoveBitTable mbt = new MoveBitTable();
+        MoveBitTable mbt = b.globalData.mbtactive;
+        if (b.globalData.mbtactive == null)
+        {
+            b.globalData.mbtactive = new MoveBitTable();
+            mbt = b.globalData.mbtactive;
+        }
+        mbt.Reset();
+        mbt.btType = MoveBitTable.BitTableType.AttackDefense;
+        GenerateMovesForAlignment(moves, ref b, pa, mbt);
+        //mbt is populated with stuff
+        GenerateSecondaryMoves(moves, ref b, pa, mbt);
+
+        //This is a weird thing to do
+        //Will this cause me problems later?
+
+        //Probably not
+        //Currently this is only used to turn Shielded into Half Shielded
+
+        //This is the function (generatemovesforplayer) a board uses to determine who is attacked
+        //So this should not cause me problems
+        b.RunTurnStart(pa == Piece.PieceAlignment.Black);
+    }
+
+    public static void GeneratePieceBitboards(Board b)
+    {
+        b.globalData.whiteHighestValuedPieceValue = 0;
+        b.globalData.blackHighestValuedPieceValue = 0;
+        b.globalData.whiteHighestValuePiece = 0;
+        b.globalData.blackHighestValuePiece = 0;
+
+        b.globalData.bitboard_piecesWhite = 0;
+        b.globalData.bitboard_piecesBlack = 0;
+        b.globalData.bitboard_piecesNeutral = 0;
+        b.globalData.bitboard_piecesCrystal = 0;
+        b.globalData.bitboard_pawnsWhite = 0;
+        b.globalData.bitboard_pawnsBlack = 0;
+        b.globalData.bitboard_kingWhite = 0;
+        b.globalData.bitboard_kingBlack = 0;
+
+        b.globalData.bitboard_immuneWhite = 0;
+        b.globalData.bitboard_immuneBlack = 0;
+        b.globalData.bitboard_immuneRelayerWhite = 0;
+        b.globalData.bitboard_immuneRelayerBlack = 0;
+
+        b.globalData.bitboard_abominationWhite = 0;
+        b.globalData.bitboard_abominationBlack = 0;
+        b.globalData.bitboard_zombieWhite = 0;
+        b.globalData.bitboard_zombieBlack = 0;
+        b.globalData.bitboard_clockworksnapperWhite = 0;
+        b.globalData.bitboard_clockworksnapperBlack = 0;
+        b.globalData.bitboard_bladebeastWhite = 0;
+        b.globalData.bitboard_bladebeastBlack = 0;
+        b.globalData.bitboard_tarotMoonWhite = 0;
+        b.globalData.bitboard_tarotMoonBlack = 0;
+        b.globalData.bitboard_tarotMoonIllusionWhite = 0;
+        b.globalData.bitboard_tarotMoonIllusionBlack = 0;
+        b.globalData.bitboard_virgoWhite = 0;
+        b.globalData.bitboard_virgoBlack = 0;
+
+        for (int i = 0; i < 64; i++)
+        {
+            if (b.pieces[i] == 0)
+            {
+                continue;
+            }
+
+            ulong bitIndex = 1uL << i;
+            Piece.PieceAlignment ppa = Piece.GetPieceAlignment(b.pieces[i]);
+
+            PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(b.pieces[i]);
+
+            if (!(pte.promotionType == Piece.PieceType.Null))
+            {
+                switch (ppa)
+                {
+                    case Piece.PieceAlignment.White:
+                        b.globalData.bitboard_pawnsWhite |= bitIndex;
+                        break;
+                    case Piece.PieceAlignment.Black:
+                        b.globalData.bitboard_pawnsBlack |= bitIndex;
+                        break;
+                }
+            }
+
+            switch (ppa)
+            {
+                case Piece.PieceAlignment.White:
+                    if (pte.type != Piece.PieceType.King && (pte.pieceValueX2 > b.globalData.whiteHighestValuedPieceValue || (pte.pieceValueX2 == b.globalData.whiteHighestValuedPieceValue && pte.type > b.globalData.whiteHighestValuePiece)))
+                    {
+                        b.globalData.whiteHighestValuedPieceValue = pte.pieceValueX2;
+                        b.globalData.whiteHighestValuePiece = pte.type;
+                    }
+                    b.globalData.bitboard_piecesWhite |= bitIndex;
+                    break;
+                case Piece.PieceAlignment.Black:
+                    if (pte.type != Piece.PieceType.King && (pte.pieceValueX2 > b.globalData.blackHighestValuedPieceValue || (pte.pieceValueX2 == b.globalData.blackHighestValuedPieceValue && pte.type > b.globalData.blackHighestValuePiece)))
+                    {
+                        b.globalData.blackHighestValuedPieceValue = pte.pieceValueX2;
+                        b.globalData.blackHighestValuePiece = pte.type;
+                    }
+                    b.globalData.bitboard_piecesBlack |= bitIndex;
+                    break;
+                case Piece.PieceAlignment.Neutral:
+                    b.globalData.bitboard_piecesNeutral |= bitIndex;
+                    break;
+                case Piece.PieceAlignment.Crystal:
+                    b.globalData.bitboard_piecesCrystal |= bitIndex;
+                    break;
+            }
+
+            Piece.PieceType pt = Piece.GetPieceType(b.pieces[i]);
+
+            switch (pt)
+            {
+                case Piece.PieceType.King:
+                    switch (ppa)
+                    {
+                        case Piece.PieceAlignment.White:
+                            b.globalData.bitboard_kingWhite |= bitIndex;
+                            break;
+                        case Piece.PieceAlignment.Black:
+                            b.globalData.bitboard_kingBlack |= bitIndex;
+                            break;
+                    }
+                    break;
+                case Piece.PieceType.ArcanaMoon:
+                    switch (ppa)
+                    {
+                        case Piece.PieceAlignment.White:
+                            b.globalData.bitboard_tarotMoonWhite |= bitIndex;
+                            b.globalData.bitboard_tarotMoonIllusionWhite |= bitIndex;
+                            break;
+                        case Piece.PieceAlignment.Black:
+                            b.globalData.bitboard_tarotMoonBlack |= bitIndex;
+                            b.globalData.bitboard_tarotMoonIllusionBlack |= bitIndex;
+                            break;
+                    }
+                    break;
+                case Piece.PieceType.MoonIllusion:
+                    switch (ppa)
+                    {
+                        case Piece.PieceAlignment.White:
+                            b.globalData.bitboard_tarotMoonIllusionWhite |= bitIndex;
+                            break;
+                        case Piece.PieceAlignment.Black:
+                            b.globalData.bitboard_tarotMoonIllusionBlack |= bitIndex;
+                            break;
+                    }
+                    break;
+                case Piece.PieceType.Virgo:
+                    switch (ppa)
+                    {
+                        case Piece.PieceAlignment.White:
+                            b.globalData.bitboard_virgoWhite |= bitIndex;
+                            break;
+                        case Piece.PieceAlignment.Black:
+                            b.globalData.bitboard_virgoBlack |= bitIndex;
+                            break;
+                    }
+                    break;
+                case Piece.PieceType.Abomination:
+                    switch (ppa)
+                    {
+                        case Piece.PieceAlignment.White:
+                            b.globalData.bitboard_abominationWhite |= bitIndex;
+                            break;
+                        case Piece.PieceAlignment.Black:
+                            b.globalData.bitboard_abominationBlack |= bitIndex;
+                            break;
+                    }
+                    break;
+                case Piece.PieceType.Zombie:
+                    switch (ppa)
+                    {
+                        case Piece.PieceAlignment.White:
+                            b.globalData.bitboard_zombieWhite |= bitIndex;
+                            break;
+                        case Piece.PieceAlignment.Black:
+                            b.globalData.bitboard_zombieBlack |= bitIndex;
+                            break;
+                    }
+                    break;
+                case Piece.PieceType.BladeBeast:
+                    switch (ppa)
+                    {
+                        case Piece.PieceAlignment.White:
+                            b.globalData.bitboard_bladebeastWhite |= bitIndex;
+                            break;
+                        case Piece.PieceAlignment.Black:
+                            b.globalData.bitboard_bladebeastBlack |= bitIndex;
+                            break;
+                    }
+                    break;
+                case Piece.PieceType.ClockworkSnapper:
+                    switch (ppa)
+                    {
+                        case Piece.PieceAlignment.White:
+                            b.globalData.bitboard_clockworksnapperWhite |= bitIndex;
+                            break;
+                        case Piece.PieceAlignment.Black:
+                            b.globalData.bitboard_clockworksnapperBlack |= bitIndex;
+                            break;
+                    }
+                    break;
+            }
+
+            //Put naturally immune pieces in the immunity bitboard
+            //PieceTableEntry pte = GlobalPieceManager.Instance.GetPieceTableEntry(pt);
+            if ((pte.pieceProperty & Piece.PieceProperty.EnchantImmune) != 0)
+            {
+                switch (ppa)
+                {
+                    case Piece.PieceAlignment.White:
+                        b.globalData.bitboard_immuneWhite |= bitIndex;
+                        break;
+                    case Piece.PieceAlignment.Black:
+                        b.globalData.bitboard_immuneBlack |= bitIndex;
+                        break;
+                }
+            }
+
+            if ((pte.pieceProperty & Piece.PieceProperty.RelayImmune) != 0)
+            {
+                switch (ppa)
+                {
+                    case Piece.PieceAlignment.White:
+                        b.globalData.bitboard_immuneRelayerWhite |= bitIndex;
+                        break;
+                    case Piece.PieceAlignment.Black:
+                        b.globalData.bitboard_immuneRelayerBlack |= bitIndex;
+                        break;
+                }
+            }
+        }
+
+        //Second pass because Virgo negates all of them
+        //(except for the piece highlight things)
+        //This second pass can use bitboard scanning because the piece bitboard is done
+
+        b.globalData.bitboard_piecesWhiteAdjacent = MainManager.SmearBitboard(b.globalData.bitboard_piecesWhite);
+        b.globalData.bitboard_piecesBlackAdjacent = MainManager.SmearBitboard(b.globalData.bitboard_piecesBlack);
+
+        b.globalData.bitboard_pieces = b.globalData.bitboard_piecesWhite | b.globalData.bitboard_piecesBlack | b.globalData.bitboard_piecesNeutral | b.globalData.bitboard_piecesCrystal;
+    }
+
+    //Most areas of effect are for enemies of (PA)
+    //i.e. you are immune to the effects of your own pieces
+    //Since this doesn't generate moves there is no move list being touched
+    public static void GenerateAreaBitboards(ref Board b)
+    {
+        GeneratePieceBitboards(b);
+
+        //Virgo gets smeared
+        b.globalData.bitboard_virgoWhite = MainManager.SmearBitboard(b.globalData.bitboard_virgoWhite);
+        b.globalData.bitboard_virgoBlack = MainManager.SmearBitboard(b.globalData.bitboard_virgoBlack);
+
+        //reset bad bitboards
+        b.globalData.bitboard_bansheeWhite = 0;
+        b.globalData.bitboard_attractorWhite = 0;
+        b.globalData.bitboard_repulserWhite = 0;
+        b.globalData.bitboard_immobilizerWhite = 0;
+        b.globalData.bitboard_harpyWhite = 0;
+        b.globalData.bitboard_hagWhite = 0;
+        b.globalData.bitboard_slothWhite = 0;
+        b.globalData.bitboard_hangedWhite = 0;
+        b.globalData.bitboard_roughWhite = 0;
+        b.globalData.bitboard_waterWhite = 0;
+
+        b.globalData.bitboard_bansheeBlack = 0;
+        b.globalData.bitboard_attractorBlack = 0;
+        b.globalData.bitboard_repulserBlack = 0;
+        b.globalData.bitboard_immobilizerBlack = 0;
+        b.globalData.bitboard_harpyBlack = 0;
+        b.globalData.bitboard_hagBlack = 0;
+        b.globalData.bitboard_slothBlack = 0;
+        b.globalData.bitboard_hangedBlack = 0;
+        b.globalData.bitboard_roughBlack = 0;
+        b.globalData.bitboard_waterBlack = 0;
+
+        //Immune relayer
+        b.globalData.bitboard_immuneWhite |= MainManager.SmearBitboard(b.globalData.bitboard_immuneRelayerWhite);
+        b.globalData.bitboard_immuneBlack |= MainManager.SmearBitboard(b.globalData.bitboard_immuneRelayerBlack);
+
+        //MainManager.PrintBitboard(b.globalData.bitboard_immuneWhite);
+
+        bool slothful = (b.globalData.enemyModifier & Board.EnemyModifier.Slothful) != 0;
+
+        //Generate the area bitboards for other piece types
+        ulong pieceBitboard = b.globalData.bitboard_piecesWhite | b.globalData.bitboard_piecesBlack;
+        while (pieceBitboard != 0)
+        {
+            int index = MainManager.PopBitboardLSB1(pieceBitboard, out pieceBitboard);
+
+            Piece.PieceType pt = Piece.GetPieceType(b.pieces[index]);
+            Piece.PieceAlignment ipa = Piece.GetPieceAlignment(b.pieces[index]);
+
+            if (slothful && pt == Piece.PieceType.King && ipa == Piece.PieceAlignment.Black)
+            {
+                b.globalData.bitboard_immobilizerBlack |= BITBOARD_PATTERN_AFILE << (index & 7);
+            }
+
+            ulong pattern = 0;
+            switch (pt)
+            {
+                case Piece.PieceType.Attractor:
+                    //Q3
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_QUEEN3, index, -3, -3);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_attractorWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_attractorBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.Repulser:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_QUEEN3, index, -3, -3);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_repulserWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_repulserBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.Immobilizer:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ADJACENT, index, -1, -1);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_immobilizerWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_immobilizerBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.Charmer:
+                    //this one doesn't need any fancy method because it's just an up shift
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_immobilizerWhite |= (1uL << (index + 8));
+                    }
+                    if (ipa == Piece.PieceAlignment.Black && index >= 8)
+                    {
+                        b.globalData.bitboard_immobilizerBlack |= (1uL << (index - 8));
+                    }
+                    break;
+                case Piece.PieceType.Sloth:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_RANGE2, index, -2, -2);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_slothWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_slothBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.ArcanaHierophant:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ROOK2, index, -2, -2);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_roughWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_roughBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.ArcanaHanged:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_DIAMOND, index, -2, -2);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_hangedWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_hangedBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.AceOfPentacles:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ROOK1, index, -1, -1);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_roughWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_roughBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.AceOfCups:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_BISHOP1, index, -1, -1);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_waterWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_waterBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.PageOfPentacles:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ROOK1, index, -1, -1);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_roughWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_roughBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.PageOfCups:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_BISHOP1, index, -1, -1);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_waterWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_waterBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.QueenOfPentacles:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ROOK2, index, -2, -2);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_roughWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_roughBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.QueenOfCups:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_BISHOP2, index, -2, -2);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_waterWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_waterBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.Earth:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ADJACENT, index, -1, -1);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_roughWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_roughBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.Saturn:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_SATURN, index, -2, -2);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_roughWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_roughBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.Taurus:
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_TAURUS_WHITE, index, -1, 0);
+                        b.globalData.bitboard_roughWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_TAURUS_BLACK, index, -1, -2);
+                        b.globalData.bitboard_roughBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.Aquarius:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ROOK2, index, -3, -3);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_waterWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_waterBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.EarthElemental:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ADJACENT, index, -1, -1);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_roughWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_roughBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.WaterElemental:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ADJACENT, index, -1, -1);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_waterWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_waterBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.EarthWisp:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ROOK1, index, -1, -1);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_roughWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_roughBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.WaterWisp:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_BISHOP1, index, -1, -1);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_waterWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_waterBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.Banshee:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ADJACENT, index, -1, -1);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_bansheeWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_bansheeBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.Harpy:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_BISHOP2, index, -2, -2);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_harpyWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_harpyBlack |= pattern;
+                    }
+                    break;
+                case Piece.PieceType.Hag:
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ADJACENT, index, -1, -1);
+                    if (ipa == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_hagWhite |= pattern;
+                    }
+                    if (ipa == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_hagBlack |= pattern;
+                    }
+                    break;
+            }
+        }
+
+        //delete bad bitboard stuff with virgo
+        b.globalData.bitboard_bansheeWhite &= ~b.globalData.bitboard_virgoBlack;
+        b.globalData.bitboard_attractorWhite &= ~b.globalData.bitboard_virgoBlack;
+        b.globalData.bitboard_repulserWhite &= ~b.globalData.bitboard_virgoBlack;
+        b.globalData.bitboard_immobilizerWhite &= ~b.globalData.bitboard_virgoBlack;
+        b.globalData.bitboard_harpyWhite &= ~b.globalData.bitboard_virgoBlack;
+        b.globalData.bitboard_hagWhite &= ~b.globalData.bitboard_virgoBlack;
+        b.globalData.bitboard_slothWhite &= ~b.globalData.bitboard_virgoBlack;
+        b.globalData.bitboard_hangedWhite &= ~b.globalData.bitboard_virgoBlack;
+        b.globalData.bitboard_roughWhite &= ~b.globalData.bitboard_virgoBlack;
+        b.globalData.bitboard_waterWhite &= ~b.globalData.bitboard_virgoBlack;
+
+        b.globalData.bitboard_bansheeBlack &= ~b.globalData.bitboard_virgoWhite;
+        b.globalData.bitboard_attractorBlack &= ~b.globalData.bitboard_virgoWhite;
+        b.globalData.bitboard_repulserBlack &= ~b.globalData.bitboard_virgoWhite;
+        b.globalData.bitboard_immobilizerBlack &= ~b.globalData.bitboard_virgoWhite;
+        b.globalData.bitboard_harpyBlack &= ~b.globalData.bitboard_virgoWhite;
+        b.globalData.bitboard_hagBlack &= ~b.globalData.bitboard_virgoWhite;
+        b.globalData.bitboard_slothBlack &= ~b.globalData.bitboard_virgoWhite;
+        b.globalData.bitboard_hangedBlack &= ~b.globalData.bitboard_virgoWhite;
+        b.globalData.bitboard_roughBlack &= ~b.globalData.bitboard_virgoWhite;
+        b.globalData.bitboard_waterBlack &= ~b.globalData.bitboard_virgoWhite;
+    }
+
+    //Secondary moves (relay moves, neutral pieces, crystal pieces, Kindness, Fool, etc)
+    //Neutrals end up here to specifically avoid messing with the other stuff
+    //This version must use a MBT to see what the attacks are
+    public static void GenerateSecondaryMoves(List<uint> moves, ref Board b, Piece.PieceAlignment pa, MoveBitTable mbt)
+    {
+        MoveBitTable antiTable = b.globalData.mbtactiveInverse;
+        if (b.globalData.mbtactiveInverse == null)
+        {
+            b.globalData.mbtactiveInverse = new MoveBitTable();
+            antiTable = b.globalData.mbtactiveInverse;
+        }
+        antiTable.MakeInverse(b.globalData.mbtactive);
+
+        b.globalData.bitboard_crystalWhite = 0;
+        b.globalData.bitboard_crystalBlack = 0;
+
+        int blackKingIndex = MainManager.PopBitboardLSB1(b.globalData.bitboard_kingBlack, out _);
+        ulong blackKingAdjacent = MainManager.SmearBitboard(b.globalData.bitboard_kingBlack);
+
+        //Use table and anti table to generate stuff
+        for (int i = 0; i < 64; i++)
+        {
+            ulong bitIndex = 1uL << i;
+            (int subX, int subY) = Board.CoordinateConvertInverse(i);
+
+            if (b.pieces[i] == 0)
+            {
+                continue;
+            }
+
+            uint piece = b.pieces[i];
+
+            //Friendly piece special movement
+            if (Piece.GetPieceAlignment(b.pieces[i]) == pa)
+            {
+                Piece.PieceType pt = Piece.GetPieceType(b.pieces[i]);
+
+                PieceTableEntry pte = GlobalPieceManager.Instance.GetPieceTableEntry(pt);
+
+                if ((pte.pieceProperty & Piece.PieceProperty.Relay) != 0)
+                {
+                    ulong relayBitboard = b.globalData.mbtactive.Get(subX, subY);
+                    if (pa == Piece.PieceAlignment.White)
+                    {
+                        relayBitboard &= b.globalData.bitboard_piecesWhite;
+                    } else if (pa == Piece.PieceAlignment.Black)
+                    {
+                        relayBitboard &= b.globalData.bitboard_piecesBlack;
+                    }
+
+                    while (relayBitboard != 0)
+                    {
+                        int index = MainManager.PopBitboardLSB1(relayBitboard, out relayBitboard);
+
+                        PieceTableEntry pteT = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
+
+                        if (pteT.type != Piece.PieceType.King && ((pteT.pieceProperty & Piece.PieceProperty.Giant) == 0) && pteT.promotionType == Piece.PieceType.Null)
+                        {
+                            //generate stuff
+                            //no MBT as that might lead to incorrect relaying
+                            GenerateMovesForPiece(moves, ref b, piece, index & 7, (index & 56) >> 3, null);
+                        }
+                    }
+                }
+
+                if ((pte.pieceProperty & Piece.PieceProperty.RelayBishop) != 0)
+                {
+                    ulong relayBitboard = b.globalData.mbtactive.Get(subX, subY);
+                    if (pa == Piece.PieceAlignment.White)
+                    {
+                        relayBitboard &= b.globalData.bitboard_piecesWhite;
+                    }
+                    else if (pa == Piece.PieceAlignment.Black)
+                    {
+                        relayBitboard &= b.globalData.bitboard_piecesBlack;
+                    }
+
+                    while (relayBitboard != 0)
+                    {
+                        int index = MainManager.PopBitboardLSB1(relayBitboard, out relayBitboard);
+
+                        //forbid relays except in bishop lines
+                        int ix = index & 7;
+                        int iy = index >> 3;
+                        if (subX - ix != subY - iy && subX - ix != iy - subY)
+                        {
+                            continue;
+                        }
+
+                        PieceTableEntry pteT = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
+
+                        if (pteT.type != Piece.PieceType.King && ((pteT.pieceProperty & Piece.PieceProperty.Giant) == 0) && pteT.promotionType == Piece.PieceType.Null)
+                        {
+                            //generate stuff
+                            //no MBT as that might lead to incorrect relaying
+                            GenerateMovesForPiece(moves, ref b, Piece.SetPieceType(Piece.PieceType.Bishop, piece), index & 7, (index & 56) >> 3, null);
+                        }
+                    }
+                }
+
+                switch (pte.type)
+                {
+                    case Piece.PieceType.Hypnotist:
+                        //Hypnotizer special movement
+                        //moves as an enemy piece
+                        //as a hacky fix I will move them as if they had Shielded which prevents own king capture
+                        ulong hypnoBitboard = b.globalData.mbtactive.Get(subX, subY);
+                        //int pastIndex = -1;
+                        if (pa == Piece.PieceAlignment.White)
+                        {
+                            hypnoBitboard &= b.globalData.bitboard_piecesBlack;
+                            //pastIndex = b.whitePerPlayerInfo.lastPieceMovedLocation;
+                        }
+                        else if (pa == Piece.PieceAlignment.Black)
+                        {
+                            hypnoBitboard &= b.globalData.bitboard_piecesWhite;
+                            //pastIndex = b.blackPerPlayerInfo.lastPieceMovedLocation;
+                        }
+
+                        while (hypnoBitboard != 0)
+                        {
+                            int index = MainManager.PopBitboardLSB1(hypnoBitboard, out hypnoBitboard);
+
+                            //Forbid you from hypnotizing the last moved piece?
+                            //This should stop you from undoing your opponents last move
+                            //Ehh this isn't a big problem
+                            /*
+                            if (index == pastIndex)
+                            {
+                                continue;
+                            }
+                            */
+
+                            if (Piece.GetPieceType(b.pieces[index]) != Piece.PieceType.King)
+                            {
+                                PieceTableEntry pteH = GlobalPieceManager.GetPieceTableEntry(b.pieces[index]);
+
+                                //No enchant immunity?
+                                if ((pteH.pieceProperty & Piece.PieceProperty.Giant) == 0)
+                                {
+                                    //generate stuff at the target's location
+                                    GenerateMovesForPiece(moves, ref b, Piece.SetPieceModifier(Piece.PieceModifier.Shielded, b.pieces[index]), index & 7, index >> 3, null);
+                                } else
+                                {
+                                    int newIndex = index;
+                                    //(int dx, int dy)
+                                    (int dx, int dy) = Board.GetGiantDelta(b.pieces[index]);
+
+                                    newIndex += dx;
+                                    newIndex += dy * 8;
+
+                                    //generate stuff at the target's location
+                                    GenerateMovesForPiece(moves, ref b, Piece.SetPieceModifier(Piece.PieceModifier.Shielded, b.pieces[index]), newIndex & 7, newIndex >> 3, null);
+                                }
+                            }
+                        }
+                        break;
+                    case Piece.PieceType.Kindness:
+                        //Use the anti bitboard
+                        ulong kindnessBitboard = antiTable.Get(subX, subY);
+                        if (pa == Piece.PieceAlignment.White)
+                        {
+                            kindnessBitboard &= b.globalData.bitboard_piecesWhite;
+                        }
+                        else if (pa == Piece.PieceAlignment.Black)
+                        {
+                            kindnessBitboard &= b.globalData.bitboard_piecesBlack;
+                        }
+                        while (kindnessBitboard != 0)
+                        {
+                            int index = MainManager.PopBitboardLSB1(kindnessBitboard, out kindnessBitboard);
+
+                            //Relay moves to kindness
+                            GenerateMovesForPiece(moves, ref b, b.pieces[index], subX, subY, null);
+                        }
+
+                        for (int ei = 0; ei < pte.enhancedMoveInfo.Count; ei++)
+                        {
+                            GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, subX, subY, pte.enhancedMoveInfo[ei], null);
+                        }
+                        break;
+                    case Piece.PieceType.Envy:
+                        //Similar setup to Hypnotist but the extra moves get applied to the Envy
+                        //No king exception so the Envy can copy King moves too
+                        ulong envyBitboard = b.globalData.mbtactive.Get(subX, subY);
+                        if (pa == Piece.PieceAlignment.White)
+                        {
+                            envyBitboard &= b.globalData.bitboard_piecesBlack;
+                        }
+                        else if (pa == Piece.PieceAlignment.Black)
+                        {
+                            envyBitboard &= b.globalData.bitboard_piecesWhite;
+                        }
+
+                        while (envyBitboard != 0)
+                        {
+                            int index = MainManager.PopBitboardLSB1(envyBitboard, out envyBitboard);
+
+                            GenerateMovesForPiece(moves, ref b, Piece.SetPieceAlignment(pa, b.pieces[index]), subX, subY, null);
+                        }
+
+                        //envy bonus moves
+                        for (int ei = 0; ei < pte.enhancedMoveInfo.Count; ei++)
+                        {
+                            GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, i & 7, (i & 56) >> 3, pte.enhancedMoveInfo[ei], null);
+                        }
+                        break;
+                    case Piece.PieceType.ArcanaEmpress:
+                        ulong smearBitboard = (MainManager.SmearBitboard(MainManager.SmearBitboard(bitIndex)));
+                        if (pa == Piece.PieceAlignment.White)
+                        {
+                            smearBitboard &= b.globalData.bitboard_piecesWhite;
+                        }
+                        else if (pa == Piece.PieceAlignment.Black)
+                        {
+                            smearBitboard &= b.globalData.bitboard_piecesBlack;
+                        }
+
+                        //relays the F move only
+                        //no MBT as that might lead to incorrect relaying
+                        while (smearBitboard != 0)
+                        {
+                            int index = MainManager.PopBitboardLSB1(smearBitboard, out smearBitboard);
+
+                            if (Piece.GetPieceType(b.pieces[index]) != Piece.PieceType.King)
+                            {
+                                //generate stuff
+                                //no MBT as that might lead to incorrect relaying
+                                GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, index & 7, (index & 56) >> 3, pte.moveInfo[0], null);
+                            }
+                        }
+                        break;
+                }
+
+                if (pa == Piece.PieceAlignment.Black)
+                {
+                    if ((b.globalData.enemyModifier & Board.EnemyModifier.Defensive) != 0)
+                    {
+                        GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, subX, subY, GlobalPieceManager.Instance.defensiveModifierMove, null);
+                    }
+
+                    if ((b.globalData.enemyModifier & Board.EnemyModifier.Fusion) != 0 && (bitIndex & blackKingAdjacent) != 0)
+                    {
+                        GenerateMovesForPiece(moves, ref b, piece, blackKingIndex & 7, (blackKingIndex >> 3), null);
+                    }
+
+                    if (pt == Piece.PieceType.King)
+                    {
+                        if ((b.globalData.enemyModifier & Board.EnemyModifier.Envious) != 0)
+                        {
+                            //Debug.Log("Envy target = " + b.globalData.whiteHighestValuePiece + " " + b.globalData.whiteHighestValuedPieceValue);
+                            PieceTableEntry pteR = GlobalPieceManager.Instance.GetPieceTableEntry(b.globalData.whiteHighestValuePiece);
+                            for (int r = 0; r < pteR.moveInfo.Count; r++)
+                            {
+                                GenerateMovesForMoveGeneratorEntry(moves, ref b, Piece.SetPieceModifier(Piece.PieceModifier.NoSpecial, piece), subX, subY, pteR.moveInfo[r], null);
+                            }
+                        }
+
+                        if ((b.globalData.enemyModifier & Board.EnemyModifier.Lustful) != 0)
+                        {
+                            ulong lustfulBitboard = 0;
+                            lustfulBitboard |= BITBOARD_PATTERN_AFILE << (subX);
+                            lustfulBitboard |= BITBOARD_PATTERN_RANK1 << (subY << 3);
+                            lustfulBitboard |= (BITBOARD_PATTERN_DIAGONAL << (i)) & MainManager.GetWraparoundCutoff(subX);
+                            lustfulBitboard |= (BITBOARD_PATTERN_DIAGONAL >> (63 - i)) & MainManager.GetWraparoundCutoff(subX - 7);
+                            if (i <= 56)
+                            {
+                                lustfulBitboard |= (BITBOARD_PATTERN_ANTIDIAGONAL >> (56 - i)) & MainManager.GetWraparoundCutoff(subX);
+                            } else
+                            {
+                                lustfulBitboard |= (BITBOARD_PATTERN_ANTIDIAGONAL << (i - 56)) & MainManager.GetWraparoundCutoff(subX);
+                            }
+                            if (i <= 7)
+                            {
+                                lustfulBitboard |= (BITBOARD_PATTERN_ANTIDIAGONAL >> (7 - i)) & MainManager.GetWraparoundCutoff(subX - 7);
+                            } else
+                            {
+                                lustfulBitboard |= (BITBOARD_PATTERN_ANTIDIAGONAL << (i - 7)) & MainManager.GetWraparoundCutoff(subX - 7);
+                            }
+                            //MainManager.PrintBitboard(lustfulBitboard);
+
+                            if (pa == Piece.PieceAlignment.Black)
+                            {
+                                lustfulBitboard &= b.globalData.bitboard_piecesWhite;
+                                //pastIndex = b.blackPerPlayerInfo.lastPieceMovedLocation;
+                            }
+
+                            while (lustfulBitboard != 0)
+                            {
+                                int index = MainManager.PopBitboardLSB1(lustfulBitboard, out lustfulBitboard);
+
+                                //Forbid you from hypnotizing the last moved piece?
+                                //This should stop you from undoing your opponents last move
+                                //Ehh this isn't a big problem
+                                /*
+                                if (index == pastIndex)
+                                {
+                                    continue;
+                                }
+                                */
+
+                                if (Piece.GetPieceType(b.pieces[index]) != Piece.PieceType.King)
+                                {
+                                    PieceTableEntry pteH = GlobalPieceManager.GetPieceTableEntry(b.pieces[index]);
+
+                                    //No enchant immunity?
+                                    if ((pteH.pieceProperty & Piece.PieceProperty.Giant) == 0)
+                                    {
+                                        //generate stuff at the target's location
+                                        GenerateMovesForPiece(moves, ref b, Piece.SetPieceModifier(Piece.PieceModifier.Shielded, b.pieces[index]), index & 7, index >> 3, null);
+                                    }
+                                    else
+                                    {
+                                        int newIndex = index;
+                                        //(int dx, int dy)
+                                        (int dx, int dy) = Board.GetGiantDelta(b.pieces[index]);
+
+                                        newIndex += dx;
+                                        newIndex += dy * 8;
+
+                                        //generate stuff at the target's location
+                                        GenerateMovesForPiece(moves, ref b, Piece.SetPieceModifier(Piece.PieceModifier.Shielded, b.pieces[index]), newIndex & 7, newIndex >> 3, null);
+                                    }
+                                }
+                            }
+                        }
+
+                        if ((b.globalData.enemyModifier & Board.EnemyModifier.Xyloid) != 0)
+                        {
+                            PieceTableEntry pteR = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.PieceType.Rootwalker);
+                            for (int r = 0; r < pteR.moveInfo.Count; r++)
+                            {
+                                GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, subX, subY, pteR.moveInfo[r], null);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (Piece.GetPieceAlignment(b.pieces[i]) == Piece.PieceAlignment.Neutral)
+            {
+                piece = Piece.SetPieceAlignment(pa, piece);
+                GenerateMovesForPiece(moves, ref b, piece, subX, subY, null);
+            }
+
+            if (Piece.GetPieceAlignment(b.pieces[i]) == Piece.PieceAlignment.Crystal)
+            {
+                //Check the inverse bitboard
+                ulong subBitboard = antiTable.Get(subX, subY);
+
+                bool canMove = false;
+                while (subBitboard != 0)
+                {
+                    int index = MainManager.PopBitboardLSB1(subBitboard, out subBitboard);
+                    if (index == -1)
+                    {
+                        break;
+                    }
+
+                    Piece.PieceAlignment cpA = Piece.GetPieceAlignment(b.pieces[index]);
+
+                    if (cpA == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_crystalWhite |= (1uL << i);
+                    }
+                    if (cpA == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_crystalBlack |= (1uL << i);
+                    }
+
+                    //who is this
+                    if (Piece.GetPieceAlignment(b.pieces[index]) == pa)
+                    {
+                        canMove = true;
+                    }
+                }
+
+                if (canMove)
+                {
+                    piece = Piece.SetPieceAlignment(pa, piece);
+                    GenerateMovesForPiece(moves, ref b, piece, subX, subY, null);
+                }
+            }
+        }
+    }
+
+    //Add moves for the entire target alignment
+    //(need to add neutrals and crystals later as well as special movers that gain moves based on defenders)
+    public static void GenerateMovesForAlignment(List<uint> moves, ref Board b, Piece.PieceAlignment pa, MoveBitTable mbt)
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 8; j++)
+            {
+                uint targetPiece = b.GetPieceAtCoordinate(i, j);
+                if (targetPiece != 0)
+                {
+                    if (Piece.GetPieceAlignment(targetPiece) == pa)
+                    {
+                        GenerateMovesForPiece(moves, ref b, targetPiece, i, j, mbt);
+                        /*
+                        moveStartIndex = GenerateMoves(moves, moveStartIndex, ref b, targetPiece, i, j, mbt);
+                        if (moveStartIndex >= moves.Length)
+                        {
+                            return moveStartIndex;
+                        }
+                        */
+                    }
+                }
+            }
+        }
+
+        return;
+        //return moveStartIndex;
+    }
+
+
+    //Add moves for the target piece
+    public static void GenerateMovesForPiece(List<uint> moves, ref Board b, uint piece, int x, int y, MoveBitTable mbt)
+    {
+        if (Piece.GetPieceType(piece) == Piece.PieceType.Null)
+        {
+            return;
+            //return moveStartIndex;
+        }
+
+        //Stunned = can't move
+        if (Piece.GetPieceStatusEffect(piece) == Piece.PieceStatusEffect.Stunned)
+        {
+            return;
+        }
+
+        Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
+
+        //Get all move generator info entries
+        PieceTableEntry pte = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(piece));
+
+        //Unpredictable
+        if (pa != Piece.PieceAlignment.Black && (b.globalData.enemyModifier & Board.EnemyModifier.Unpredictable) != 0)
+        {
+            if (x + (y << 3) == b.whitePerPlayerInfo.lastPieceMovedLocation)
+            {
+                return;
+            }
+        }
+
+        //Isolated
+        if (pa != Piece.PieceAlignment.Black && (b.globalData.enemyModifier & Board.EnemyModifier.Isolated) != 0)
+        {
+            ulong bitIndex = 1uL << x + (y << 3);
+            if ((bitIndex & b.globalData.bitboard_piecesBlackAdjacent) != 0 && (bitIndex & MainManager.SmearBitboard(b.globalData.bitboard_piecesWhite & ~bitIndex)) == 0)
+            {
+                return;
+            }
+        }
+
+
+        if (pa == Piece.PieceAlignment.White)
+        {
+            if (((pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0) && ((1uL << x + y * 8 & b.globalData.bitboard_immobilizerBlack) != 0))
+            {
+                return;
+            }
+            if ((pte.pieceProperty & Piece.PieceProperty.SlowMove) != 0 && b.whitePerPlayerInfo.lastPieceMovedType != Piece.PieceType.Null && (GlobalPieceManager.Instance.GetPieceTableEntry(b.whitePerPlayerInfo.lastPieceMovedType).pieceProperty & Piece.PieceProperty.SlowMove) != 0)
+            {
+                return;
+            }
+        }
+        if (pa == Piece.PieceAlignment.Black)
+        {
+            if (((pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0) && ((1uL << x + y * 8 & b.globalData.bitboard_immobilizerWhite) != 0))
+            {
+                return;
+            }
+            if ((pte.pieceProperty & Piece.PieceProperty.SlowMove) != 0 && b.blackPerPlayerInfo.lastPieceMovedType != Piece.PieceType.Null && (GlobalPieceManager.Instance.GetPieceTableEntry(b.blackPerPlayerInfo.lastPieceMovedType).pieceProperty & Piece.PieceProperty.SlowMove) != 0)
+            {
+                return;
+            }
+        }
+
+        //Giant piece wrong corners can't move (to simplify move generation)
+        if (Piece.GetPieceSpecialData(piece) != 0 && ((pte.pieceProperty & Piece.PieceProperty.Giant) != 0))
+        {
+            return;
+        }
+
+        if (Piece.GetPieceModifier(piece) == Piece.PieceModifier.NoSpecial)
+        {
+            for (int i = 0; i < pte.moveInfo.Count; i++)
+            {
+                if (pte.moveInfo[i].atom >= MoveGeneratorAtom.SpecialMoveDivider)
+                {
+                    continue;
+                }
+                GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.moveInfo[i], mbt);
+            }
+            return;
+        }
+
+        if (Piece.GetPieceType(piece) == Piece.PieceType.ArcanaFool)
+        {
+            uint targetPiece = piece;
+            if (!b.blackToMove && Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.White && b.whitePerPlayerInfo.lastPieceMovedType != Piece.PieceType.Null)
+            {
+                targetPiece = Piece.SetPieceType(b.whitePerPlayerInfo.lastPieceMovedType, targetPiece);
+                targetPiece = Piece.SetPieceModifier(Piece.PieceModifier.NoSpecial, targetPiece);
+            }
+            if (b.blackToMove && Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.Black && b.blackPerPlayerInfo.lastPieceMovedType != Piece.PieceType.Null)
+            {
+                targetPiece = Piece.SetPieceType(b.blackPerPlayerInfo.lastPieceMovedType, targetPiece);
+                targetPiece = Piece.SetPieceModifier(Piece.PieceModifier.NoSpecial, targetPiece);
+            }
+
+            //This causes infinite loops
+            if (Piece.GetPieceType(targetPiece) == Piece.PieceType.ArcanaFool)
+            {
+                targetPiece = Piece.SetPieceType(Piece.PieceType.Null, targetPiece);
+            }
+
+            //don't really want to deal with pieces reacting to Fool's movement so no MBT?
+            GenerateMovesForPiece(moves, ref b, targetPiece, x, y, null);
+            return;
+        }
+
+        //switch movers
+        if ((pte.pieceProperty & Piece.PieceProperty.SwitchMover) != 0)
+        {
+            if (Board.CoordinateIsBlack(x, y))
+            {
+                for (int i = 0; i < pte.enhancedMoveInfo.Count; i++)
+                {
+                    GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.enhancedMoveInfo[i], mbt);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < pte.moveInfo.Count; i++)
+                {
+                    GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.moveInfo[i], mbt);
+                }
+            }
+            return;
+        }
+
+        //diligence mover
+        if ((pte.pieceProperty & Piece.PieceProperty.DiligenceMover) != 0)
+        {
+            int lastPieceLocation = -1;
+            if (b.blackToMove)
+            {
+                lastPieceLocation = b.blackPerPlayerInfo.lastPieceMovedLocation;
+            } else
+            {
+                lastPieceLocation = b.whitePerPlayerInfo.lastPieceMovedLocation;
+            }
+
+            if (lastPieceLocation == x + y * 8)
+            {
+                for (int i = 0; i < pte.enhancedMoveInfo.Count; i++)
+                {
+                    GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.enhancedMoveInfo[i], mbt);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < pte.moveInfo.Count; i++)
+                {
+                    GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.moveInfo[i], mbt);
+                }
+            }
+            return;
+        }
+
+        //justice mover (enemy captured last turn)
+        if ((pte.pieceProperty & Piece.PieceProperty.JusticeMover) != 0)
+        {
+            for (int i = 0; i < pte.moveInfo.Count; i++)
+            {
+                GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.moveInfo[i], mbt);
+            }
+
+            if (Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.Black ? (b.whitePerPlayerInfo.capturedLastTurn) : b.blackPerPlayerInfo.capturedLastTurn)
+            {
+                for (int i = 0; i < pte.enhancedMoveInfo.Count; i++)
+                {
+                    GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.enhancedMoveInfo[i], mbt);
+                }
+            }
+            return;
+        }
+
+        //vampire mover (enemy or ally captured last turn)
+        if ((pte.pieceProperty & Piece.PieceProperty.VampireMover) != 0)
+        {
+            for (int i = 0; i < pte.moveInfo.Count; i++)
+            {
+                GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.moveInfo[i], mbt);
+            }
+
+            if (b.blackPerPlayerInfo.capturedLastTurn || b.whitePerPlayerInfo.capturedLastTurn)
+            {
+                for (int i = 0; i < pte.enhancedMoveInfo.Count; i++)
+                {
+                    GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.enhancedMoveInfo[i], mbt);
+                }
+            }
+            return;
+        }
+
+        //no ally mover
+        if ((pte.pieceProperty & Piece.PieceProperty.NoAllyMover) != 0)
+        {
+            //problem: the piece itself is inside the bitboard so it would be considered adjacent to itself
+
+            ulong allyBitboard = Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesBlack : b.globalData.bitboard_piecesWhite;
+            allyBitboard = MainManager.SmearBitboard(allyBitboard & ~(1uL << x + y * 8));
+            
+            //MainManager.PrintBitboard(allyBitboard);
+            if ((allyBitboard & (1uL << x + y * 8)) == 0)
+            {
+                for (int i = 0; i < pte.enhancedMoveInfo.Count; i++)
+                {
+                    GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.enhancedMoveInfo[i], mbt);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < pte.moveInfo.Count; i++)
+                {
+                    GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.moveInfo[i], mbt);
+                }
+            }
+            return;
+        }
+
+        //ally mover
+        if ((pte.pieceProperty & Piece.PieceProperty.AllyMover) != 0)
+        {
+            //problem: the piece itself is inside the bitboard so it would be considered adjacent to itself
+            ulong allyBitboard = Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesBlack : b.globalData.bitboard_piecesWhite;
+            allyBitboard = MainManager.SmearBitboard(allyBitboard & ~(1uL << x + y * 8));
+
+            //MainManager.PrintBitboard(allyBitboard);
+            if ((allyBitboard & (1uL << x + y * 8)) == 0)
+            {
+                for (int i = 0; i < pte.moveInfo.Count; i++)
+                {
+                    GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.moveInfo[i], mbt);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < pte.enhancedMoveInfo.Count; i++)
+                {
+                    GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.enhancedMoveInfo[i], mbt);
+                }
+            }
+            return;
+        }
+
+        //war movers (adjacent to enemies)
+        if ((pte.pieceProperty & Piece.PieceProperty.WarMover) != 0)
+        {
+            for (int i = 0; i < pte.moveInfo.Count; i++)
+            {
+                GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.moveInfo[i], mbt);
+            }
+
+            ulong enemyBitboard = Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesWhiteAdjacent : b.globalData.bitboard_piecesBlackAdjacent;
+            //enemyBitboard = MainManager.SmearBitboard(enemyBitboard);
+            if (((1uL << x + y * 8) & enemyBitboard) != 0)
+            {
+                for (int i = 0; i < pte.enhancedMoveInfo.Count; i++)
+                {
+                    GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.enhancedMoveInfo[i], mbt);
+                }
+            }
+            return;
+        }
+
+        if (pte.type == Piece.PieceType.ArcanaLovers)
+        {
+            for (int i = 0; i < pte.moveInfo.Count; i++)
+            {
+                GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.moveInfo[i], mbt);
+            }
+
+            ulong allyBitboard = Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.White ? b.globalData.bitboard_piecesWhite : b.globalData.bitboard_piecesBlack;
+            if (MainManager.PopCount(MainManager.SmearBitboard(1uL << x + y * 8) & allyBitboard) >= 3)  //3 because it counts Arcana Lovers itself as one of the neighbors
+            {
+                for (int i = 0; i < pte.enhancedMoveInfo.Count; i++)
+                {
+                    GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.enhancedMoveInfo[i], mbt);
+                }
+            }
+            return;
+        }
+
+        for (int i = 0; i < pte.moveInfo.Count; i++)
+        {
+            GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.moveInfo[i], mbt);
+        }
+
+        return;
+    }
+
+
+    //Populate the span with moves for the piece at x and y
+    //Note: I can't do bitboards?
+    public static void GenerateMovesForMoveGeneratorEntry(List<uint> moves, ref Board b, uint piece, int x, int y, MoveGeneratorInfoEntry mgie, MoveBitTable mbt)
+    {
+        int tempX = x;
+        int tempY = y;
+
+        int deltaX = 0;
+        int deltaY = 0;
+
+        Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
+        Piece.PieceType pt = Piece.GetPieceType(piece);
+
+        Move.Dir dir;
+
+        bool flip = false;
+
+        ulong flipCheckBitboard = 0;
+        if (pa == Piece.PieceAlignment.White)
+        {
+            flipCheckBitboard |= b.globalData.bitboard_hangedBlack;
+        } else if (pa == Piece.PieceAlignment.Black)
+        {
+            flipCheckBitboard |= b.globalData.bitboard_hangedWhite;
+        } else
+        {
+            flipCheckBitboard |= b.globalData.bitboard_hangedWhite;
+            flipCheckBitboard |= b.globalData.bitboard_hangedBlack;
+        }
+
+        PieceTableEntry pte = GlobalPieceManager.Instance.GetPieceTableEntry(pt);
+
+        bool directionRestricted = (mgie.modifier & MoveGeneratorPreModifier.DirectionModifiers) != 0;
+
+        Move.SpecialType specialType = Move.SpecialType.Normal;
+
+        if (Piece.GetPieceModifier(piece) == Piece.PieceModifier.NoSpecial)
+        {
+            if (mgie.atom >= MoveGeneratorAtom.SpecialMoveDivider)
+            {
+                return;
+            }
+        }
+
+        if ((mgie.modifier & MoveGeneratorPreModifier.m) != 0)
+        {
+            specialType = Move.SpecialType.MoveOnly;
+        }
+        if ((mgie.modifier & MoveGeneratorPreModifier.c) != 0)
+        {
+            specialType = Move.SpecialType.CaptureOnly;
+        }
+
+        if (Piece.GetPieceModifier(piece) != Piece.PieceModifier.NoSpecial)
+        {
+            if ((mgie.modifier & MoveGeneratorPreModifier.r) != 0 || (specialType == SpecialType.CaptureOnly && ((pte.pieceProperty & Piece.PieceProperty.FireCapture) != 0)))
+            {
+                specialType = Move.SpecialType.FireCaptureOnly;
+            }
+            if ((specialType != SpecialType.MoveOnly && specialType != SpecialType.FireCaptureOnly && ((pte.pieceProperty & Piece.PieceProperty.FireCapture) != 0)))
+            {
+                specialType = Move.SpecialType.FireCapture;
+            }
+            if (specialType != SpecialType.MoveOnly && (pte.pieceProperty & Piece.PieceProperty.WrathCapture) != 0)
+            {
+                specialType = Move.SpecialType.WrathCapturer;
+            }
+
+            if ((mgie.modifier & MoveGeneratorPreModifier.l) != 0)
+            {
+                specialType = Move.SpecialType.LongLeaper;
+            }
+            if ((mgie.modifier & MoveGeneratorPreModifier.j) != 0)
+            {
+                specialType = Move.SpecialType.LongLeaperCaptureOnly;
+            }
+            if ((mgie.modifier & MoveGeneratorPreModifier.a) != 0)
+            {
+                specialType = Move.SpecialType.AllyAbility;
+
+                switch (pt)
+                {
+                    case Piece.PieceType.ArcanaPriestess:
+                        if (mgie.atom == MoveGeneratorAtom.B)
+                        {
+                            specialType = SpecialType.RangedPushAllyOnly;
+                        }
+                        else
+                        {
+                            specialType = SpecialType.RangedPullAllyOnly;
+                        }
+                        break;
+                    case Piece.PieceType.GlassSpirit:
+                    case Piece.PieceType.ShieldSpirit:
+                        specialType = SpecialType.Imbue;
+                        break;
+                    case Piece.PieceType.FeatherSpirit:
+                        specialType = SpecialType.ImbueWinged;
+                        break;
+                    case Piece.PieceType.GrailSpirit:
+                        specialType = SpecialType.ImbuePromote;
+                        break;
+                }
+            }
+            if ((mgie.modifier & MoveGeneratorPreModifier.n) != 0)
+            {
+                specialType = Move.SpecialType.EmptyAbility;
+
+                if ((pte.pieceProperty & Piece.PieceProperty.Splitter) != 0)
+                {
+                    specialType = SpecialType.Spawn;
+                }
+            }
+            if ((mgie.modifier & MoveGeneratorPreModifier.e) != 0)
+            {
+                specialType = Move.SpecialType.EnemyAbility;
+
+                if (pt == Piece.PieceType.Lust)
+                {
+                    specialType = SpecialType.RangedPull;
+                }
+            }
+            if ((mgie.modifier & MoveGeneratorPreModifier.p) != 0)
+            {
+                specialType = Move.SpecialType.PassiveAbility;
+            }
+            if ((mgie.modifier & MoveGeneratorPreModifier.o) != 0)
+            {
+                if ((b.globalData.enemyModifier & Board.EnemyModifier.Xyloid) != 0 && pte.type == Piece.PieceType.King)
+                {
+                    specialType = Move.SpecialType.PlantMove;
+                }
+                if ((pte.pieceProperty & Piece.PieceProperty.SlipMover) != 0)
+                {
+                    specialType = Move.SpecialType.SlipMove;
+                }
+                if ((pte.pieceProperty & Piece.PieceProperty.PlantMover) != 0)
+                {
+                    specialType = Move.SpecialType.PlantMove;
+                }
+                if ((pte.pieceProperty & Piece.PieceProperty.ChargeEnhance) != 0)
+                {
+                    if (Piece.GetPieceSpecialData(piece) == 0)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        switch (pt)
+                        {
+                            case Piece.PieceType.QueenLeech:
+                                specialType = SpecialType.Spawn;
+                                break;
+                            case Piece.PieceType.SoulDevourer:
+                                specialType = Move.SpecialType.ChargeMove;
+                                break;
+                            case Piece.PieceType.SoulCannon:
+                                specialType = Move.SpecialType.FireCaptureOnly;
+                                break;
+                            default:
+                                specialType = Move.SpecialType.ChargeMove;
+                                break;
+                        }
+                    }
+                }
+            }
+
+            if (specialType != SpecialType.CaptureOnly && (pte.pieceProperty & Piece.PieceProperty.Push) != 0)
+            {
+                specialType = SpecialType.PushMove;
+            }
+            if (specialType != SpecialType.CaptureOnly && (pte.pieceProperty & Piece.PieceProperty.Pull) != 0)
+            {
+                specialType = SpecialType.PullMove;
+            }
+
+            if ((pte.pieceProperty & Piece.PieceProperty.SwapCapture) != 0)
+            {
+                specialType = SpecialType.AnyoneSwap;
+            }
+            if ((pte.pieceProperty & Piece.PieceProperty.ConvertCapture) != 0)
+            {
+                specialType = SpecialType.Convert;
+            }
+            if ((pte.pieceProperty & Piece.PieceProperty.WeakConvertCapture) != 0)
+            {
+                specialType = SpecialType.ConvertPawn;
+            }
+            if ((pte.pieceProperty & Piece.PieceProperty.FlankingCapture) != 0)
+            {
+                specialType = SpecialType.FlankingCapturer;
+            }
+            if ((pte.pieceProperty & Piece.PieceProperty.ConsumeAllies) != 0 && specialType == SpecialType.Normal)
+            {
+                specialType = SpecialType.ConsumeAllies;
+            }
+            if ((pte.pieceProperty & Piece.PieceProperty.ConsumeAllies) != 0 && specialType == SpecialType.CaptureOnly)
+            {
+                specialType = SpecialType.ConsumeAlliesCaptureOnly;
+            }
+
+            //special stuff
+            switch (pte.type)
+            {
+                case Piece.PieceType.Disguiser:
+                    specialType = SpecialType.MorphIntoTarget;
+                    break;
+                case Piece.PieceType.Bolter:
+                    specialType = SpecialType.Withdrawer;
+                    break;
+                case Piece.PieceType.Shocker:
+                    specialType = SpecialType.Advancer;
+                    break;
+                case Piece.PieceType.Aries:
+                    specialType = SpecialType.AdvancerPush;
+                    break;
+                case Piece.PieceType.LightningElemental:
+                    specialType = SpecialType.AdvancerWithdrawer;
+                    break;
+            }
+
+            if (pte.type == Piece.PieceType.Disguiser)
+            {
+                specialType = SpecialType.MorphIntoTarget;
+            }
+        } else
+        {
+            //r, e -> c
+            if ((mgie.modifier & MoveGeneratorPreModifier.r) != 0)
+            {
+                specialType = Move.SpecialType.CaptureOnly;
+            }
+            if ((mgie.modifier & MoveGeneratorPreModifier.e) != 0)
+            {
+                specialType = Move.SpecialType.CaptureOnly;
+            }
+
+            if ((mgie.modifier & MoveGeneratorPreModifier.n) != 0)
+            {
+                specialType = Move.SpecialType.MoveOnly;
+            }
+
+            //passive or ally only ability = No
+            if ((mgie.modifier & MoveGeneratorPreModifier.a) != 0)
+            {
+                return;
+            }
+            if ((mgie.modifier & MoveGeneratorPreModifier.p) != 0)
+            {
+                return;
+            }
+            //no bonus moves
+            if ((mgie.modifier & MoveGeneratorPreModifier.o) != 0)
+            {
+                return;
+            }
+        }
+
+        if ((mgie.modifier & MoveGeneratorPreModifier.i) != 0)
+        {
+            //Initial: if not legal just return immediately
+            //I made initial refer to anything on the first 2 rows because otherwise it is ambiguous
+            switch (pa)
+            {
+                case Piece.PieceAlignment.White:
+                    if (y > 1)
+                    {
+                        return;
+                        //return moveStartIndex;
+                    }
+                    break;
+                case Piece.PieceAlignment.Black:
+                    if (y < 6)
+                    {
+                        return;
+                        //return moveStartIndex;
+                    }
+                    break;
+                case Piece.PieceAlignment.Neutral:  //Note: moves as if it was the same color as the one moving it
+                case Piece.PieceAlignment.Crystal:  //Note: moves as if it was the same color as the one moving it
+                    return;
+                    //return moveStartIndex;
+            }
+        }
+
+        if (pa != Piece.PieceAlignment.Black)
+        {
+            //Complacent boss: can't capture 2 turns in a row
+            if ((b.globalData.enemyModifier & Board.EnemyModifier.Complacent) != 0 && b.whitePerPlayerInfo.capturedLastTurn)
+            {
+                if (Piece.GetPieceStatusEffect(piece) == Piece.PieceStatusEffect.Bloodlust)
+                {
+                    return;
+                }
+                piece = Piece.SetPieceStatusEffect(Piece.PieceStatusEffect.Voided, piece);
+            }
+
+            //Prideful boss: Can't capture if White has more pieces
+            if ((b.globalData.enemyModifier & Board.EnemyModifier.Prideful) != 0 && b.whitePerPlayerInfo.pieceCount > b.blackPerPlayerInfo.pieceCount)
+            {
+                if (Piece.GetPieceStatusEffect(piece) == Piece.PieceStatusEffect.Bloodlust)
+                {
+                    return;
+                }
+                piece = Piece.SetPieceStatusEffect(Piece.PieceStatusEffect.Voided, piece);
+            }
+        }
+
+        if (pa == Piece.PieceAlignment.Black)
+        {
+            /*
+            //Greedy boss: first 3 captures are Convert
+            if ((b.globalData.enemyModifier & Board.EnemyModifier.Greedy) != 0 && (b.globalData.whitePerPlayerInfo.startPieceCount - b.whitePerPlayerInfo.pieceCount) < 3)
+            {
+                //convert is a stationary thing so fire capture gets lumped in also
+                if (specialType == SpecialType.Normal || specialType == SpecialType.FireCapture)
+                {
+                    specialType = SpecialType.Convert;
+                }
+                if (specialType == SpecialType.CaptureOnly || specialType == SpecialType.FireCaptureOnly)
+                {
+                    specialType = SpecialType.ConvertCaptureOnly;
+                }
+            }
+            */
+        }
+
+        if ((pte.pieceProperty & Piece.PieceProperty.Giant) != 0)
+        {
+            ulong bitIndex = 1uL << x + y * 8;
+            bitIndex |= 1uL << (x + 1) + y * 8;
+            bitIndex |= 1uL << x + (y + 1) * 8;
+            bitIndex |= 1uL << (x + 1) + (y + 1) * 8;
+            flip = (flipCheckBitboard & (bitIndex)) != 0;
+
+            //Trying to capture when capturing is restricted
+            //note that non standard captures are not blocked because it would be kind of hard to stop them
+            //This includes advancers, withdrawers, coordinators, leapers
+            //Water effect
+            //Water squares
+            //Voided status effect
+            ulong waterBitboard = 0;
+            if (pa == Piece.PieceAlignment.White)
+            {
+                waterBitboard = b.globalData.bitboard_waterBlack;
+            }
+            if (pa == Piece.PieceAlignment.Black)
+            {
+                waterBitboard = b.globalData.bitboard_waterWhite;
+            }
+
+            if (Piece.GetPieceStatusEffect(piece) == Piece.PieceStatusEffect.Voided || ((b.globalData.squares[x + y * 8].type == Square.SquareType.Water || (bitIndex & waterBitboard) != 0) && ((pte.pieceProperty & (Piece.PieceProperty.WaterImmune | Piece.PieceProperty.NoTerrain)) == 0)))
+            {
+                if (Piece.GetPieceStatusEffect(piece) == Piece.PieceStatusEffect.Bloodlust)
+                {
+                    //Bloodlust status effect might be on the piece already
+                    //Bloodlust + Voided = can't move at all
+                    return;
+                }
+
+                //lazy kind of check
+                //later code forces this to only apply to things that target enemies
+                piece = Piece.SetPieceStatusEffect(Piece.PieceStatusEffect.Voided, piece);
+            }
+
+            //Trying to not capture when non-captures are restricted
+            //note that non standard captures are not blocked because it would be kind of hard to stop them
+            //This includes advancers, withdrawers, coordinators, leapers
+            //Harpy effect
+            //Capture only zone
+            ulong harpyBitboard = 0;
+            if (pa == Piece.PieceAlignment.White)
+            {
+                harpyBitboard = b.globalData.bitboard_harpyBlack;
+            }
+            if (pa == Piece.PieceAlignment.Black)
+            {
+                harpyBitboard = b.globalData.bitboard_harpyWhite;
+            }
+            if (Piece.GetPieceStatusEffect(piece) == Piece.PieceStatusEffect.Bloodlust || ((pte.pieceProperty & Piece.PieceProperty.NoTerrain) == 0 && b.globalData.squares[x + y * 8].type == Square.SquareType.CaptureOnly) || (bitIndex & harpyBitboard) != 0)
+            {
+                if (Piece.GetPieceStatusEffect(piece) == Piece.PieceStatusEffect.Voided)
+                {
+                    //Bloodlust + Voided = can't move at all
+                    return;
+                }
+
+                //lazy kind of check
+                //later code forces this to only apply to things that target enemies
+                piece = Piece.SetPieceStatusEffect(Piece.PieceStatusEffect.Bloodlust, piece);
+            }
+
+            switch (mgie.atom)
+            {
+                case MoveGeneratorAtom.R:
+                case MoveGeneratorAtom.W:
+                    //ray up
+                    //Up is allowed if F is set or V is set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0 || (mgie.modifier & MoveGeneratorPreModifier.v) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, 1, flip);
+                        GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    //ray down
+                    //Down is allowed if B is set or V is set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0 || (mgie.modifier & MoveGeneratorPreModifier.v) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, -1, flip);
+                        GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    //ray left
+                    //Left is allowed if H is set
+                    //Note that currently there is no left right asymmetry allowed in movesets
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 0, flip);
+                        GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    //ray right
+                    //Right is allowed if H is set
+                    //Note that currently there is no left right asymmetry allowed in movesets
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 0, flip);
+                        GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.B:
+                case MoveGeneratorAtom.F:
+                    //ray up right
+                    //Allowed if F set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 1, flip);
+                        GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    //ray up left
+                    //Allowed if F set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 1, flip);
+                        GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    //ray down right
+                    //Allowed if B set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, -1, flip);
+                        GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    //ray down left
+                    //Allowed if B set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, -1, flip);
+                        GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.Leaper:
+                    //Is this a 4 leaper
+                    deltaX = mgie.x;
+                    deltaY = mgie.y;
+
+                    //for symmetry I will make the X coord larger
+                    int ch = deltaX > deltaY ? deltaX : deltaY;
+                    int cl = deltaX > deltaY ? deltaY : deltaX;
+
+                    if (deltaX == 0 || deltaY == 0)
+                    {
+                        //4 ortho leaper
+                        //up
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0 || (mgie.modifier & MoveGeneratorPreModifier.v) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, cl, ch, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //down
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0 || (mgie.modifier & MoveGeneratorPreModifier.v) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, cl, -ch, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //right
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, ch, cl, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //left
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -ch, cl, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                    }
+                    else if (deltaX == deltaY || deltaX == -deltaY)
+                    {
+                        //4 diagonal leaper
+                        //ray up right
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, ch, cl, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray up left
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -ch, cl, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray down right
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, ch, -cl, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray down left
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -ch, -cl, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                    }
+                    else
+                    {
+                        //8 leaper
+
+                        //Logic is slightly different for directions
+                        //f = front 4
+                        //v = vertical 4 
+                        //fv = front vertical 2
+
+                        //Inverted conditions
+
+                        //Vertical 4
+                        //ray up right
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, cl, ch, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray up left
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -cl, ch, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray down right
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, cl, -ch, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray down left
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -cl, -ch, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+
+                        //Horizontal 4
+                        //ray up right
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, ch, cl, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray up left
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -ch, cl, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray down right
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, ch, -cl, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray down left
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -ch, -cl, flip);
+                            GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                    }
+                    break;
+            }
+        } else
+        {
+            flip = (flipCheckBitboard & (1uL << x + y * 8)) != 0;
+            //Trying to capture when capturing is restricted
+            //note that non standard captures are not blocked because it would be kind of hard to stop them
+            //This includes advancers, withdrawers, coordinators, leapers
+            //Water effect
+            //Water squares
+            //Voided status effect
+            ulong waterBitboard = 0;
+            if (pa == Piece.PieceAlignment.White)
+            {
+                waterBitboard = b.globalData.bitboard_waterBlack;
+            }
+            if (pa == Piece.PieceAlignment.Black)
+            {
+                waterBitboard = b.globalData.bitboard_waterWhite;
+            }
+            if (Piece.GetPieceStatusEffect(piece) == Piece.PieceStatusEffect.Voided || ((b.globalData.squares[x + y * 8].type == Square.SquareType.Water || (1uL << x + y * 8 & waterBitboard) != 0) && ((pte.pieceProperty & (Piece.PieceProperty.WaterImmune | Piece.PieceProperty.NoTerrain)) == 0)))
+            {
+                if (Piece.GetPieceStatusEffect(piece) == Piece.PieceStatusEffect.Bloodlust)
+                {
+                    //Bloodlust status effect might be on the piece already
+                    //Bloodlust + Voided = can't move at all
+                    return;
+                }
+
+                //lazy kind of check
+                //later code forces this to only apply to things that target enemies
+                piece = Piece.SetPieceStatusEffect(Piece.PieceStatusEffect.Voided, piece);
+            }
+
+            //Trying to not capture when non-captures are restricted
+            //note that non standard captures are not blocked because it would be kind of hard to stop them
+            //This includes advancers, withdrawers, coordinators, leapers
+            //Harpy effect
+            //Capture only zone
+            ulong harpyBitboard = 0;
+            if (pa == Piece.PieceAlignment.White)
+            {
+                harpyBitboard = b.globalData.bitboard_harpyBlack;
+            }
+            if (pa == Piece.PieceAlignment.Black)
+            {
+                harpyBitboard = b.globalData.bitboard_harpyWhite;
+            }
+            if (Piece.GetPieceStatusEffect(piece) == Piece.PieceStatusEffect.Bloodlust || ((pte.pieceProperty & Piece.PieceProperty.NoTerrain) == 0 && b.globalData.squares[x + y * 8].type == Square.SquareType.CaptureOnly) || (1uL << x + y * 8 & harpyBitboard) != 0)
+            {
+                if (Piece.GetPieceStatusEffect(piece) == Piece.PieceStatusEffect.Voided)
+                {
+                    //Bloodlust + Voided = can't move at all
+                    return;
+                }
+
+                //lazy kind of check
+                //later code forces this to only apply to things that target enemies
+                piece = Piece.SetPieceStatusEffect(Piece.PieceStatusEffect.Bloodlust, piece);
+            }
+
+            switch (mgie.atom)
+            {
+                case MoveGeneratorAtom.R:
+                case MoveGeneratorAtom.W:
+                    //ray up
+                    //Up is allowed if F is set or V is set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0 || (mgie.modifier & MoveGeneratorPreModifier.v) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, 1, flip);
+                        GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    //ray down
+                    //Down is allowed if B is set or V is set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0 || (mgie.modifier & MoveGeneratorPreModifier.v) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, -1, flip);
+                        GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    //ray left
+                    //Left is allowed if H is set
+                    //Note that currently there is no left right asymmetry allowed in movesets
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 0, flip);
+                        GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    //ray right
+                    //Right is allowed if H is set
+                    //Note that currently there is no left right asymmetry allowed in movesets
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 0, flip);
+                        GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.B:
+                case MoveGeneratorAtom.F:
+                    //ray up right
+                    //Allowed if F set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 1, flip);
+                        GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    //ray up left
+                    //Allowed if F set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 1, flip);
+                        GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    //ray down right
+                    //Allowed if B set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, -1, flip);
+                        GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    //ray down left
+                    //Allowed if B set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, -1, flip);
+                        GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.Z:
+                    //Note: incompatible with Winged modifier because the mixed move types are hard to keep track of
+                    //crooked bishop
+                    //needs a custom ray thing
+                    //2 different steps
+                    //Problem: Duplicate steps
+                    //I can try to remove those by combining 2 different rays into the same function
+                    //(i.e. the up then right and the right then up are combined)
+                    //(The first step will have overlaps but that is less bad than overlaps every 2 steps)
+                    //ray up
+                    //Up is allowed if F is set or V is set
+                    int deltaXB;
+                    int deltaYB;
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0 || (mgie.modifier & MoveGeneratorPreModifier.v) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 1, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, -1, 1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    //ray down
+                    //Down is allowed if B is set or V is set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0 || (mgie.modifier & MoveGeneratorPreModifier.v) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, -1, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, -1, -1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    //ray left
+                    //Left is allowed if H is set
+                    //Note that currently there is no left right asymmetry allowed in movesets
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 1, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, -1, -1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    //ray right
+                    //Right is allowed if H is set
+                    //Note that currently there is no left right asymmetry allowed in movesets
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 1, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, 1, -1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.C:   //crooked rook
+                                            //Note: incompatible with Winged modifier because the mixed move types are hard to keep track of
+                                            //needs a custom ray thing
+                                            //2 different steps
+                                            //Problem: Duplicate steps
+                                            //I can try to remove those by combining 2 different rays into the same function
+                                            //(i.e. the up then right and the right then up are combined)
+                                            //(The first step will have overlaps but that is less bad than overlaps every 2 steps)
+                                            //ray up right
+                                            //Allowed if F set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 0, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, 0, 1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    //ray up left
+                    //Allowed if F set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 0, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, 0, 1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    //ray down right
+                    //Allowed if B set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 0, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, 0, -1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    //ray down left
+                    //Allowed if B set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 0, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, 0, -1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.I:
+                    //Note: incompatible with Winged modifier because the mixed move types are hard to keep track of
+                    //8 dual rays :P
+                    //Logic is slightly different for directions
+                    //f = front 4
+                    //v = vertical 4 
+                    //fv = front vertical 2
+
+                    //Inverted conditions
+
+                    //(1,0), (1,1) steps
+
+                    //Vertical 4
+                    //ray up right
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, 1, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, 1, 1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    //ray up left
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, 1, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, -1, 1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    //ray down right
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, -1, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, 1, -1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    //ray down left
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, -1, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, -1, -1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+
+                    //Horizontal 4
+                    //ray up right
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 0, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, 1, 1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    //ray up left
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 0, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, -1, 1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    //ray down right
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 0, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, 1, -1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    //ray down left
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 0, flip);
+                        (deltaXB, deltaYB) = Move.TransformBasedOnAlignment(pa, -1, -1, flip);
+                        GenerateRayMovesDual(moves, ref b, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.G:   //gryphon
+                                            //ray up right
+                    int targetX;
+                    int targetY;
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) == 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 1, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        (bool canContinue, _) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, Dir.UpRight, pa, specialType, pte, mgie, mbt);
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //up
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
+                            {
+                                //right
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 0, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+                        }
+                    }
+                    //ray up left
+                    //Allowed if F set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) == 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 1, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        (bool canContinue, _) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, Dir.UpLeft, pa, specialType, pte, mgie, mbt);
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //up
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
+                            {
+                                //left
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 0, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+                        }
+                    }
+                    //ray down right
+                    //Allowed if B set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) == 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, -1, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        (bool canContinue, _) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, Dir.DownRight, pa, specialType, pte, mgie, mbt);
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //up
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
+                            {
+                                //right
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 0, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+                        }
+                    }
+                    //ray down left
+                    //Allowed if B set
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) == 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, -1, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        (bool canContinue, _) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, Dir.DownLeft, pa, specialType, pte, mgie, mbt);
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //down
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
+                            {
+                                //left
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 0, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+                        }
+                    }
+                    break;
+                case MoveGeneratorAtom.M:   //manticore
+                                            //Uses the offset ray logic
+                                            //ray up
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, 1, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        (bool canContinue, _) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, Dir.Up, pa, specialType, pte, mgie, mbt);
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //up right
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //up left
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+                        }
+                    }
+                    //ray down
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, -1, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        (bool canContinue, _) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, Dir.Down, pa, specialType, pte, mgie, mbt);
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //down right
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //down left
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+                        }
+                    }
+                    //ray left
+                    //Note that currently there is no left right asymmetry allowed in movesets
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 0, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        (bool canContinue, _) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, Dir.Left, pa, specialType, pte, mgie, mbt);
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) == 0)
+                            {
+                                //left up
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) == 0)
+                            {
+                                //left down
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+                        }
+                    }
+                    //ray right
+                    //Note that currently there is no left right asymmetry allowed in movesets
+                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 0, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        (bool canContinue, _) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, Dir.Right, pa, specialType, pte, mgie, mbt);
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) == 0)
+                            {
+                                //right up
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) == 0)
+                            {
+                                //right down
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt);
+                            }
+                        }
+                    }
+                    break;
+                case MoveGeneratorAtom.H:   //wheel
+                                            //Uses the between points ray logic
+                    int cxA = x;
+                    int cyA = x;
+                    if (x > 3)
+                    {
+                        cxA = 7 - x;
+                        cyA = 7 - x;
+                    }
+                    if (y < cxA)
+                    {
+                        cxA = y;
+                        cyA = y;
+                    }
+                    if (7 - y < cxA)
+                    {
+                        cxA = 7 - y;
+                        cyA = 7 - y;
+                    }
+
+                    //cxA and cxB = 0,0 or 1,1 or 2,2 or 3,3
+                    //to make this easier I will also flip the corner around if the x or y is on the other side of that corner
+
+                    if (x == 7 - cxA || y == 7 - cyA)
+                    {
+                        cxA = 7 - cxA;
+                        cyA = 7 - cyA;
+                    }
+
+                    //The other corners
+                    int cxB = cxA;
+                    int cyB = 7 - cyA;
+                    int cxC = 7 - cxA;
+                    int cyC = cyB;
+                    int cxD = cxC;
+                    int cyD = cyA;
+
+                    //Debug.Log(x + " " + y + ", " + cxA + " " + cyA + ", " + cxB + " " + cyB + ", " + cxC + " " + cyC + ", " + cxD + " " + cyD);
+
+                    bool keepGoing = true;
+
+                    //A  (pos)   D
+                    //B         C
+
+                    //Or
+                    //A     D
+                    //(pos)
+                    //B     C
+
+                    if (y == cxA)
+                    {
+                        //X direction first
+                        //Move between x and A
+                        keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, x, y, cxA, cyA, specialType, pte, mbt);
+                        //Debug.Log(x + " " + y + " to " + cxA + " " + cyA);
+
+                        if (keepGoing)
+                        {
+                            //A to B
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxA, cyA, cxB, cyB, specialType, pte, mbt);
+                            //Debug.Log(cxA + " " + cyA + " to " + cxB + " " + cyB);
+                        }
+                        //B to C
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxB, cyB, cxC, cyC, specialType, pte, mbt);
+                            //Debug.Log(cxB + " " + cyB + " to " + cxC + " " + cyC);
+                        }
+                        //C to D
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxC, cyC, cxD, cyD, specialType, pte, mbt);
+                            //Debug.Log(cxC + " " + cyC + " to " + cxD + " " + cyD);
+                        }
+                        //D to x
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxD, cyD, x, y, specialType, pte, mbt);
+                            //Debug.Log(cxD + " " + cyD + " to " + x + " " + y);
+                        }
+
+                        //Reverse
+                        //x to D
+                        keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, x, y, cxD, cyD, specialType, pte, mbt);
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxD, cyD, cxC, cyC, specialType, pte, mbt);
+                        }
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxC, cyC, cxB, cyB, specialType, pte, mbt);
+                        }
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxB, cyB, cxA, cyA, specialType, pte, mbt);
+                        }
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxA, cyA, x, y, specialType, pte, mbt);
+                        }
+                    }
+                    else
+                    {
+                        //Y direction first
+                        //Move between x and A
+                        keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, x, y, cxA, cyA, specialType, pte, mbt);
+                        //Debug.Log(x + " " + y + " to " + cxA + " " + cyA);
+                        if (keepGoing)
+                        {
+                            //A to D
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxA, cyA, cxD, cyD, specialType, pte, mbt);
+                            //Debug.Log(cxA + " " + cyA + " to " + cxD + " " + cyD);
+                        }
+                        //D to C
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxD, cyD, cxC, cyC, specialType, pte, mbt);
+                            //Debug.Log(cxD + " " + cyD + " to " + cxC + " " + cyC);
+                        }
+                        //C to B
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxC, cyC, cxB, cyB, specialType, pte, mbt);
+                            //Debug.Log(cxC + " " + cyC + " to " + cxB + " " + cyB);
+                        }
+                        //B to x
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxB, cyB, x, y, specialType, pte, mbt);
+                            //Debug.Log(cxB + " " + cyB + " to " + x + " " + y);
+                        }
+
+                        //Reverse
+                        keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, x, y, cxB, cyB, specialType, pte, mbt);
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxB, cyB, cxC, cyC, specialType, pte, mbt);
+                        }
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxC, cyC, cxD, cyD, specialType, pte, mbt);
+                        }
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxD, cyD, cxA, cyA, specialType, pte, mbt);
+                        }
+                        if (keepGoing)
+                        {
+                            keepGoing = GenerateOffsetMovesBetweenPoints(moves, ref b, piece, x, y, cxA, cyA, x, y, specialType, pte, mbt);
+                        }
+                    }
+                    break;
+                case MoveGeneratorAtom.O:   //orbiter
+                                            //Need to detect orbit targets nearby
+                    ulong pieceBitboard = 1uL << (x + y * 8);
+                    pieceBitboard = MainManager.SmearBitboard(pieceBitboard) & ~pieceBitboard;
+                    pieceBitboard &= b.globalData.bitboard_pieces;
+
+                    while (pieceBitboard != 0)
+                    {
+                        int pieceIndex = MainManager.PopBitboardLSB1(pieceBitboard, out pieceBitboard);
+
+                        //Uses the offset ray logic
+                        //Orbit around pieceIndex
+                        int px = pieceIndex & 7;
+                        int py = (pieceIndex & 56) >> 3;
+
+                        //But there are 8 ways to orbit, I need to see which one it is
+
+                        int index = 0;
+                        for (int i = 0; i < 8; i++)
+                        {
+                            if (px + GlobalPieceManager.Instance.orbiterDeltas[i][0] == x && py + GlobalPieceManager.Instance.orbiterDeltas[i][1] == y)
+                            {
+                                index = i;
+                                break;
+                            }
+                        }
+
+                        //Orbit
+                        for (int i = 1; i < 8; i++)
+                        {
+                            (bool keepGoingO, _) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, px + GlobalPieceManager.Instance.orbiterDeltas[(i + index) % 8][0], py + GlobalPieceManager.Instance.orbiterDeltas[(i + index) % 8][1], GlobalPieceManager.Instance.orbiterDirections[(i + index) % 8][0], pa, specialType, pte, mgie, mbt);
+                            if (!keepGoingO)
+                            {
+                                break;
+                            }
+                        }
+                        //Orbit opposite
+                        for (int i = 1; i < 8; i++)
+                        {
+                            (bool keepGoingO, _) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, px + GlobalPieceManager.Instance.orbiterDeltas[((8 - i) + index) % 8][0], py + GlobalPieceManager.Instance.orbiterDeltas[((8 - i) + index) % 8][1], GlobalPieceManager.Instance.orbiterDirections[((8 - i) + index) % 8][1], pa, specialType, pte, mgie, mbt);
+                            if (!keepGoingO)
+                            {
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                case MoveGeneratorAtom.Leaper:  //leaper
+                                                //Is this a 4 leaper
+                    deltaX = mgie.x;
+                    deltaY = mgie.y;
+
+                    //for symmetry I will make the X coord larger
+                    int ch = deltaX > deltaY ? deltaX : deltaY;
+                    int cl = deltaX > deltaY ? deltaY : deltaX;
+
+                    if (deltaX == 0 || deltaY == 0)
+                    {
+                        //4 ortho leaper
+                        //up
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0 || (mgie.modifier & MoveGeneratorPreModifier.v) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, cl, ch, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //down
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0 || (mgie.modifier & MoveGeneratorPreModifier.v) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, cl, -ch, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //right
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, ch, cl, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //left
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -ch, cl, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                    }
+                    else if (deltaX == deltaY || deltaX == -deltaY)
+                    {
+                        //4 diagonal leaper
+                        //ray up right
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, ch, cl, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray up left
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -ch, cl, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray down right
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, ch, -cl, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray down left
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -ch, -cl, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                    }
+                    else
+                    {
+                        //8 leaper
+
+                        //Logic is slightly different for directions
+                        //f = front 4
+                        //v = vertical 4 
+                        //fv = front vertical 2
+
+                        //Inverted conditions
+
+                        //Vertical 4
+                        //ray up right
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, cl, ch, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray up left
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -cl, ch, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray down right
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, cl, -ch, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray down left
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -cl, -ch, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+
+                        //Horizontal 4
+                        //ray up right
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, ch, cl, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray up left
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -ch, cl, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray down right
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, ch, -cl, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                        //ray down left
+                        if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -ch, -cl, flip);
+                            GenerateRayMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt);
+                        }
+                    }
+                    break;
+                case MoveGeneratorAtom.Castling:
+                    //spawns moves
+                    if (Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.White)
+                    {
+                        if (!b.whitePerPlayerInfo.canCastle)
+                        {
+                            return;
+                            //return moveStartIndex;
+                        }
+                    }
+                    else
+                    {
+                        if (!b.blackPerPlayerInfo.canCastle)
+                        {
+                            return;
+                            //return moveStartIndex;
+                        }
+                    }
+
+                    GenerateCastling(moves, ref b, piece, x, y, true, mbt);
+                    GenerateCastling(moves, ref b, piece, x, y, false, mbt);
+                    break;
+                case MoveGeneratorAtom.AllyKingTeleport:
+                    //Teleport to empty spaces
+                    ulong allyKingBitboard = 0;
+                    if (Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.White)
+                    {
+                        allyKingBitboard = MainManager.SmearBitboard(b.globalData.bitboard_kingWhite);
+                    }
+                    else
+                    {
+                        allyKingBitboard = MainManager.SmearBitboard(b.globalData.bitboard_kingBlack);
+                    }
+                    allyKingBitboard &= ~b.globalData.bitboard_pieces;
+                    while (allyKingBitboard != 0)
+                    {
+                        int pieceIndex = MainManager.PopBitboardLSB1(allyKingBitboard, out allyKingBitboard);
+
+                        //Plop a move down
+                        GenerateSquareSingle(moves, true, ref b, piece, x, y, pieceIndex & 7, (pieceIndex & 56) >> 3, Dir.Null, pa, SpecialType.MoveOnly, pte, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.EnemyKingTeleport:
+                    //Teleport to empty spaces
+                    ulong enemyKingBitboard = 0;
+                    if (Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.White)
+                    {
+                        enemyKingBitboard = MainManager.SmearBitboard(b.globalData.bitboard_kingBlack);
+                    }
+                    else
+                    {
+                        enemyKingBitboard = MainManager.SmearBitboard(b.globalData.bitboard_kingWhite);
+                    }
+                    enemyKingBitboard &= ~b.globalData.bitboard_pieces;
+                    while (enemyKingBitboard != 0)
+                    {
+                        int pieceIndex = MainManager.PopBitboardLSB1(enemyKingBitboard, out enemyKingBitboard);
+
+                        //Plop a move down
+                        GenerateSquareSingle(moves, true, ref b, piece, x, y, pieceIndex & 7, (pieceIndex & 56) >> 3, Dir.Null, pa, SpecialType.MoveOnly, pte, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.PawnSwapTeleport:
+                    ulong allyPawnsBitboard = 0;
+                    if (Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.White)
+                    {
+                        allyPawnsBitboard = b.globalData.bitboard_pawnsWhite;
+                    }
+                    else
+                    {
+                        allyPawnsBitboard = b.globalData.bitboard_pawnsBlack;
+                    }
+                    while (allyPawnsBitboard != 0)
+                    {
+                        int pieceIndex = MainManager.PopBitboardLSB1(allyPawnsBitboard, out allyPawnsBitboard);
+
+                        //Plop a move down
+                        GenerateSquareSingle(moves, true, ref b, piece, x, y, pieceIndex & 7, (pieceIndex & 56) >> 3, Dir.Null, pa, SpecialType.AllySwap, pte, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.AllySwapTeleport:
+                    ulong allyBitboard = 0;
+                    if (Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.White)
+                    {
+                        allyBitboard = b.globalData.bitboard_piecesWhite;
+                    }
+                    else
+                    {
+                        allyBitboard = b.globalData.bitboard_piecesBlack;
+                    }
+                    while (allyBitboard != 0)
+                    {
+                        int pieceIndex = MainManager.PopBitboardLSB1(allyBitboard, out allyBitboard);
+
+                        //Plop a move down
+                        GenerateSquareSingle(moves, true, ref b, piece, x, y, pieceIndex & 7, (pieceIndex & 56) >> 3, Dir.Null, pa, SpecialType.AllySwap, pte, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.AllyBehindTeleport:
+                    ulong allyBBitboard = 0;
+                    //behind is subjective so 2 separate code lines
+                    if (Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.White)
+                    {
+                        allyBBitboard = b.globalData.bitboard_piecesWhite;
+                        //down 1 but not occupied
+                        allyBBitboard = allyBBitboard >> 8 & ~allyBBitboard;
+                    }
+                    else
+                    {
+                        allyBBitboard = b.globalData.bitboard_piecesBlack;
+                        allyBBitboard = allyBBitboard << 8 & ~allyBBitboard;
+                    }
+
+                    while (allyBBitboard != 0)
+                    {
+                        int pieceIndex = MainManager.PopBitboardLSB1(allyBBitboard, out allyBBitboard);
+
+                        //Plop a move down
+                        GenerateSquareSingle(moves, true, ref b, piece, x, y, pieceIndex & 7, (pieceIndex & 56) >> 3, Dir.Null, pa, SpecialType.AllySwap, pte, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.AnywhereTeleport:
+                    ulong anywhereBitboard = 0;
+                    anywhereBitboard = ~b.globalData.bitboard_pieces;
+                    while (anywhereBitboard != 0)
+                    {
+                        int pieceIndex = MainManager.PopBitboardLSB1(anywhereBitboard, out anywhereBitboard);
+
+                        //Plop a move down
+                        GenerateSquareSingle(moves, true, ref b, piece, x, y, pieceIndex & 7, (pieceIndex & 56) >> 3, Dir.Null, pa, SpecialType.MoveOnly, pte, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.HomeRangeTeleport:
+                    ulong homeRangeBitboard = 0xffff;
+
+                    if (Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.Black)
+                    {
+                        //6 rows upwards
+                        homeRangeBitboard <<= 48;
+                    }
+
+                    homeRangeBitboard &= ~b.globalData.bitboard_pieces;
+                    while (homeRangeBitboard != 0)
+                    {
+                        int pieceIndex = MainManager.PopBitboardLSB1(homeRangeBitboard, out homeRangeBitboard);
+
+                        //Plop a move down
+                        GenerateSquareSingle(moves, true, ref b, piece, x, y, pieceIndex & 7, (pieceIndex & 56) >> 3, Dir.Null, pa, SpecialType.MoveOnly, pte, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.KingSwapTeleport:
+                    ulong allyKingBitboardB = 0;
+                    if (Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.White)
+                    {
+                        allyKingBitboardB = b.globalData.bitboard_kingWhite;
+                    }
+                    else
+                    {
+                        allyKingBitboardB = b.globalData.bitboard_kingBlack;
+                    }
+                    while (allyKingBitboardB != 0)
+                    {
+                        int pieceIndex = MainManager.PopBitboardLSB1(allyKingBitboardB, out allyKingBitboardB);
+
+                        //Plop a move down
+                        GenerateSquareSingle(moves, true, ref b, piece, x, y, pieceIndex & 7, (pieceIndex & 56) >> 3, Dir.Null, pa, SpecialType.AllySwap, pte, mbt);
+                    }
+                    break;
+                case MoveGeneratorAtom.MirrorTeleport:
+                    GenerateSquareSingle(moves, true, ref b, piece, x, y, 7 - x, y, Dir.Null, pa, SpecialType.Normal, pte, mbt);
+                    break;
+                case MoveGeneratorAtom.LensRook:
+                    //plop a move down?
+                    (bool keepGoingLR, bool _) = GenerateSquareSingle(moves, true, ref b, piece, x, y, 7 - x, 7 - y, Dir.Null, pa, SpecialType.MoveOnly, pte, mbt);
+
+                    if (keepGoingLR)
+                    {
+                        //ray up
+                        //Up is allowed if F is set or V is set
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0 || (mgie.modifier & MoveGeneratorPreModifier.v) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, 1, flip);
+                            GenerateOffsetRayMoves(moves, ref b, piece, x, y, 7 - x, 7 - y, 0, deltaX, deltaY, SpecialType.MoveOnly, pte, mgie, mbt);
+                        }
+                        //ray down
+                        //Down is allowed if B is set or V is set
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0 || (mgie.modifier & MoveGeneratorPreModifier.v) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, -1, flip);
+                            GenerateOffsetRayMoves(moves, ref b, piece, x, y, 7 - x, 7 - y, 0, deltaX, deltaY, SpecialType.MoveOnly, pte, mgie, mbt);
+                        }
+                        //ray left
+                        //Left is allowed if H is set
+                        //Note that currently there is no left right asymmetry allowed in movesets
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 0, flip);
+                            GenerateOffsetRayMoves(moves, ref b, piece, x, y, 7 - x, 7 - y, 0, deltaX, deltaY, SpecialType.MoveOnly, pte, mgie, mbt);
+                        }
+                        //ray right
+                        //Right is allowed if H is set
+                        //Note that currently there is no left right asymmetry allowed in movesets
+                        if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) != 0)
+                        {
+                            (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 0, flip);
+                            GenerateOffsetRayMoves(moves, ref b, piece, x, y, 7 - x, 7 - y, 0, deltaX, deltaY, SpecialType.MoveOnly, pte, mgie, mbt);
+                        }
+                    }
+                    break;
+            }
+        }
+        return;
+    }
+
+    //This is a ton of arguments
+    public static void GenerateRayMoves(List<uint> moves, ref Board b, uint piece, int x, int y, int deltaX, int deltaY, Move.SpecialType specialType, PieceTableEntry pte, MoveGeneratorInfoEntry mgie, MoveBitTable mbt)
+    {
+        //Offset of 0 :P
+        GenerateOffsetRayMoves(moves, ref b, piece, x, y, x, y, 0, deltaX, deltaY, specialType, pte, mgie, mbt);
+    }
+
+    public static bool GenerateOffsetRayMoves(List<uint> moves, ref Board b, uint piece, int x, int y, int startX, int startY, int lostRange, int deltaX, int deltaY, Move.SpecialType specialType, PieceTableEntry pte, MoveGeneratorInfoEntry mgie, MoveBitTable mbt)
+    {
+        //I can precompute these in the above loop but that adds more arguments
+        bool cylindrical = (pte.pieceProperty & Piece.PieceProperty.Cylindrical) != 0;
+        bool tubular = (pte.pieceProperty & Piece.PieceProperty.Sneaky) != 0;
+        bool reflecter = (pte.pieceProperty & Piece.PieceProperty.Reflecter) != 0;
+
+        if (specialType == SpecialType.Spawn)
+        {
+            tubular = false;
+        }
+
+        int rangeMultiplier = 1;
+        bool specialRange = (pte.pieceProperty & Piece.PieceProperty.RangeChange) != 0;
+
+        Move.Dir dir = Dir.Null;
+
+        Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
+
+        if (pa == Piece.PieceAlignment.Black && (b.globalData.enemyModifier & Board.EnemyModifier.Knave) != 0)
+        {
+            tubular = true;
+        }
+
+        dir = Move.DeltaToDir(deltaX, deltaY);
+
+        int generatedMoves = 0;
+
+        if (specialRange)
+        {
+            if ((pte.pieceProperty & Piece.PieceProperty.RangeIncrease_MissingPieces) != 0)
+            {
+                if (pa == Piece.PieceAlignment.Neutral || pa == Piece.PieceAlignment.Crystal)
+                {
+                    rangeMultiplier = 1;
+                }
+                else
+                {
+                    rangeMultiplier = 1 + b.GetMissingPieces(pa == Piece.PieceAlignment.Black);
+                }
+            }
+            if ((pte.pieceProperty & Piece.PieceProperty.RangeIncrease_FurtherRows) != 0)
+            {
+                switch (pa)
+                {
+                    case Piece.PieceAlignment.White:
+                        rangeMultiplier = y + 1;
+                        break;
+                    case Piece.PieceAlignment.Black:
+                        rangeMultiplier = (8 - y);
+                        break;
+                }
+            }
+            if ((pte.pieceProperty & Piece.PieceProperty.RangeDecrease_FurtherRows) != 0)
+            {
+                switch (pa)
+                {
+                    case Piece.PieceAlignment.White:
+                        rangeMultiplier = (8 - 2 * y);
+                        break;
+                    case Piece.PieceAlignment.Black:
+                        rangeMultiplier = 2 * y - 7;
+                        break;
+                }
+            }
+            if (rangeMultiplier < 1)
+            {
+                rangeMultiplier = 1;
+            }
+        }
+
+        int tempX = startX;
+        int tempY = startY;
+
+        int lastTempX = tempX;
+        int lastTempY = tempY;
+
+        int effectiveMaxRange = mgie.range * rangeMultiplier;
+        if (effectiveMaxRange == 0)
+        {
+            effectiveMaxRange = 8;
+        }
+
+        if ((pte.pieceProperty & Piece.PieceProperty.RangeDecrease_FurtherRows) != 0)
+        {
+            if (mgie.range == 0)
+            {
+                effectiveMaxRange = 1 * rangeMultiplier;
+            }
+            if (mgie.range == 1)
+            {
+                effectiveMaxRange = 1;
+            }
+        }
+        if (pte.type == Piece.PieceType.Gluttony)
+        {
+            effectiveMaxRange += Piece.GetPieceSpecialData(piece);
+        }
+        if (pte.type == Piece.PieceType.King && pa == Piece.PieceAlignment.Black && (b.globalData.enemyModifier & Board.EnemyModifier.Voracious) != 0)
+        {
+            effectiveMaxRange = 1 + (b.GetMissingPieces(false) >> 2);
+        }
+
+        bool wasGenerated = true;
+        bool keepGoing = true;
+
+        bool canMove = true;
+        int currentRange = lostRange;
+        while (true)
+        {
+            lastTempX = tempX;
+            lastTempY = tempY;
+            tempX += deltaX;
+            tempY += deltaY;
+            currentRange++;
+
+            switch (mgie.rangeType)
+            {
+                case RangeType.Exact:
+                    canMove = (currentRange == mgie.range);
+                    break;
+                case RangeType.Minimum:
+                    canMove = (currentRange >= mgie.range);
+                    break;
+                case RangeType.AntiRange:
+                    canMove = false;
+                    break;
+            }
+
+            //Going too far?
+            if (currentRange > effectiveMaxRange && mgie.rangeType != RangeType.Minimum)
+            {
+                break;
+            }
+
+            //Out of bounds?
+            if (tempX < 0 || tempX > 7)
+            {
+                if (!cylindrical && !reflecter)
+                {
+                    if (mgie.rangeType == RangeType.AntiRange && !(lastTempX == x && lastTempY == y))
+                    {
+                        (_, bool moveGenerated) = GenerateSquareSingle(moves, true, ref b, piece, x, y, lastTempX, lastTempY, dir, pa, specialType, pte, mgie, mbt);
+                    }
+
+                    keepGoing = false;
+                    break;
+                }
+
+                if (cylindrical) {
+                    if (tempX < 0)
+                    {
+                        tempX += 8;
+                    }
+                    else
+                    {
+                        tempX -= 8;
+                    }
+                }
+                if (reflecter)
+                {
+                    if (deltaY == 0)
+                    {
+                        keepGoing = false;
+                        break;
+                    }
+                    if (tempX < 0)
+                    {
+                        tempX = -tempX;
+                        deltaX = -deltaX;
+                    }
+                    else
+                    {
+                        tempX = 14 - tempX;
+                        deltaX = -deltaX;
+                    }
+                }
+            }
+            if (tempY < 0 || tempY > 7)
+            {
+                if (!tubular)
+                {
+                    if (mgie.rangeType == RangeType.AntiRange && !(lastTempX == x && lastTempY == y))
+                    {
+                        (_, bool moveGenerated) = GenerateSquareSingle(moves, true, ref b, piece, x, y, lastTempX, lastTempY, dir, pa, specialType, pte, mgie, mbt);
+                    }
+
+                    keepGoing = false;
+                    break;
+                }
+
+                if (tempY < 0)
+                {
+                    tempY += 8;
+                }
+                else
+                {
+                    tempY -= 8;
+                }
+                if (specialType != SpecialType.FlyingMoveOnly)
+                {
+                    specialType = Move.SpecialType.MoveOnly;
+                }
+            }
+
+            //Is an obstacle in the way?
+            uint obstaclePiece = b.GetPieceAtCoordinate(tempX, tempY);
+            (keepGoing, wasGenerated) = GenerateSquareSingle(moves, canMove, ref b, piece, x, y, tempX, tempY, dir, pa, specialType, pte, mgie, mbt);
+
+            if ((obstaclePiece == 0 || Piece.GetPieceAlignment(obstaclePiece) == pa) && specialType == SpecialType.LongLeaperCaptureOnly)
+            {
+                return false;
+            }
+
+            if (!keepGoing)
+            {
+                //For antirange: if nothing was generated you have to generate something on the last square
+                //That means you hit an ally piece
+                if (mgie.rangeType == RangeType.AntiRange && !wasGenerated)
+                {
+                    (keepGoing, wasGenerated) = GenerateSquareSingle(moves, true, ref b, piece, x, y, lastTempX, lastTempY, dir, pa, specialType, pte, mgie, mbt);
+                    if (wasGenerated)
+                    {
+                        generatedMoves++;
+                    }
+                }
+
+                //For flying: change type to flying
+                if ((Move.CanFlyOverObstacles(specialType) || Piece.GetPieceModifier(piece) == Piece.PieceModifier.Winged) && specialType != SpecialType.FlyingMoveOnly)
+                {
+                    if (!Move.CanFlyOverObstacles(specialType))
+                    {
+                        switch (specialType)
+                        {
+                            case SpecialType.AllyAbility:
+                            case SpecialType.EmptyAbility:
+                            case SpecialType.EnemyAbility:
+                            case SpecialType.PassiveAbility:
+                                break;
+                            default:
+                                specialType = SpecialType.FlyingMoveOnly;
+                                break;
+                        }
+                    }
+                }
+                else
+                {
+                    if (specialType == SpecialType.LongLeaperCaptureOnly && (Piece.GetPieceAlignment(obstaclePiece) == pa))
+                    {
+                        return false;
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        return keepGoing;
+        //return generatedMoves > 0;
+        //return moveStartIndex;
+    }
+
+    public static bool GenerateOffsetRayMoves(List<uint> moves, ref Board b, uint piece, int x, int y, int startX, int startY, int deltaX, int deltaY, Move.SpecialType specialType, PieceTableEntry pte, int maxRange, MoveBitTable mbt)
+    {
+        //null
+        //returns true because it didn't even check any obstacles
+        if (maxRange == 0)
+        {
+            return true;
+        }
+
+        //I can precompute these in the above loop but that adds more arguments
+        bool cylindrical = (pte.pieceProperty & Piece.PieceProperty.Cylindrical) != 0;
+        bool tubular = (pte.pieceProperty & Piece.PieceProperty.Sneaky) != 0;
+        bool reflecter = (pte.pieceProperty & Piece.PieceProperty.Reflecter) != 0;
+
+        if (specialType == SpecialType.Spawn)
+        {
+            tubular = false;
+        }
+
+        int rangeMultiplier = 1;
+        bool specialRange = (pte.pieceProperty & Piece.PieceProperty.RangeChange) != 0;
+
+        Move.Dir dir = Dir.Null;
+
+        Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
+
+        if (pa == Piece.PieceAlignment.Black && (b.globalData.enemyModifier & Board.EnemyModifier.Knave) != 0)
+        {
+            tubular = true;
+        }
+
+        dir = Move.DeltaToDir(deltaX, deltaY);
+
+        if (specialRange)
+        {
+            if ((pte.pieceProperty & Piece.PieceProperty.RangeIncrease_MissingPieces) != 0)
+            {
+                if (pa == Piece.PieceAlignment.Neutral || pa == Piece.PieceAlignment.Crystal)
+                {
+                    rangeMultiplier = 1;
+                }
+                else
+                {
+                    rangeMultiplier = 1 + b.GetMissingPieces(pa == Piece.PieceAlignment.Black);
+                }
+            }
+            if ((pte.pieceProperty & Piece.PieceProperty.RangeIncrease_FurtherRows) != 0)
+            {
+                switch (pa)
+                {
+                    case Piece.PieceAlignment.White:
+                        rangeMultiplier = y + 1;
+                        break;
+                    case Piece.PieceAlignment.Black:
+                        rangeMultiplier = (8 - y);
+                        break;
+                }
+            }
+            if ((pte.pieceProperty & Piece.PieceProperty.RangeDecrease_FurtherRows) != 0)
+            {
+                switch (pa)
+                {
+                    case Piece.PieceAlignment.White:
+                        rangeMultiplier = (8 - 2 * y);
+                        break;
+                    case Piece.PieceAlignment.Black:
+                        rangeMultiplier = 2 * y - 7;
+                        break;
+                }
+            }
+            if (rangeMultiplier < 1)
+            {
+                rangeMultiplier = 1;
+            }
+        }
+
+        int tempX = startX;
+        int tempY = startY;
+
+        int lastTempX = tempX;
+        int lastTempY = tempY;
+
+        bool canMove = true;
+        int currentRange = 0;
+
+        bool keepGoing = true;
+        bool wasGenerated = false;
+
+        while (true)
+        {
+            lastTempX = tempX;
+            lastTempY = tempY;
+            tempX += deltaX;
+            tempY += deltaY;
+            currentRange++;
+
+            //Going too far?
+            if (currentRange > maxRange)
+            {
+                break;
+            }
+
+            //Out of bounds?
+            if (tempX < 0 || tempX > 7)
+            {
+                if (!cylindrical && !reflecter)
+                {
+                    if (!(lastTempX == x && lastTempY == y))
+                    {
+                        (_, bool moveGenerated) = GenerateSquareSingle(moves, true, ref b, piece, x, y, lastTempX, lastTempY, dir, pa, specialType, pte, mbt);
+                    }
+
+                    keepGoing = false;
+                    break;
+                }
+
+                if (cylindrical)
+                {
+                    if (tempX < 0)
+                    {
+                        tempX += 8;
+                    }
+                    else
+                    {
+                        tempX -= 8;
+                    }
+                }
+                if (reflecter)
+                {
+                    if (deltaY == 0)
+                    {
+                        keepGoing = false;
+                        break;
+                    }
+                    if (tempX < 0)
+                    {
+                        tempX = -tempX;
+                        deltaX = -deltaX;
+                    }
+                    else
+                    {
+                        tempX = 14 - tempX;
+                        deltaX = -deltaX;
+                    }
+                }
+            }
+            if (tempY < 0 || tempY > 7)
+            {
+                if (!tubular)
+                {
+                    keepGoing = false;
+                    break;
+                }
+
+                if (tempY < 0)
+                {
+                    tempY += 8;
+                }
+                else
+                {
+                    tempY -= 8;
+                }
+                if (specialType != SpecialType.FlyingMoveOnly)
+                {
+                    specialType = Move.SpecialType.MoveOnly;
+                }
+            }
+
+            //Is an obstacle in the way?
+            uint obstaclePiece = b.GetPieceAtCoordinate(tempX, tempY);
+            (keepGoing, wasGenerated) = GenerateSquareSingle(moves, canMove, ref b, piece, x, y, tempX, tempY, dir, pa, specialType, pte, mbt);
+
+            if ((obstaclePiece == 0 || Piece.GetPieceAlignment(obstaclePiece) == pa) && specialType == SpecialType.LongLeaperCaptureOnly)
+            {
+                return false;
+            }
+
+            if (!keepGoing)
+            {
+                //For flying: change type to flying
+                if ((Move.CanFlyOverObstacles(specialType) || Piece.GetPieceModifier(piece) == Piece.PieceModifier.Winged) && specialType != SpecialType.FlyingMoveOnly)
+                {
+                    if (!Move.CanFlyOverObstacles(specialType))
+                    {
+                        specialType = SpecialType.FlyingMoveOnly;
+                    }
+                }
+                else
+                {
+                    if (specialType == SpecialType.LongLeaperCaptureOnly && (Piece.GetPieceAlignment(obstaclePiece) == pa))
+                    {
+                        return false;
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        return keepGoing;
+        //return generatedMoves > 0;
+        //return moveStartIndex;
+    }
+
+    public static bool GenerateOffsetMovesBetweenPoints(List<uint> moves, ref Board b, uint piece, int x, int y, int startX, int startY, int endX, int endY, Move.SpecialType specialType, PieceTableEntry pte, MoveBitTable mbt)
+    {
+        //try to go
+        int dist = 0;
+
+        int dx = endX - startX;
+        int dy = endY - startY;
+
+        dist = dx;
+        if (dx < 0)
+        {
+            dist = -dx;
+        }
+        if (dy > dist)
+        {
+            dist = dy;
+        } else if (-dy > dist)
+        {
+            dist = -dy;
+        }
+
+        bool invalidDirection = true;
+        if (startX == endX || startY == endY)
+        {
+            invalidDirection = false;
+        }
+        if ((endX - startX) == (endY - startY))
+        {
+            invalidDirection = false;
+        }
+        if ((endX - startX) == -(endY - startY))
+        {
+            invalidDirection = false;
+        }
+
+        if (invalidDirection)
+        {
+            return false;
+        }
+
+        if (dx > 0)
+        {
+            dx = 1;
+        } else if (dx < 0)
+        {
+            dx = -1;
+        }
+        if (dy > 0)
+        {
+            dy = 1;
+        }
+        else if (dy < 0)
+        {
+            dy = -1;
+        }
+
+        return GenerateOffsetRayMoves(moves, ref b, piece, x, y, startX, startY, dx, dy, specialType, pte, dist, mbt);
+    }
+
+    //keep going, wasGenerated
+    public static (bool, bool) TryGenerateSquareSingle(List<uint> moves, bool canMove, ref Board b, uint piece, int x, int y, int targetX, int targetY, Dir dir, Piece.PieceAlignment pa, Move.SpecialType specialType, PieceTableEntry pte, MoveGeneratorInfoEntry mgie, MoveBitTable mbt)
+    {
+        if (targetX > 7 || targetX < 0 || targetY > 7 || targetY < 0)
+        {
+            return (false, false);
+        }
+
+        //Forbid null moves
+        if (targetX == x && targetY == y)
+        {
+            return (false, false);
+        }
+
+        return GenerateSquareSingle(moves, canMove, ref b, piece, x, y, targetX, targetY, dir, pa, specialType, pte, mgie, mbt);
+    }
+
+    //false if obstacle
+    //this has a ridiculous amount of arguments :P
+    //returns (keep going, was a move generated)
+    public static (bool, bool) GenerateSquareSingle(List<uint> moves, bool canMove, ref Board b, uint piece, int x, int y, int tX, int tY, Dir dir, Piece.PieceAlignment pa, Move.SpecialType specialType, PieceTableEntry pte, MoveGeneratorInfoEntry mgie, MoveBitTable mbt)
+    {
+        bool wasGenerated = false;
+
+        Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(piece);
+
+        //Holes are illegal to cross (except for things that fly over obstacles)
+        if (b.GetSquareAtCoordinate(tX, tY).type == Square.SquareType.Hole)
+        {
+            return (false, false);
+        }
+
+        bool specialAllowed = true;
+        ulong allyBitboard = 0;
+        ulong enemyBitboard = 0;
+        ulong bitIndex = 1uL << tX + tY * 8;
+
+        //Unfortunately I have to check these per square
+        ulong bansheeBitboard = 0;
+        ulong attractorBitboard = 0;
+        ulong repulserBitboard = 0;
+        ulong slothBitboard = 0;
+
+        if (pa == Piece.PieceAlignment.White)
+        {
+            allyBitboard = b.globalData.bitboard_piecesWhiteAdjacent;
+            enemyBitboard = b.globalData.bitboard_piecesBlackAdjacent & ~b.globalData.bitboard_piecesBlack;
+            bansheeBitboard = b.globalData.bitboard_bansheeBlack;
+            attractorBitboard = b.globalData.bitboard_attractorBlack;
+            repulserBitboard = b.globalData.bitboard_repulserBlack;
+            slothBitboard = b.globalData.bitboard_slothBlack;
+        }
+        if (pa == Piece.PieceAlignment.Black)
+        {
+            allyBitboard = b.globalData.bitboard_piecesBlackAdjacent;
+            enemyBitboard = b.globalData.bitboard_piecesWhiteAdjacent & ~b.globalData.bitboard_piecesWhite;
+            bansheeBitboard = b.globalData.bitboard_bansheeWhite;
+            attractorBitboard = b.globalData.bitboard_attractorWhite;
+            repulserBitboard = b.globalData.bitboard_repulserWhite;
+            slothBitboard = b.globalData.bitboard_slothWhite;
+        }
+
+        if (pa == Piece.PieceAlignment.White)
+        {
+            if ((b.globalData.enemyModifier & Board.EnemyModifier.Blinking) != 0)
+            {
+                int fX = Move.GetFromX(b.whitePerPlayerInfo.lastMove);
+                int fY = Move.GetFromY(b.whitePerPlayerInfo.lastMove);
+
+                if (((fX + fY) & 1) == ((tX + tY) & 1))
+                {
+                    canMove = false;
+                }
+            }
+            if ((b.globalData.enemyModifier & Board.EnemyModifier.Terror) != 0)
+            {
+                bansheeBitboard |= MainManager.SmearBitboard(MainManager.SmearBitboard(b.globalData.bitboard_kingBlack));
+                //MainManager.PrintBitboard(b.globalData.bitboard_kingBlack);
+                //MainManager.PrintBitboard(MainManager.SmearBitboard(b.globalData.bitboard_kingBlack));
+                //MainManager.PrintBitboard(MainManager.SmearBitboard(MainManager.SmearBitboard(b.globalData.bitboard_kingBlack)));
+                //MainManager.PrintBitboard(bansheeBitboard);
+            }
+        }
+
+        /*
+        Debug.Log(pa);
+        MainManager.PrintBitboard(attractorBitboard);
+        MainManager.PrintBitboard(repulserBitboard);
+        MainManager.PrintBitboard(slothBitboard);
+        MainManager.PrintBitboard(bansheeBitboard);
+        MainManager.PrintBitboard(1uL << x + y * 8);
+        */
+
+        ulong bitindexT = 1uL << tX + (tY << 3);
+        ulong bitindex = 1uL << x + (y << 3);
+
+        bool bansheeTarget = false;
+        if ((bitindexT & bansheeBitboard) != 0 && (pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0)
+        {
+            bansheeTarget = true;
+        }
+        if ((bitindex & attractorBitboard) != 0 && (pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0)
+        {
+            if (pa == Piece.PieceAlignment.White && tY <= y)
+            {
+                return (false, false);
+            }
+            if (pa == Piece.PieceAlignment.Black && tY >= y)
+            {
+                return (false, false);
+            }
+        }
+        if ((bitindex & repulserBitboard) != 0 && (pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0)
+        {
+            if (pa == Piece.PieceAlignment.White && tY >= y)
+            {
+                return (false, false);
+            }
+            if (pa == Piece.PieceAlignment.Black && tY <= y)
+            {
+                return (false, false);
+            }
+        }
+        if ((bitindex & slothBitboard) != 0 && (pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0)
+        {
+            if (pa == Piece.PieceAlignment.White && ((tY > y + 1) || (tY < y - 1) || (tX > x + 1) || (tX < x - 1)))
+            {
+                return (false, false);
+            }
+            if (pa == Piece.PieceAlignment.Black && ((tY > y + 1) || (tY < y - 1) || (tX > x + 1) || (tX < x - 1)))
+            {
+                return (false, false);
+            }
+        }
+
+        switch (pte.type)
+        {
+            case Piece.PieceType.EliteMilitia:
+            case Piece.PieceType.Militia:
+                if (pa == Piece.PieceAlignment.White && (bitindexT & MoveGeneratorInfoEntry.BITBOARD_PATTERN_HALFBOARD) == 0)
+                {
+                    canMove = false;
+                }
+                if (pa == Piece.PieceAlignment.Black && (bitindexT & MoveGeneratorInfoEntry.BITBOARD_PATTERN_HALFBOARD) != 0)
+                {
+                    canMove = false;
+                }
+                break;
+            case Piece.PieceType.EdgeRook:
+                if ((bitindexT & MoveGeneratorInfoEntry.BITBOARD_PATTERN_NOCENTER) == 0)
+                {
+                    canMove = false;
+                }
+                break;
+            case Piece.PieceType.CornerlessBishop:
+                if ((bitindexT & MoveGeneratorInfoEntry.BITBOARD_PATTERN_NOCORNERS) == 0)
+                {
+                    canMove = false;
+                }
+                break;
+            case Piece.PieceType.CenterQueen:
+                if ((bitindexT & MoveGeneratorInfoEntry.BITBOARD_PATTERN_MIDDLEFILES) == 0)
+                {
+                    canMove = false;
+                }
+                break;
+        }
+
+        switch (specialType)
+        {
+            case SpecialType.SlipMove:
+                specialAllowed = (bitIndex & enemyBitboard) != 0;
+                break;
+            case SpecialType.PlantMove:
+                specialAllowed = (bitIndex & allyBitboard) != 0;
+                break;
+        }
+
+        canMove &= specialAllowed;
+
+        uint obstaclePiece = b.GetPieceAtCoordinate(tX, tY);
+        if (obstaclePiece != 0)
+        {
+            if (Piece.GetPieceAlignment(obstaclePiece) == pa)
+            {
+                //Ally piece
+                if ((canMove || mgie.rangeType == RangeType.AntiRange) && Move.SpecialMoveCanMoveOntoAlly(specialType, ref b, tX, tY, dir) && pse != Piece.PieceStatusEffect.Bloodlust && !bansheeTarget)
+                {
+                    if (moves != null && specialType != SpecialType.PassiveAbility && (mbt == null || !mbt.Get(x, y, tX, tY)))
+                    {
+                        moves.Add(Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType));
+                    }
+                }
+
+                //no matter what it gets set anyway
+                if (mbt != null && Move.SpecialMoveCaptureLike(specialType) && (mbt.btType & MoveBitTable.BitTableType.AttackDefense) != 0 && pse != Piece.PieceStatusEffect.Voided)
+                {
+                    mbt.Set(x, y, tX, tY);
+                }
+
+                //Ally spectral pieces can be ignored :)
+                if (Piece.GetPieceModifier(obstaclePiece) == Piece.PieceModifier.Spectral)
+                {
+                    return (true, wasGenerated);
+                } else
+                {
+                    return (false, wasGenerated);
+                }
+            }
+            else
+            {
+                //Enemy piece: Can capture
+                if ((canMove || mgie.rangeType == RangeType.AntiRange) && Move.SpecialMoveCanMoveOntoEnemy(specialType, ref b, tX, tY, dir) && !Piece.IsPieceInvincible(b, obstaclePiece, tX, tY, piece, x, y, specialType) && pse != Piece.PieceStatusEffect.Voided)
+                {
+                    if (moves != null && specialType != SpecialType.PassiveAbility && (mbt == null || !mbt.Get(x, y, tX, tY)))
+                    {
+                        moves.Add(Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType));
+                    }
+                }
+
+                //no matter what it gets set anyway
+                if (mbt != null && Move.SpecialMoveCaptureLike(specialType) && (mbt.btType & MoveBitTable.BitTableType.AttackDefense) != 0 && pse != Piece.PieceStatusEffect.Voided)
+                {
+                    mbt.Set(x, y, tX, tY);
+                }
+
+                if (Piece.GetPieceStatusEffect(obstaclePiece) == Piece.PieceStatusEffect.Ghostly)
+                {
+                    return (true, wasGenerated);
+                } else
+                {
+                    return (false, wasGenerated);
+                }
+            }
+        }
+
+        //No obstacle: add the move
+        if (canMove)
+        {
+            if (!Move.SpecialMoveCantTargetEmpty(specialType) && pse != Piece.PieceStatusEffect.Bloodlust && !bansheeTarget)
+            {
+                if (moves != null && specialType != SpecialType.PassiveAbility && (mbt == null || !mbt.Get(x, y, tX, tY)))
+                {
+                    moves.Add(Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType));
+                }
+
+                if (mbt != null && (mbt.btType & MoveBitTable.BitTableType.MoveOnly) != 0)
+                {
+                    mbt.Set(x, y, tX, tY);
+                }
+            }
+        }
+
+        //Anti range still causes the attack range to be set
+        //Because any enemy piece trying to cross that line will get attacked
+        //Note that minimum range and 
+        if (mgie.rangeType == RangeType.AntiRange || canMove)
+        {
+            if (mbt != null && Move.SpecialMoveCaptureLike(specialType) && (mbt.btType & MoveBitTable.BitTableType.AttackDefense) != 0 && pse != Piece.PieceStatusEffect.Voided)
+            {
+                mbt.Set(x, y, tX, tY);
+            }
+        }
+
+        //Rough terrain: don't keep going
+        ulong roughTest = 0;
+        if (pa == Piece.PieceAlignment.White)
+        {
+            roughTest = b.globalData.bitboard_roughBlack;
+        }
+        if (pa == Piece.PieceAlignment.Black)
+        {
+            roughTest = b.globalData.bitboard_roughWhite;
+        }
+
+        if ((pte.pieceProperty & Piece.PieceProperty.NoTerrain) == 0 && (b.GetSquareAtCoordinate(tX, tY).type == Square.SquareType.Rough || ((1uL << tX + tY * 8) & roughTest) != 0))
+        {
+            return (false, wasGenerated);
+        }
+
+        return (true, wasGenerated);
+    }
+
+    public static (bool, bool) GenerateSquareSingle(List<uint> moves, bool canMove, ref Board b, uint piece, int x, int y, int tX, int tY, Dir dir, Piece.PieceAlignment pa, Move.SpecialType specialType, PieceTableEntry pte, MoveBitTable mbt)
+    {
+        bool wasGenerated = false;
+        Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(piece);
+
+        //Holes are illegal to cross (except for things that fly over obstacles)
+        if (b.GetSquareAtCoordinate(tX, tY).type == Square.SquareType.Hole)
+        {
+            return (false, false);
+        }
+
+        bool specialAllowed = true;
+        ulong allyBitboard = 0;
+        ulong enemyBitboard = 0;
+        ulong bitIndex = 1uL << tX + tY * 8;
+
+        //Unfortunately I have to check these per square
+        ulong bansheeBitboard = 0;
+        ulong attractorBitboard = 0;
+        ulong repulserBitboard = 0;
+        ulong slothBitboard = 0;
+
+        if (pa == Piece.PieceAlignment.White)
+        {
+            allyBitboard = b.globalData.bitboard_piecesWhiteAdjacent;
+            enemyBitboard = b.globalData.bitboard_piecesBlackAdjacent & ~b.globalData.bitboard_piecesBlack;
+            bansheeBitboard = b.globalData.bitboard_bansheeBlack;
+            attractorBitboard = b.globalData.bitboard_attractorBlack;
+            repulserBitboard = b.globalData.bitboard_repulserBlack;
+            slothBitboard = b.globalData.bitboard_slothBlack;
+        }
+        if (pa == Piece.PieceAlignment.Black)
+        {
+            allyBitboard = b.globalData.bitboard_piecesBlackAdjacent;
+            enemyBitboard = b.globalData.bitboard_piecesWhiteAdjacent & ~b.globalData.bitboard_piecesWhite;
+            bansheeBitboard = b.globalData.bitboard_bansheeWhite;
+            attractorBitboard = b.globalData.bitboard_attractorWhite;
+            repulserBitboard = b.globalData.bitboard_repulserWhite;
+            slothBitboard = b.globalData.bitboard_slothWhite;
+        }
+
+        if (pa == Piece.PieceAlignment.White)
+        {
+            if ((b.globalData.enemyModifier & Board.EnemyModifier.Blinking) != 0)
+            {
+                int fX = Move.GetFromX(b.whitePerPlayerInfo.lastMove);
+                int fY = Move.GetFromY(b.whitePerPlayerInfo.lastMove);
+                if (((fX + fY) & 1) == ((tX + tY) & 1))
+                {
+                    canMove = false;
+                }
+            }
+            if ((b.globalData.enemyModifier & Board.EnemyModifier.Terror) != 0)
+            {
+                bansheeBitboard |= MainManager.SmearBitboard(MainManager.SmearBitboard(b.globalData.bitboard_kingBlack));
+            }
+        }
+
+        /*
+        Debug.Log(pa);
+        MainManager.PrintBitboard(attractorBitboard);
+        MainManager.PrintBitboard(repulserBitboard);
+        MainManager.PrintBitboard(slothBitboard);
+        MainManager.PrintBitboard(bansheeBitboard);
+        MainManager.PrintBitboard(1uL << x + y * 8);
+        */
+
+        bool bansheeTarget = false;
+        if (((1uL << tX + tY * 8) & bansheeBitboard) != 0 && (pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0)
+        {
+            bansheeTarget = true;
+        }
+        if (((1uL << x + y * 8) & attractorBitboard) != 0 && (pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0)
+        {
+            if (pa == Piece.PieceAlignment.White && tY <= y)
+            {
+                return (false, false);
+            }
+            if (pa == Piece.PieceAlignment.Black && tY >= y)
+            {
+                return (false, false);
+            }
+        }
+        if (((1uL << x + y * 8) & repulserBitboard) != 0 && (pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0)
+        {
+            if (pa == Piece.PieceAlignment.White && tY >= y)
+            {
+                return (false, false);
+            }
+            if (pa == Piece.PieceAlignment.Black && tY <= y)
+            {
+                return (false, false);
+            }
+        }
+        if (((1uL << x + y * 8) & slothBitboard) != 0 && (pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0)
+        {
+            if (pa == Piece.PieceAlignment.White && ((tY > y + 1) || (tY < y - 1) || (tX > x + 1) || (tX < x - 1)))
+            {
+                return (false, false);
+            }
+            if (pa == Piece.PieceAlignment.Black && ((tY > y + 1) || (tY < y - 1) || (tX > x + 1) || (tX < x - 1)))
+            {
+                return (false, false);
+            }
+        }
+
+        switch (specialType)
+        {
+            case SpecialType.SlipMove:
+                specialAllowed = (bitIndex & enemyBitboard) != 0;
+                break;
+            case SpecialType.PlantMove:
+                specialAllowed = (bitIndex & allyBitboard) != 0;
+                break;
+        }
+        canMove &= specialAllowed;
+
+        uint obstaclePiece = b.GetPieceAtCoordinate(tX, tY);
+        if (obstaclePiece != 0)
+        {
+            if (Piece.GetPieceAlignment(obstaclePiece) == pa)
+            {
+                //Ally piece
+                if ((canMove) && Move.SpecialMoveCanMoveOntoAlly(specialType, ref b, tX, tY, dir) && pse != Piece.PieceStatusEffect.Bloodlust && !bansheeTarget)
+                {
+                    if (moves != null && (mbt == null || !mbt.Get(x, y, tX, tY)))
+                    {
+                        moves.Add(Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType));
+                    }
+                    /*
+                    moves[moveStartIndex] = Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType);
+                    moveStartIndex++;
+                    wasGenerated = true;
+                    */
+                }
+
+                //no matter what it gets set anyway
+                if (mbt != null && Move.SpecialMoveCaptureLike(specialType) && (mbt.btType & MoveBitTable.BitTableType.AttackDefense) != 0 && pse != Piece.PieceStatusEffect.Voided)
+                {
+                    mbt.Set(x, y, tX, tY);
+                }
+
+                //Ally spectral pieces can be ignored :)
+                if (Piece.GetPieceModifier(obstaclePiece) == Piece.PieceModifier.Spectral)
+                {
+                    return (true, wasGenerated);
+                }
+                else
+                {
+                    return (false, wasGenerated);
+                }
+            }
+            else
+            {
+                //Enemy piece: Can capture
+                if ((canMove) && Move.SpecialMoveCanMoveOntoEnemy(specialType, ref b, tX, tY, dir) && !Piece.IsPieceInvincible(b, obstaclePiece, tX, tY, piece, x, y, specialType) && pse != Piece.PieceStatusEffect.Voided)
+                {
+                    if (moves != null && (mbt == null || !mbt.Get(x, y, tX, tY)))
+                    {
+                        moves.Add(Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType));
+                    }
+                    /*
+                    moves[moveStartIndex] = Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType);
+                    moveStartIndex++;
+                    wasGenerated = true;
+                    */
+                }
+
+                //no matter what it gets set anyway
+                if (mbt != null && Move.SpecialMoveCaptureLike(specialType) && (mbt.btType & MoveBitTable.BitTableType.AttackDefense) != 0 && pse != Piece.PieceStatusEffect.Voided)
+                {
+                    mbt.Set(x, y, tX, tY);
+                }
+
+                if (Piece.GetPieceStatusEffect(obstaclePiece) == Piece.PieceStatusEffect.Ghostly)
+                {
+                    return (true, wasGenerated);
+                }
+                else
+                {
+                    return (false, wasGenerated);
+                }
+            }
+        }
+
+        //No obstacle: add the move
+        if (canMove)
+        {
+            if (!Move.SpecialMoveCantTargetEmpty(specialType) && pse != Piece.PieceStatusEffect.Bloodlust && !bansheeTarget)
+            {
+                if (moves != null && specialType != SpecialType.PassiveAbility && (mbt == null || !mbt.Get(x, y, tX, tY)))
+                {
+                    moves.Add(Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType));
+                }
+                /*
+                moves[moveStartIndex] = Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType);
+                moveStartIndex++;
+                wasGenerated = true;
+                */
+
+                if (mbt != null && (mbt.btType & MoveBitTable.BitTableType.MoveOnly) != 0)
+                {
+                    mbt.Set(x, y, tX, tY);
+                }
+            }
+        }
+
+        //Anti range still causes the attack range to be set
+        //Because any enemy piece trying to cross that line will get attacked
+        //Note that minimum range and 
+        if (canMove)
+        {
+            if (mbt != null && Move.SpecialMoveCaptureLike(specialType) && (mbt.btType & MoveBitTable.BitTableType.AttackDefense) != 0 && pse != Piece.PieceStatusEffect.Voided)
+            {
+                mbt.Set(x, y, tX, tY);
+            }
+        }
+
+        //Rough terrain: don't keep going
+        ulong roughTest = 0;
+        if (pa == Piece.PieceAlignment.White)
+        {
+            roughTest = b.globalData.bitboard_roughBlack;
+        }
+        if (pa == Piece.PieceAlignment.Black)
+        {
+            roughTest = b.globalData.bitboard_roughWhite;
+        }
+
+        if ((pte.pieceProperty & Piece.PieceProperty.NoTerrain) == 0 && (b.GetSquareAtCoordinate(tX, tY).type == Square.SquareType.Rough || ((1uL << tX + tY * 8) & roughTest) != 0))
+        {
+            return (false, wasGenerated);
+        }
+
+        return (true, wasGenerated);
+    }
+
+    //keep going, can generate
+    public static (bool, bool) GiantCheckGenerateSquareSingle(ref Board b, uint piece, int x, int y, int tX, int tY, Dir dir, Piece.PieceAlignment pa, Move.SpecialType specialType, PieceTableEntry pte, MoveBitTable mbt)
+    {
+        if (tX > 7 || tX < 0 || tY > 7 || tY < 0)
+        {
+            return (false, false);
+        }
+
+        //Forbid null moves
+        if (tX == x && tY == y)
+        {
+            return (false, false);
+        }
+
+        bool canMove = true;
+        bool canGenerate = false;
+        Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(piece);
+
+        //Holes are illegal to cross (except for things that fly over obstacles)
+        if (b.GetSquareAtCoordinate(tX, tY).type == Square.SquareType.Hole)
+        {
+            return (false, false);
+        }
+
+        bool specialAllowed = true;
+        ulong allyBitboard = 0;
+        ulong enemyBitboard = 0;
+
+        ulong bitIndex = 1uL << x + y * 8;
+        bitIndex |= 1uL << (x + 1) + y * 8;
+        bitIndex |= 1uL << x + (y + 1) * 8;
+        bitIndex |= 1uL << (x + 1) + (y + 1) * 8;
+        ulong bitIndexT = 1uL << tX + tY * 8;
+        bitIndexT |= 1uL << (tX + 1) + tY * 8;
+        bitIndexT |= 1uL << (tX) + (tY + 1) * 8;
+        bitIndexT |= 1uL << (tX + 1) + (tY + 1) * 8;
+
+        //Unfortunately I have to check these per square
+        ulong bansheeBitboard = 0;
+        ulong attractorBitboard = 0;
+        ulong repulserBitboard = 0;
+        ulong slothBitboard = 0;
+
+        if (pa == Piece.PieceAlignment.White)
+        {
+            allyBitboard = b.globalData.bitboard_piecesWhiteAdjacent;
+            enemyBitboard = b.globalData.bitboard_piecesBlackAdjacent & ~b.globalData.bitboard_piecesBlack;
+            bansheeBitboard = b.globalData.bitboard_bansheeBlack;
+            attractorBitboard = b.globalData.bitboard_attractorBlack;
+            repulserBitboard = b.globalData.bitboard_repulserBlack;
+            slothBitboard = b.globalData.bitboard_slothBlack;
+        }
+        if (pa == Piece.PieceAlignment.Black)
+        {
+            allyBitboard = b.globalData.bitboard_piecesBlackAdjacent;
+            enemyBitboard = b.globalData.bitboard_piecesWhiteAdjacent & ~b.globalData.bitboard_piecesWhite;
+            bansheeBitboard = b.globalData.bitboard_bansheeWhite;
+            attractorBitboard = b.globalData.bitboard_attractorWhite;
+            repulserBitboard = b.globalData.bitboard_repulserWhite;
+            slothBitboard = b.globalData.bitboard_slothWhite;
+        }
+
+        /*
+        Debug.Log(pa);
+        MainManager.PrintBitboard(attractorBitboard);
+        MainManager.PrintBitboard(repulserBitboard);
+        MainManager.PrintBitboard(slothBitboard);
+        MainManager.PrintBitboard(bansheeBitboard);
+        MainManager.PrintBitboard(1uL << x + y * 8);
+        */
+
+        bool bansheeTarget = false;
+        if (((bitIndexT) & bansheeBitboard) != 0 && (pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0)
+        {
+            bansheeTarget = true;
+        }
+        if (((bitIndex) & attractorBitboard) != 0 && (pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0)
+        {
+            if (pa == Piece.PieceAlignment.White && tY <= y)
+            {
+                return (false, false);
+            }
+            if (pa == Piece.PieceAlignment.Black && tY >= y)
+            {
+                return (false, false);
+            }
+        }
+        if (((bitIndex) & repulserBitboard) != 0 && (pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0)
+        {
+            if (pa == Piece.PieceAlignment.White && tY >= y)
+            {
+                return (false, false);
+            }
+            if (pa == Piece.PieceAlignment.Black && tY <= y)
+            {
+                return (false, false);
+            }
+        }
+        if (((bitIndex) & slothBitboard) != 0 && (pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0)
+        {
+            if (pa == Piece.PieceAlignment.White && ((tY > y + 1) || (tY < y - 1) || (tX > x + 1) || (tX < x - 1)))
+            {
+                return (false, false);
+            }
+            if (pa == Piece.PieceAlignment.Black && ((tY > y + 1) || (tY < y - 1) || (tX > x + 1) || (tX < x - 1)))
+            {
+                return (false, false);
+            }
+        }
+
+        switch (specialType)
+        {
+            case SpecialType.SlipMove:
+                specialAllowed = (bitIndex & enemyBitboard) != 0;
+                break;
+            case SpecialType.PlantMove:
+                specialAllowed = (bitIndex & allyBitboard) != 0;
+                break;
+        }
+        canMove &= specialAllowed;
+
+        uint obstaclePiece = b.GetPieceAtCoordinate(tX, tY);
+        if (obstaclePiece != 0)
+        {
+            if (Piece.GetPieceAlignment(obstaclePiece) == pa)
+            {
+                //Ally piece
+                if ((canMove) && Move.SpecialMoveCanMoveOntoAlly(specialType, ref b, tX, tY, dir) && pse != Piece.PieceStatusEffect.Bloodlust && !bansheeTarget)
+                {
+                    canGenerate = true;
+                }
+
+                //no matter what it gets set anyway
+                if (mbt != null && Move.SpecialMoveCaptureLike(specialType) && (mbt.btType & MoveBitTable.BitTableType.AttackDefense) != 0 && pse != Piece.PieceStatusEffect.Voided)
+                {
+                    mbt.Set(x, y, tX, tY);
+                }
+
+                //Ally spectral pieces can be ignored :)
+                if (Piece.GetPieceModifier(obstaclePiece) == Piece.PieceModifier.Spectral)
+                {
+                    return (true, canGenerate);
+                }
+                else
+                {
+                    return (false, canGenerate);
+                }
+            }
+            else
+            {
+                //Enemy piece: Can capture
+                if ((canMove) && Move.SpecialMoveCanMoveOntoEnemy(specialType, ref b, tX, tY, dir) && !Piece.IsPieceInvincible(b, obstaclePiece, tX, tY, piece, x, y, specialType) && pse != Piece.PieceStatusEffect.Voided)
+                {
+                    canGenerate = true;
+                }
+
+                //no matter what it gets set anyway
+                if (mbt != null && Move.SpecialMoveCaptureLike(specialType) && (mbt.btType & MoveBitTable.BitTableType.AttackDefense) != 0 && pse != Piece.PieceStatusEffect.Voided)
+                {
+                    mbt.Set(x, y, tX, tY);
+                }
+
+                if (Piece.GetPieceStatusEffect(obstaclePiece) == Piece.PieceStatusEffect.Ghostly)
+                {
+                    return (true, canGenerate);
+                }
+                else
+                {
+                    return (false, canGenerate);
+                }
+            }
+        }
+
+        //No obstacle: add the move
+        if (canMove)
+        {
+            if (!Move.SpecialMoveCantTargetEmpty(specialType) && pse != Piece.PieceStatusEffect.Bloodlust && !bansheeTarget)
+            {
+                canGenerate = true;
+
+                if (mbt != null && (mbt.btType & MoveBitTable.BitTableType.MoveOnly) != 0)
+                {
+                    mbt.Set(x, y, tX, tY);
+                }
+            }
+        }
+
+        //Anti range still causes the attack range to be set
+        //Because any enemy piece trying to cross that line will get attacked
+        //Note that minimum range and 
+        if (canMove)
+        {
+            if (mbt != null && Move.SpecialMoveCaptureLike(specialType) && (mbt.btType & MoveBitTable.BitTableType.AttackDefense) != 0 && pse != Piece.PieceStatusEffect.Voided)
+            {
+                mbt.Set(x, y, tX, tY);
+            }
+        }
+
+        //Rough terrain: don't keep going
+        ulong roughTest = 0;
+        if (pa == Piece.PieceAlignment.White)
+        {
+            roughTest = b.globalData.bitboard_roughBlack;
+        }
+        if (pa == Piece.PieceAlignment.Black)
+        {
+            roughTest = b.globalData.bitboard_roughWhite;
+        }
+
+        if ((pte.pieceProperty & Piece.PieceProperty.NoTerrain) == 0 && (b.GetSquareAtCoordinate(tX, tY).type == Square.SquareType.Rough || ((1uL << tX + tY * 8) & roughTest) != 0))
+        {
+            return (false, canGenerate);
+        }
+
+        return (true, canGenerate);
+    }
+
+
+
+    public static void GenerateRayMovesDual(List<uint> moves, ref Board b, uint piece, int x, int y, int deltaXA, int deltaYA, int deltaXB, int deltaYB, Move.SpecialType specialType, PieceTableEntry pte, MoveGeneratorInfoEntry mgie, MoveBitTable mbt)
+    {
+        //I can precompute these in the above loop but that adds more arguments
+        bool cylindrical = (pte.pieceProperty & Piece.PieceProperty.Cylindrical) != 0;
+        bool tubular = (pte.pieceProperty & Piece.PieceProperty.Sneaky) != 0;
+        bool reflecter = (pte.pieceProperty & Piece.PieceProperty.Reflecter) != 0;
+
+        int rangeMultiplier = 1;
+        bool specialRange = (pte.pieceProperty & Piece.PieceProperty.RangeChange) != 0;
+
+        Move.Dir dirA = Dir.Null;
+        Move.Dir dirB = Dir.Null;
+        Move.Dir dirC = Dir.Null;
+
+        Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
+
+        if (pa == Piece.PieceAlignment.Black && (b.globalData.enemyModifier & Board.EnemyModifier.Knave) != 0)
+        {
+            tubular = true;
+        }
+
+        dirA = Move.DeltaToDir(deltaXA, deltaYA);
+        dirB = Move.DeltaToDir(deltaXB, deltaYB);
+        dirC = Move.DeltaToDir(deltaXA + deltaXB, deltaYA + deltaYB);
+        if (dirC == Dir.Null)
+        {
+            dirC = dirA;
+        }
+
+        bool blockedA = false;
+        bool blockedB = false;
+
+        if (specialRange)
+        {
+            if ((pte.pieceProperty & Piece.PieceProperty.RangeIncrease_MissingPieces) != 0)
+            {
+                if (pa == Piece.PieceAlignment.Neutral || pa == Piece.PieceAlignment.Crystal)
+                {
+                    rangeMultiplier = 1;
+                }
+                else
+                {
+                    rangeMultiplier = 1 + b.GetMissingPieces(pa == Piece.PieceAlignment.Black);
+                }
+            }
+            if ((pte.pieceProperty & Piece.PieceProperty.RangeIncrease_FurtherRows) != 0)
+            {
+                switch (pa)
+                {
+                    case Piece.PieceAlignment.White:
+                        rangeMultiplier = y + 1;
+                        break;
+                    case Piece.PieceAlignment.Black:
+                        rangeMultiplier = (8 - y);
+                        break;
+                }
+            }
+            if ((pte.pieceProperty & Piece.PieceProperty.RangeDecrease_FurtherRows) != 0)
+            {
+                switch (pa)
+                {
+                    case Piece.PieceAlignment.White:
+                        rangeMultiplier = (8 - 2 * y);
+                        break;
+                    case Piece.PieceAlignment.Black:
+                        rangeMultiplier = 2 * y - 7;
+                        break;
+                }
+            }
+            if (rangeMultiplier < 1)
+            {
+                rangeMultiplier = 1;
+            }
+        }
+
+        int tempX = x;
+        int tempY = y;
+
+        int tempXA = x;
+        int tempYA = y;
+        int tempXB = x;
+        int tempYB = y;
+
+        int effectiveMaxRange = mgie.range * rangeMultiplier;
+        if (effectiveMaxRange == 0)
+        {
+            effectiveMaxRange = 20; //Note: 8 is not enough because crooked rook can take 16 steps from one corner to the other corner
+        }
+
+        bool canMove = true;
+        int currentRange = 0;
+        while (true)
+        {
+            //iteration part 1: the A side and B side
+            if (!blockedA)
+            {
+                tempXA = tempX + deltaXA;
+                tempYA = tempY + deltaYA;
+            }
+            if (!blockedB)
+            {
+                tempXB = tempX + deltaXB;
+                tempYB = tempY + deltaYB;
+            }
+            currentRange++;
+
+            switch (mgie.rangeType)
+            {
+                case RangeType.Exact:
+                    canMove = (currentRange == mgie.range);
+                    break;
+                case RangeType.Minimum:
+                    canMove = (currentRange >= mgie.range);
+                    break;
+                case RangeType.AntiRange:
+                    canMove = false;
+                    break;
+            }
+
+            //Going too far?
+            if (currentRange > effectiveMaxRange && mgie.rangeType != RangeType.Minimum)
+            {
+                break;
+            }
+
+            //Out of bounds?
+            if (!blockedA)
+            {
+                if (tempXA < 0 || tempXA > 7)
+                {
+                    if (!cylindrical && !reflecter)
+                    {
+                        if (mgie.rangeType == RangeType.AntiRange && !(tempX == x && tempY == y))
+                        {
+                            (_, bool moveGenerated) = GenerateSquareSingle(moves, true, ref b, piece, x, y, tempX, tempY, dirC, pa, specialType, pte, mgie, mbt);
+                        }
+
+                        blockedA = true;
+                    }
+
+                    if (cylindrical)
+                    {
+                        if (tempXA < 0)
+                        {
+                            tempXA += 8;
+                        }
+                        else
+                        {
+                            tempXA -= 8;
+                        }
+                    }
+                    if (reflecter)
+                    {
+                        if (tempXA < 0)
+                        {
+                            tempXA = -tempXA;
+                            deltaXA = -deltaXA;
+                        }
+                        else
+                        {
+                            tempXA = 14 - tempXA;
+                            deltaXA = -deltaXA;
+                        }
+                    }
+                }
+                if (tempYA < 0 || tempYA > 7)
+                {
+                    if (!tubular)
+                    {
+                        if (mgie.rangeType == RangeType.AntiRange && !(tempX == x && tempY == y))
+                        {
+                            (_, bool moveGenerated) = GenerateSquareSingle(moves, true, ref b, piece, x, y, tempX, tempY, dirC, pa, specialType, pte, mgie, mbt);
+                        }
+
+                        blockedA = true;
+                    }
+
+                    if (tempYA < 0)
+                    {
+                        tempYA += 8;
+                    }
+                    else
+                    {
+                        tempYA -= 8;
+                    }
+                    if (specialType != SpecialType.FlyingMoveOnly)
+                    {
+                        specialType = Move.SpecialType.MoveOnly;
+                    }
+                }
+            }
+            if (!blockedB)
+            {
+                if (tempXB < 0 || tempXB > 7)
+                {
+                    if (!cylindrical && !reflecter)
+                    {
+                        if (mgie.rangeType == RangeType.AntiRange && !(tempX == x && tempY == y))
+                        {
+                            (_, bool moveGenerated) = GenerateSquareSingle(moves, true, ref b, piece, x, y, tempX, tempY, dirC, pa, specialType, pte, mgie, mbt);
+                        }
+
+                        blockedB = true;
+                    }
+
+                    if (cylindrical)
+                    {
+                        if (tempXB < 0)
+                        {
+                            tempXB += 8;
+                        }
+                        else
+                        {
+                            tempXB -= 8;
+                        }
+                    }
+                    if (reflecter)
+                    {
+                        if (tempXB < 0)
+                        {
+                            tempXB = -tempXB;
+                            deltaXB = -deltaXB;
+                        }
+                        else
+                        {
+                            tempXB = 14 - tempXB;
+                            deltaXB = -deltaXB;
+                        }
+                    }
+                }
+                if (tempYB < 0 || tempYB > 7)
+                {
+                    if (!tubular)
+                    {
+                        if (mgie.rangeType == RangeType.AntiRange && !(tempX == x && tempY == y))
+                        {
+                            (_, bool moveGenerated) = GenerateSquareSingle(moves, true, ref b, piece, x, y, tempX, tempY, dirC, pa, specialType, pte, mgie, mbt);
+                        }
+
+                        blockedB = true;
+                    }
+
+                    if (tempYB < 0)
+                    {
+                        tempYB += 8;
+                    }
+                    else
+                    {
+                        tempYB -= 8;
+                    }
+                    if (specialType != SpecialType.FlyingMoveOnly)
+                    {
+                        specialType = Move.SpecialType.MoveOnly;
+                    }
+                }
+            }
+
+            if (!blockedA)
+            {
+                //Is an obstacle in the way?
+                (bool keepGoingA, bool wasGeneratedA) = GenerateSquareSingle(moves, canMove, ref b, piece, x, y, tempXA, tempYA, dirA, pa, specialType, pte, mgie, mbt);
+
+                if (!keepGoingA)
+                {
+                    //For antirange: if nothing was generated you have to generate something on the last square
+                    //That means you hit an ally piece
+                    if (mgie.rangeType == RangeType.AntiRange && !wasGeneratedA)
+                    {
+                        (keepGoingA, wasGeneratedA) = GenerateSquareSingle(moves, true, ref b, piece, x, y, tempX, tempY, dirC, pa, specialType, pte, mgie, mbt);
+                    }
+
+                    //For flying: change type to flying
+                    //No flying check because it would be a real headache to generate those moves correctly with my current setup
+                    blockedA = true;
+                }
+            }
+            if (!blockedB)
+            {
+                //Is an obstacle in the way?
+                (bool keepGoingB, bool wasGeneratedB) = GenerateSquareSingle(moves, canMove, ref b, piece, x, y, tempXB, tempYB, dirB, pa, specialType, pte, mgie, mbt);
+
+                if (!keepGoingB)
+                {
+                    //For antirange: if nothing was generated you have to generate something on the last square
+                    //That means you hit an ally piece
+                    if (mgie.rangeType == RangeType.AntiRange && !wasGeneratedB)
+                    {
+                        (keepGoingB, wasGeneratedB) = GenerateSquareSingle(moves, true, ref b, piece, x, y, tempX, tempY, dirC, pa, specialType, pte, mgie, mbt);
+                    }
+
+                    //For flying: change type to flying
+                    //No flying check because it would be a real headache to generate those moves correctly with my current setup
+                    blockedB = true;
+                }
+            }
+
+            //Both sides are blocked so you can't go forward
+            if (blockedA && blockedB)
+            {
+                return;
+                //return moveStartIndex;
+            }
+
+            tempX += deltaXA;
+            tempY += deltaYA;
+            tempX += deltaXB;
+            tempY += deltaYB;
+
+            //iteration part 2: the C side
+            currentRange++;
+
+            switch (mgie.rangeType)
+            {
+                case RangeType.Exact:
+                    canMove = (currentRange == mgie.range);
+                    break;
+                case RangeType.Minimum:
+                    canMove = (currentRange >= mgie.range);
+                    break;
+                case RangeType.AntiRange:
+                    canMove = false;
+                    break;
+            }
+
+            //Going too far?
+            if (currentRange > effectiveMaxRange && mgie.rangeType != RangeType.Minimum)
+            {
+                break;
+            }
+
+            if (tempX < 0 || tempX > 7)
+            {
+                if (!cylindrical)
+                {
+                    if (mgie.rangeType == RangeType.AntiRange)
+                    {
+                        if (!blockedA)
+                        {
+                            (_, _) = GenerateSquareSingle(moves, true, ref b, piece, x, y, tempXA, tempYA, dirA, pa, specialType, pte, mgie, mbt);
+                            /*
+                            if (moveGenerated)
+                            {
+                                moveStartIndex++;
+                            }
+                            if (moveStartIndex >= moves.Length)
+                            {
+                                return moveStartIndex;
+                            }
+                            */
+                        }
+                        if (!blockedB)
+                        {
+                            (_, _) = GenerateSquareSingle(moves, true, ref b, piece, x, y, tempXB, tempYB, dirB, pa, specialType, pte, mgie, mbt);
+                            /*
+                            if (moveGenerated)
+                            {
+                                moveStartIndex++;
+                            }
+                            if (moveStartIndex >= moves.Length)
+                            {
+                                return moveStartIndex;
+                            }
+                            */
+                        }
+                    }
+
+                    break;
+                }
+
+                if (tempX < 0)
+                {
+                    tempX += 8;
+                }
+                else
+                {
+                    tempX -= 8;
+                }
+            }
+            if (tempY < 0 || tempY > 7)
+            {
+                if (!tubular)
+                {
+                    if (mgie.rangeType == RangeType.AntiRange)
+                    {
+                        if (!blockedA)
+                        {
+                            (_, _) = GenerateSquareSingle(moves, true, ref b, piece, x, y, tempXA, tempYA, dirA, pa, specialType, pte, mgie, mbt);
+                            /*
+                            if (moveGenerated)
+                            {
+                                moveStartIndex++;
+                            }
+                            if (moveStartIndex >= moves.Length)
+                            {
+                                return moveStartIndex;
+                            }
+                            */
+                        }
+                        if (!blockedB)
+                        {
+                            (_, _) = GenerateSquareSingle(moves, true, ref b, piece, x, y, tempXB, tempYB, dirB, pa, specialType, pte, mgie, mbt);
+                            /*
+                            if (moveGenerated)
+                            {
+                                moveStartIndex++;
+                            }
+                            if (moveStartIndex >= moves.Length)
+                            {
+                                return moveStartIndex;
+                            }
+                            */
+                        }
+                    }
+
+                    break;
+                }
+
+                if (tempY < 0)
+                {
+                    tempY += 8;
+                }
+                else
+                {
+                    tempY -= 8;
+                }
+                if (specialType != SpecialType.FlyingMoveOnly)
+                {
+                    specialType = Move.SpecialType.MoveOnly;
+                }
+            }
+
+            //Is an obstacle in the way?
+            (bool keepGoing, bool wasGenerated) = GenerateSquareSingle(moves, canMove, ref b, piece, x, y, tempX, tempY, dirA, pa, specialType, pte, mgie, mbt);
+
+            if (!keepGoing)
+            {
+                //For antirange: if nothing was generated you have to generate something on the last square
+                //That means you hit an ally piece
+                if (mgie.rangeType == RangeType.AntiRange && !wasGenerated)
+                {
+                    if (!blockedA)
+                    {
+                        (_, _) = GenerateSquareSingle(moves, true, ref b, piece, x, y, tempXA, tempYA, dirA, pa, specialType, pte, mgie, mbt);
+                        /*
+                        if (moveGenerated)
+                        {
+                            moveStartIndex++;
+                        }
+                        if (moveStartIndex >= moves.Length)
+                        {
+                            return moveStartIndex;
+                        }
+                        */
+                    }
+                    if (!blockedB)
+                    {
+                        (_, _) = GenerateSquareSingle(moves, true, ref b, piece, x, y, tempXB, tempYB, dirB, pa, specialType, pte, mgie, mbt);
+                        /*
+                        if (moveGenerated)
+                        {
+                            moveStartIndex++;
+                        }
+                        if (moveStartIndex >= moves.Length)
+                        {
+                            return moveStartIndex;
+                        }
+                        */
+                    }
+                }
+
+                //For flying: change type to flying
+                //No flying check because it would be a real headache to generate those moves correctly with my current setup
+                return;
+            }
+        }
+        return;
+        //return moveStartIndex;
+    }
+
+    public static void GenerateCastling(List<uint> moves, ref Board b, uint piece, int x, int y, bool goLeft, MoveBitTable mbt)
+    {
+        int deltaX = goLeft ? -1 : 1;
+        //int deltaY = 0;
+
+        int tempX = x;
+        int tempY = y;
+
+        //Check 1 away from king
+        //Must be empty
+        tempX += deltaX;
+
+        //Fail
+        if (tempX < 0 || tempX > 7)
+        {
+            return;
+            //return moveStartIndex;
+        }
+
+        if (b.GetPieceAtCoordinate(tempX, tempY) != 0)
+        {
+            return;
+            //return moveStartIndex;
+        }
+
+        //Check 2 away from king
+        //Must be empty
+        tempX += deltaX;
+
+        //Fail
+        if (tempX < 0 || tempX > 7)
+        {
+            return;
+            //return moveStartIndex;
+        }
+
+        if (b.GetPieceAtCoordinate(tempX, tempY) != 0)
+        {
+            return;
+            //return moveStartIndex;
+        }
+
+        //Now check 3 away
+        //Must be an ally non pawn
+        tempX += deltaX;
+        if (tempX < 0 || tempX > 7)
+        {
+            return;
+            //return moveStartIndex;
+        }
+
+        uint targetPiece = b.GetPieceAtCoordinate(tempX, tempY);
+        if (Piece.GetPieceAlignment(targetPiece) != Piece.GetPieceAlignment(piece))
+        {
+            return;
+            //return moveStartIndex;
+        }
+
+        PieceTableEntry pte = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(targetPiece));
+
+        ulong pawnBitboard = 0;
+        if (Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.White)
+        {
+            pawnBitboard = b.globalData.bitboard_pawnsWhite;
+        } else
+        {
+            pawnBitboard = b.globalData.bitboard_pawnsBlack;
+        }
+
+        //Giants are too big to castle with
+        if (targetPiece == 0 || ((pawnBitboard & (1uL << tempX + tempY * 8)) != 0) || ((pte.pieceProperty & Piece.PieceProperty.Giant) != 0))
+        {
+            return;
+            //return moveStartIndex;
+        }
+
+        //Success: generate move to 2 away
+        tempX -= deltaX;
+
+        //moves[moveStartIndex] = Move.PackMove((byte)x, (byte)y, (byte)tempX, (byte)tempY, DeltaToDir(deltaX, 0), SpecialType.Castling);
+        //moveStartIndex++;
+        if (moves != null && (mbt == null || !mbt.Get(x, y, tempX, tempY)))
+        {
+            moves.Add(Move.PackMove((byte)x, (byte)y, (byte)tempX, (byte)tempY, DeltaToDir(deltaX, 0), SpecialType.Castling));
+        }
+
+        if (mbt != null && (mbt.btType & MoveBitTable.BitTableType.MoveOnly) != 0)
+        {
+            mbt.Set(x, y, tempX, tempY);
+        }
+
+        return;
+        //return moveStartIndex;
+    }
+
+
+    //Giant rays
+    public static void GenerateGiantOffsetRayMoves(List<uint> moves, ref Board b, uint piece, int x, int y, int deltaX, int deltaY, Move.SpecialType specialType, PieceTableEntry pte, MoveGeneratorInfoEntry mgie, MoveBitTable mbt)
+    {
+        int gx = 0;
+        int gy = 0;
+        int deltaXA = 0;
+        int deltaYA = 0;
+        int deltaXB = 0;
+        int deltaYB = 0;
+
+        Move.Dir dir = Move.DeltaToDir(deltaX, deltaY);
+
+        if (deltaX > 1 || deltaX < -1 || deltaY > 1 || deltaY < -1)
+        {
+            dir = Dir.Null;
+        }
+
+        switch (dir)
+        {
+            case Dir.DownLeft:
+                deltaXA = 0;
+                deltaYA = 1;
+                deltaXB = 1;
+                deltaYB = 0;
+                break;
+            case Dir.Down:
+                deltaXA = 1;
+                deltaYA = 0;
+                break;
+            case Dir.DownRight:
+                gx = 1;
+                gy = 0;
+                deltaXA = 0;
+                deltaYA = 1;
+                deltaXB = -1;
+                deltaYB = 0;
+                break;
+            case Dir.Left:
+                deltaXA = 0;
+                deltaYA = 1;
+                break;
+            case Dir.Right:
+                gx = 1;
+                gy = 0;
+                deltaXA = 0;
+                deltaYA = 1;
+                break;
+            case Dir.UpLeft:
+                gx = 0;
+                gy = 1;
+                deltaXA = 0;
+                deltaYA = -1;
+                deltaXB = 1;
+                deltaYB = 0;
+                break;
+            case Dir.Up:
+                gx = 0;
+                gy = 1;
+                deltaXA = 1;
+                deltaYA = 0;
+                break;
+            case Dir.UpRight:
+                gx = 1;
+                gy = 1;
+                deltaXA = -1;
+                deltaYA = 0;
+                deltaXB = 0;
+                deltaYB = -1;
+                break;
+            case Dir.Null:
+                deltaXA = 1;
+                deltaYA = 0;
+                deltaXB = 0;
+                deltaYB = 1;
+                //So it checks all 4 squares
+                //I can't do this same thing for the other directions as that would be double checking squares and also the other parts of the giant would break stuff
+                //For leaps longer than distance 1 it is guaranteed that the giant doesn't overlap with its previous steps so this set of values is required every time
+                break;
+        }
+
+        GenerateGiantOffsetRayMoves(moves, ref b, piece, x, y, x + gx, y + gy, 0, deltaX, deltaY, deltaXA, deltaYA, deltaXB, deltaYB, specialType, pte, mgie, mbt);
+    }
+
+    public static void GenerateGiantOffsetRayMoves(List<uint> moves, ref Board b, uint piece, int x, int y, int startX, int startY, int lostRange, int deltaX, int deltaY, int deltaXA, int deltaYA, int deltaXB, int deltaYB, Move.SpecialType specialType, PieceTableEntry pte, MoveGeneratorInfoEntry mgie, MoveBitTable mbt)
+    {
+        bool deltaBOff = false;
+        bool checkBack = true;
+        if (deltaXB == 0 && deltaYB == 0)
+        {
+            deltaBOff = true;
+            checkBack = false;
+        }
+        if ((deltaXA + deltaXB) == -deltaX && (deltaYA + deltaYB) == -deltaY)
+        {
+            checkBack = false;
+        }
+
+
+        Move.Dir dir = Dir.Null;
+
+        Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
+
+        dir = Move.DeltaToDir(deltaX, deltaY);
+
+        //bool wasGenerated = true;
+        bool keepGoing = true;
+
+        int tempX = startX;
+        int tempY = startY;
+        //int lastTempX;
+        //int lastTempY;
+
+        int gx = (startX - x);
+        int gy = (startY - y);
+        //int gx = 0;
+        //int gy = 0;
+
+        int maxRange = mgie.range;
+        if (maxRange == 0)
+        {
+            maxRange = 16;
+        }
+
+        int currentRange = lostRange;
+        while (true)
+        {
+            tempX += deltaX;
+            tempY += deltaY;
+            currentRange++;
+
+            //Going too far?
+            if (currentRange > maxRange)
+            {
+                break;
+            }
+
+            //Out of bounds?
+            if (tempX < 0 || tempX > 7)
+            {
+                keepGoing = false;
+                break;
+            }
+            if (tempY < 0 || tempY > 7)
+            {
+                keepGoing = false;
+                break;
+            }
+
+            //check the offsets too
+            if (tempX < 0 || tempX > 7)
+            {
+                keepGoing = false;
+                break;
+            }
+            if (tempY + deltaXA < 0 || tempY + deltaYA > 7)
+            {
+                keepGoing = false;
+                break;
+            }
+            if (!deltaBOff && (tempY + deltaXB < 0 || tempY + deltaYB > 7))
+            {
+                keepGoing = false;
+                break;
+            }
+            if (checkBack && (tempY + deltaXA + deltaXB < 0 || tempY + deltaYA + deltaYB > 7))
+            {
+                keepGoing = false;
+                break;
+            }
+
+            bool checkO = false;
+            bool checkA = false;
+            bool checkB = deltaBOff;
+            bool checkAB = !checkBack;
+
+            bool moCheckO = false;
+            bool moCheckA = false;
+            bool moCheckB = checkB;
+            bool moCheckAB = checkAB;
+
+            bool coCheckO = false;
+            bool coCheckA = false;
+            bool coCheckB = false;
+            bool coCheckAB = false;
+
+            moCheckO = b.pieces[tempX + (tempY) * 8] == 0;
+            moCheckA = b.pieces[tempX + deltaXA + (tempY + deltaYA) * 8] == 0;
+            moCheckB = checkB || b.pieces[tempX + deltaXB + (tempY + deltaYB) * 8] == 0;
+            moCheckAB = checkAB || b.pieces[tempX + deltaXA + deltaXB + (tempY + deltaYA + deltaYB) * 8] == 0;
+
+            coCheckO = !moCheckO && Piece.GetPieceAlignment(b.pieces[tempX + (tempY) * 8]) != pa;
+            coCheckA = !moCheckA && Piece.GetPieceAlignment(b.pieces[tempX + deltaXA + (tempY + deltaYA) * 8]) != pa;
+            coCheckB = checkB || (!moCheckB && Piece.GetPieceAlignment(b.pieces[tempX + deltaXB + (tempY + deltaYB) * 8]) != pa);
+            coCheckAB = checkAB || (!moCheckAB && Piece.GetPieceAlignment(b.pieces[tempX + deltaXA + deltaXB + (tempY + deltaYA + deltaYB) * 8]) != pa);
+
+            if (specialType == SpecialType.MoveOnly && !(moCheckO && moCheckA && moCheckB && moCheckAB))
+            {
+                break;
+            }
+            if (specialType == SpecialType.CaptureOnly && !(coCheckO || coCheckA || coCheckB || coCheckAB))
+            {
+                break;
+            }
+
+            bool wg = false;
+            //landing on an enemy sets KeepGoing to false but WasGenerated to true
+            //so I need the OR of the two
+
+            bool kg = true;
+
+            bool kgt = true;
+            (kgt, wg) = GiantCheckGenerateSquareSingle(ref b, piece, x, y, tempX, tempY, dir, pa, specialType, pte, mbt);
+            checkO |= kgt;
+            kg &= kgt;
+            checkO |= wg;
+            (kgt, wg) = GiantCheckGenerateSquareSingle(ref b, piece, x, y, tempX + deltaXA, tempY + deltaYA, dir, pa, specialType, pte, mbt);
+            checkA |= kgt;
+            kg &= kgt;
+            checkA |= wg;
+            if (!checkB)
+            {
+                (kgt, wg) = GiantCheckGenerateSquareSingle(ref b, piece, x, y, tempX + deltaXB, tempY + deltaYB, dir, pa, specialType, pte, mbt);
+                checkB |= kgt;
+                kg &= kgt;
+                checkB |= wg;
+            }
+            if (!checkAB)
+            {
+                (kgt, wg) = GiantCheckGenerateSquareSingle(ref b, piece, x, y, tempX + deltaXA + deltaXB, tempY + deltaYA + deltaYB, dir, pa, specialType, pte, mbt);
+                checkAB |= kgt;
+                kg &= kgt;
+                checkAB |= wg;
+            }
+
+            keepGoing = kg;
+            if (checkO && checkA && checkB && checkAB)
+            {
+                //Is an obstacle in the way?
+                //(keepGoing, wasGenerated) = GenerateSquareSingle(moves, canMove, ref b, piece, x, y, tempX - gx, tempY - gy, dir, pa, specialType, pte, mgie, mbt);
+
+                //Note: mbt causes this check to fail a lot erroneously
+                //(Because the Giant protects those squares even if it can't move up onto them)
+                if (moves != null && specialType != SpecialType.PassiveAbility)// && (mbt == null || !mbt.Get(x, y, tempX - gx, tempY - gy)))
+                {
+                    moves.Add(Move.PackMove((byte)x, (byte)y, (byte)(tempX - gx), (byte)(tempY - gy), dir, specialType));
+                }
+            }
+
+            if (!keepGoing)
+            {
+                break;
+            }
+        }
+
+        return;
+    }
+}

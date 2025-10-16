@@ -1,0 +1,957 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+//Use ints
+//(If I made a struct it would be forced to be 8 bytes?)
+//Which is a big waste of space?
+//So instead of that this is a static class that helps convert those ints into the real data you want
+public static class Piece
+{
+    //format
+    //0-9 = piece type
+    //10-16 = piece special data byte
+    //18-21 = modifier type
+    //22-25 = status type
+    //26-29 = status duration
+    //30-31 = alignment
+
+
+    //Actually more like 10 bits
+    //I don't think my piece numbers are going to reach 1024
+    public enum PieceType : short
+    {
+        Null = 0,
+        Rock = 1,   //rock = neutral aligned Null   (I decided not to make it 0 because I don't want to deal with that headache)
+        King = 2,
+        Queen,
+        Rook,
+        Bishop,
+        Knight,
+        Pawn,
+        Squire,
+        Dragoon,
+        Lancer,
+        Cataphract,
+        Marshall,
+        Priest,
+        Missionary,
+        Inquisitor,
+        Archbishop,
+        Cardinal,
+        Anchorite,
+        Rammer,
+        Turret,
+        Trebuchet,
+        Fortress,
+        Shielder,
+        Amazon,
+        Guard,
+        Courtesan,
+        Warden,
+        Princess,
+        Pegasus,
+        Pontiff,
+        Stronghold,
+        Empress,
+        SuperPawn,
+        DivineProgenitor,
+        DivineProtector,
+        DivineBeacon,
+        DivineCourier,
+        DivineServant,
+        SnailQueen,
+        Crab,
+        Lobster,
+        Shrimp,
+        Tardigrade,
+        BigBomb,
+        Bomb,
+        XBomb,
+        PiercingCharge,
+        MiniBomb,
+        RelayKnight,
+        RelayBishop,
+        RelayRook,
+        RelayQueen,
+        Runner,
+        SwiftBishop,
+        SwiftRook,
+        SwiftQueen,
+        FastPawn,
+        Boat,
+        Skipper,
+        Raft,
+        Warship,
+        Canoe,
+        Pusher,
+        PushBishop,
+        PushRook,
+        PushQueen,
+        PushPawn,
+        StickyMan,
+        StickyBishop,
+        StickyRook,
+        StickyQueen,
+        StickyPawn,
+        Lanterner,
+        Candler,
+        Torcher,
+        Vestal,
+        MatchPawn,
+        Hypnotist,
+        Attractor,
+        Repulser,
+        Immobilizer,
+        Jester,
+        Charmer,
+        Wrath,
+        Greed,
+        Gluttony,
+        Sloth,
+        Lust,
+        Envy,
+        Pride,
+        Imp,
+        Patience,
+        Charity,
+        Temperance,
+        Diligence,
+        Chastity,
+        Kindness,
+        Humility,
+        Monk,
+        ArcanaFool,
+        ArcanaMagician,
+        ArcanaPriestess,
+        ArcanaEmpress,
+        ArcanaEmperor,
+        ArcanaHierophant,
+        ArcanaLovers,
+        ArcanaChariot,
+        ArcanaJustice,
+        ArcanaHermit,
+        ArcanaFortune,
+        ArcanaStrength,
+        ArcanaHanged,
+        ArcanaDeath,
+        ArcanaTemperance,
+        ArcanaDevil,
+        ArcanaTower,
+        ArcanaStar,
+        ArcanaMoon,
+        MoonIllusion,
+        ArcanaSun,
+        ArcanaJudgement,
+        ArcanaWorld,
+        AceOfWands,
+        AceOfSwords,
+        AceOfPentacles,
+        AceOfCups,
+        PageOfWands,
+        PageOfSwords,
+        PageOfPentacles,
+        PageOfCups,
+        QueenOfWands,
+        QueenOfSwords,
+        QueenOfPentacles,
+        QueenOfCups,
+        Mercury,
+        Venus,
+        Earth,
+        Mars,
+        Jupiter,
+        Saturn,
+        Uranus,
+        Neptune,
+        Moon,
+        Asteroid,
+        Comet,
+        Aries,
+        Taurus,
+        Gemini,
+        GeminiTwin,
+        Cancer,
+        Leo,
+        Virgo,
+        Libra,
+        Scorpio,
+        Sagittarius,
+        Capricorn,
+        Aquarius,
+        Pisces,
+        AirElemental,
+        FireElemental,
+        EarthElemental,
+        WaterElemental,
+        VoidElemental,
+        LightElemental,
+        AirWisp,
+        FireWisp,
+        EarthWisp,
+        WaterWisp,
+        VoidWisp,
+        LightWisp,
+        Vulture,
+        Falcon,
+        Hawk,
+        Eagle,
+        Fledgling,
+        SwitchPaladin,
+        SwitchTower,
+        SwitchFrog,
+        SwitchKnight,
+        SwitchSquire,
+        WarQueen,
+        WarRook,
+        WarBishop,
+        WarKnight,
+        BerserkerPawn,
+        Hopper,
+        Locust,
+        KingHopper,
+        Checker,
+        Revenant,
+        Abomination,
+        Necromancer,
+        Vampire,
+        Skeleton,
+        Zombie,
+        Bat,
+        Banshee,
+        Harpy,
+        Hag,
+        Frog,
+        Toad,
+        Plaguebearer,
+        Werewolf,
+        Werebear,
+        Werechimera,
+        Werefox,
+        ElephantCalf,
+        Elephant,
+        ElephantScholar,
+        ElephantCharger,
+        ElephantQueen,
+        Blackguard,
+        Spy,
+        Infiltrator,
+        Disguiser,
+        SlipPawn,
+        RoyalDouble,
+        RoyalGuard,
+        RoyalMaid,
+        RoyalCastle,
+        RoyalRecruit,
+        MirrorQueen,
+        LensRook,
+        ReflectionBishop,
+        MirrorKnight,
+        MirrorPawn,
+        Pincer,
+        Bolter,
+        Shocker,
+        Magnet,
+        LightningElemental,
+        ElectroPawn,
+        GlassSpirit,
+        FeatherSpirit,
+        SwordSpirit,
+        ShieldSpirit,
+        GrailSpirit,
+        DaggerSpirit,
+        Paladin,
+        CrookedBishop,
+        CrookedRook,
+        CrookedQueen,
+        CrookedPawn,
+        ClockworkTurtle,
+        ClockworkTowerB,
+        ClockworkTowerR,
+        ClockworkLeaper,
+        ClockworkWalker,
+        BladeBeast,
+        ClockworkSnapper,
+        Leafling,
+        Gardener,
+        Rootwalker,
+        Burrower,
+        FlowerPawn,
+        Gargoyle,
+        Pillar,
+        Arch,
+        Wall,
+        Statue,
+        EliteMilitia,
+        EdgeRook,
+        CornerlessBishop,
+        CenterQueen,
+        Militia,
+        KangarooQueen,
+        KangarooPrincess,
+        Triknight,
+        Tribishop,
+        Birook,
+        TrojanHorse,
+        PawnStack,
+        BigSlime,
+        Slime,
+        Duelist,
+        Fencer,
+        FlankingKnight,
+        FlankingBishop,
+        FlankingPawn,
+        FrontQueen,
+        FrontRook,
+        FrontBishop,
+        FrontKnight,
+        FrontPawn,
+        Marshqueen,
+        Brook,
+        Bishight,
+        Knishop,
+        TailPawn,
+        NarrowQueen,
+        NarrowRook,
+        NarrowBishop,
+        NarrowKnight,
+        NarrowPawn,
+        FlatQueen,
+        FlatRook,
+        FlatBishop,
+        FlatKnight,
+        AxePawn,
+        GlassQueen,
+        GlassRook,
+        GlassBishop,
+        GlassKnight,
+        GlassPawn,
+        QuickKnight,
+        QuickHog,
+        Hummingbird,
+        QuickSlug,
+        QuickPawn,
+        SlothQueen,
+        VolcanoTower,
+        FlameObelisk,
+        HeavyFrog,
+        HeavyPawn,
+        SoulCannon,
+        Lich,
+        SoulDevourer,
+        QueenLeech,
+        Leech,
+
+        Peasant,
+
+        Prince,
+        Outlaw,
+        Yeoman,
+
+        EndOfTable
+    }
+
+    public enum PieceClass
+    {
+        None,
+        Normal,
+        Knight,
+        Bishop,
+        Rook,
+        Amazons,
+        Ultimate,
+        Divine,
+        Armored,
+        Explosive,
+        Relay,
+        Swift,
+        Boat,
+        Push,
+        Sticky,
+        Fire,
+        Enchanter,
+        DeadlySins,
+        HeavenlyVirtues,
+        TarotMajor,
+        TarotMinor,
+        Planets,
+        Zodiac,
+        Elemental,
+        Birds,
+        Switchers,
+        Warlike,
+        Hoppers,
+        Undead,
+        Monster,
+        Lycanthropes,
+        Giant,
+        Dark,
+        Royalist,
+        Mirror,
+        Electro,
+        ObjectSpirit,
+        Crooked,
+        Clockwork,
+        Plants,
+        Statue,
+        ZoneRestricted,
+        Splitters,
+        Flankers,
+        FrontBias,
+        FrontBack,
+        Narrow,
+        Flat,
+        Glass,
+        Quick,
+        Slow,
+        SoulMages,
+    }
+
+    //2 bits = 4 possible
+    public enum PieceAlignment : byte
+    {
+        Null = 255,
+        White = 0,
+        Black,
+        Neutral,        //Neutral pieces have a lot of balance problems (What material value do they give? Zero? If it's zero then the AI will just sacrifice them willy nilly which might just be the best use case for them)
+        Crystal         //Crystal pieces have this problem a lot less as keeping them around you can use them for defense (you get positive value from them so just sacrificing them immediately isn't the best play)
+    }
+
+    //4 bits = 15 possible
+    //Modifiers are infinite duration things
+    public enum PieceModifier : byte
+    {
+        None,
+        Spectral,       //Does not block ally pieces from moving through them
+        Winged,         //Gets move only hop over anything in its ranged moves
+        Immune,         //Immune to enemy negative effects (unimplemented)
+        Shielded,       //If user ends turn when it is attacked: Shielded becomes Half Shielded
+        HalfShielded,   //Half shielded is removed on enemy turn end (So a shielded king works properly, if it was removed on own turn end it would lead to stalemates where the shielded king is not capturable by the enemy but any move would remove the shield)
+        Depleted,       //Pieces with single use abilities that can't use them anymore (note: things that imbue the other modifiers will restore their single use!)
+
+        NoSpecial,      //Special thing for move copying pieces (Blocks all special moves)
+    }
+
+    //4 bits = 15 possible
+    //Status effects have a temporary counter (4 bits) (decremented on user turn end?) (So poison for 1 turn is basically a weaker ranged capture)
+    public enum PieceStatusEffect : byte
+    {
+        None,
+        Stunned,    //can't move for X turns
+        Poisoned,   //die after X turns
+        Voided,   //No capturing and no enemy targetting abilities (and generates no auras)
+        Bloodlust,  //Die in X turns, removed on capture, can only capture
+        Zapped, //Die in X turns, removed on move
+        Ghostly, //Enemy version of Spectral (enemy pieces can pass through)
+        Fragile,    //Acts as "destroy on capture"
+    }
+
+    //Special properties (may generate teleports)
+    [Flags]
+    public enum PieceProperty : ulong
+    {   
+        //63
+        //so I am officially out of flags
+        //I have to rearrange the existing ones to make more space
+        //Ideally I should remove flags that are only used by 1 piece type and change it to a single piece condition (This won't increase the overhead because 1 conditional is 1 conditional? Difference between them is negligible or the piece type check might even be better than the flag check?)
+
+        //Tags to change by priority
+        //Castling: can be made into a forced King only thing
+        //Convert and Weak Convert can be combined
+        //
+
+        None = 0,
+
+        //Move generating things
+        //Idea: since they only exist to add stuff to the moveInfo I can just overload the thing so it can parse these as special move atoms also
+        /*
+        //Castling = 1uL,   //treated as a special property of the king     //x
+        AllyKingTeleport = 1uL << 1,    //x
+        EnemyKingTeleport = 1uL << 2,   //x
+        PawnSwapTeleport = 1uL << 3,    //x
+        AllySwapTeleport = 1uL << 4,    //x
+        AllyBehindTeleport = 1uL << 0,
+        AnywhereTeleport = 1uL << 5,    //x
+        HomeRangeTeleport = 1uL << 58,  //x
+        KingSwapTeleport = 1uL << 59,   //x
+        */
+        BonusMove = 1uL << 2,
+        SlowMove = 1uL << 4,
+        ConsumeAllies = 1uL << 5,
+        ChargeEnhance = 1uL << 58,
+        ExplodeCaptureX = 1uL << 59,
+
+        //Range modifiers under conditions
+        RangeIncrease_MissingPieces = 1uL << 6,
+        RangeIncrease_FurtherRows = 1uL << 7,
+        RangeDecrease_FurtherRows = 1uL << 8,
+
+        RangeChange = RangeIncrease_MissingPieces | RangeIncrease_FurtherRows | RangeDecrease_FurtherRows,
+
+        //Special capture types
+        ConvertCapture = 1uL << 9,
+        WeakConvertCapture = 1uL << 10,
+        SwapCapture = 1uL << 11,
+
+        PromoteCapture = 1uL << 12,   //this piece promotes by capturing
+        PromoteCaptureNonPawn = 1uL << 13,   //this piece promotes by capturing
+
+        EnchantImmune = 1uL << 14,
+        Deadly = 1uL << 15,
+        FireImmune = 1uL << 16,
+        WaterImmune = 1uL << 17,
+        //DisplacementImmune = 1uL << 18,       //NoTerrain subsumed this
+
+        Cylindrical = 1uL << 19,
+        Sneaky = 1uL << 20,         //Top bottom non captures
+        Reflecter = 1uL << 21,        
+
+        Unique = 1uL << 22,             //this is mostly a out of battle restriction, make into a boolean in the PTE?
+        Giant = 1uL << 23,
+
+        //Invincibility of various forms
+        Invincible = 1uL << 24,
+        InvincibleWrongColor = 1uL << 25,
+        InvincibleFront = 1uL << 26,
+        InvinciblePawns = 1uL << 27,
+        InvincibleNonPawns = 1uL << 28,
+        InvincibleClose = 1uL << 29,
+        InvincibleClose2 = 1uL << 30,
+        InvinciblePride = 1uL << 31,      //Only most costly piece or piece of more cost
+        InvincibleJustice = 1uL << 32,      //Invincible if ally captured last turn
+
+        Relay = 1uL << 33,
+        RelayBishop = 1uL << 34,      //this is only on a special piece that doesn't match its movement
+        RelayImmune = 1uL << 35,        //area in range is immune (so I just paste the attack/defense range to the immune range minus any enemy pieces in the way)
+        WrathCapture = 1uL << 36,
+        Splitter = 1uL << 37,
+
+        FlankingCapture = 1uL << 3,
+
+        /*
+        RelayKnight = 1uL << 33,  
+        RelayBishop = 1uL << 34,
+        RelayBishopImmune = 1uL << 35,
+        RelayRook = 1uL << 36,
+        RelayMan = 1uL << 37,
+        */
+
+        OnlyCapturePawns = 1uL << 38,
+
+        DestroyCapturer = 1uL << 39,
+        DestroyOnCapture = 1uL << 40,
+        ExplodeCapture = 1uL << 41,
+
+        FireCapture = 1uL << 42,
+
+        SwitchMover = 1uL << 43,    //use enhanced only if on black
+        WarMover = 1uL << 44,       //enhanced if enemy near
+        NoAllyMover = 1uL << 45,    //enhanced if no ally near
+        AllyMover = 1uL << 0,    //enhanced if ally near
+        JusticeMover = 1uL << 46,   //enhanced if enemy captured last turn
+        DiligenceMover = 1uL << 47, //enhanced if moved last turn
+        VampireMover = 1uL << 48, //enhanced if you or enemy captured last turn
+        SlipMover = 1uL << 49, //enhanced target squares can move next to enemies
+        PlantMover = 1uL << 50, //enhanced target squares can move next to allies
+
+        NoTerrain = 1uL << 51,
+
+        //morph capturer to be this victim's type
+        MorphCapturer = 1uL << 52,
+        MorphCapturerPawn = 1uL << 53,
+        MorphCapturerNonPawn = 1uL << 54,
+
+        ClockworkSwapper = 1uL << 55,
+
+        Push = 1uL << 56,
+        Pull = 1uL << 57,
+
+        PassivePull = 1uL << 60,
+        PassivePushDiag = 1uL << 18,
+        PassivePullStrong = 1uL << 61,
+        PassivePushStrongDiag = 1uL << 1,
+        PassivePush = 1uL << 62,
+        PassivePushStrong = 1uL << 63,
+    }
+
+
+    public static uint PackPieceData(PieceType pt, byte pspd, PieceModifier pm, PieceStatusEffect pse, byte psed, PieceAlignment pa)
+    {
+        uint output = 0;
+        output = SetPieceType(pt, output);
+        output = SetPieceSpecialData(pspd, output);
+        output = SetPieceModifier(pm, output);
+        output = SetPieceStatusEffect(pse, output);
+        output = SetPieceStatusDuration(psed, output);
+        output = SetPieceAlignment(pa, output);
+        return output;
+    }
+    public static uint PackPieceData(PieceType pt, byte pspd, PieceModifier pm, PieceAlignment pa)
+    {
+        uint output = 0;
+        output = SetPieceType(pt, output);
+        output = SetPieceSpecialData(pspd, output);
+        output = SetPieceModifier(pm, output);
+        output = SetPieceAlignment(pa, output);
+        return output;
+    }
+    public static uint PackPieceData(PieceType pt, PieceModifier pm, PieceAlignment pa)
+    {
+        uint output = 0;
+        output = SetPieceType(pt, output);
+        output = SetPieceModifier(pm, output);
+        output = SetPieceAlignment(pa, output);
+        return output;
+    }
+    public static uint PackPieceData(PieceType pt, PieceAlignment pa)
+    {
+        uint output = 0;
+        output = SetPieceType(pt, output);
+        output = SetPieceAlignment(pa, output);
+        return output;
+    }
+
+    public static PieceType GetPieceType(uint pieceInfo)
+    {
+        return (PieceType)(MainManager.BitFilter(pieceInfo, 0, 9));
+    }
+    public static uint SetPieceType(PieceType pt, uint pieceInfo)
+    {
+        return MainManager.BitFilterSet(pieceInfo, (uint)pt, 0, 9);
+    }
+
+    public static bool GetPieceProperty(PieceType pt, PieceProperty pp)
+    {
+        return (GlobalPieceManager.Instance.GetPieceTableEntry(pt).pieceProperty & pp) != 0;
+    }
+
+    //A full byte of special data
+    //This is quite a lot
+    //Big enough to fit a starting square value
+    //Currently uses 2 bits for giants
+    public static byte GetPieceSpecialData(uint pieceInfo)
+    {
+        return (byte)(MainManager.BitFilter(pieceInfo, 10, 17));
+    }
+    public static uint SetPieceSpecialData(byte psd, uint pieceInfo)
+    {
+        return MainManager.BitFilterSet(pieceInfo, psd, 10, 17);
+    }
+
+    public static PieceModifier GetPieceModifier(uint pieceInfo)
+    {
+        return (PieceModifier)(MainManager.BitFilter(pieceInfo, 18, 21));
+    }
+    public static uint SetPieceModifier(PieceModifier pm, uint pieceInfo)
+    {
+        return MainManager.BitFilterSet(pieceInfo, (uint)pm, 18, 21);
+    }
+
+    public static PieceStatusEffect GetPieceStatusEffect(uint pieceInfo)
+    {
+        return (PieceStatusEffect)(MainManager.BitFilter(pieceInfo, 22, 25));
+    }
+    public static uint SetPieceStatusEffect(PieceStatusEffect pm, uint pieceInfo)
+    {
+        return MainManager.BitFilterSet(pieceInfo, (uint)pm, 22, 25);
+    }
+
+    public static byte GetPieceStatusDuration(uint pieceInfo)
+    {
+        return (byte)(MainManager.BitFilter(pieceInfo, 26, 29));
+    }
+    public static uint SetPieceStatusDuration(byte psd, uint pieceInfo)
+    {
+        return MainManager.BitFilterSet(pieceInfo, psd, 26, 29);
+    }
+
+    public static PieceAlignment GetPieceAlignment(uint pieceInfo)
+    {
+        return (PieceAlignment)(MainManager.BitFilter(pieceInfo, 30, 31));
+    }
+    public static uint SetPieceAlignment(PieceAlignment pa, uint pieceInfo)
+    {
+        return MainManager.BitFilterSet(pieceInfo, (uint)pa, 30, 31);
+    }
+
+    public static Color GetPieceColor(PieceAlignment pa)
+    {
+        switch (pa)
+        {
+            case PieceAlignment.White:
+                return Color.white;
+            case PieceAlignment.Black:
+                return Color.black;
+            case PieceAlignment.Neutral:
+                return Color.yellow;
+            case PieceAlignment.Crystal:
+                return Color.magenta;
+        }
+
+        return Color.blue;
+    }
+
+
+    public static bool IsPieceInvincible(Board b, uint piece, int x, int y, uint attackerPiece, int attackerX, int attackerY, Move.SpecialType specialType)
+    {
+        Piece.PieceType ptA = Piece.GetPieceType(attackerPiece);
+        Piece.PieceType ptV = Piece.GetPieceType(piece);
+
+        Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
+        Piece.PieceAlignment paA = Piece.GetPieceAlignment(attackerPiece);
+
+        PieceTableEntry pteA = GlobalPieceManager.Instance.GetPieceTableEntry(ptA);
+        PieceTableEntry pteV = GlobalPieceManager.Instance.GetPieceTableEntry(ptV);
+
+        //Voided can't capture
+        if (Piece.GetPieceStatusEffect(attackerPiece) == PieceStatusEffect.Voided)
+        {
+            return true;
+        }
+
+        //Shielded, Protected can't attack kings
+        if (Piece.GetPieceType(piece) == PieceType.King)
+        {
+            PieceModifier pmA = GetPieceModifier(attackerPiece);
+
+            if (pmA == PieceModifier.Shielded || pmA == PieceModifier.HalfShielded)
+            {
+                return true;
+            }
+        }
+
+        //Fire immune
+        if ((specialType == Move.SpecialType.FireCapture || specialType == Move.SpecialType.FireCapturePush) && ((pteV.pieceProperty & PieceProperty.FireImmune) != 0))
+        {
+            return true;
+        }
+
+        //blanket ban stuff with immune
+        ulong immunityBitboard = 0;
+        if (pa == PieceAlignment.White)
+        {
+            immunityBitboard = b.globalData.bitboard_immuneWhite;
+        }
+        if (pa == PieceAlignment.Black)
+        {
+            immunityBitboard = b.globalData.bitboard_immuneBlack;
+        }
+
+        if ((pteV.pieceProperty & PieceProperty.EnchantImmune) != 0 || (1uL << x + y * 8 & immunityBitboard) != 0)
+        {
+            switch (specialType)
+            {
+                case Move.SpecialType.EnemyAbility:
+                case Move.SpecialType.RangedPull:
+                case Move.SpecialType.RangedPush:
+                case Move.SpecialType.Convert:
+                case Move.SpecialType.ConvertPawn:
+                    return true;
+            }
+        }
+
+        //Giants are not compatible with most stuff
+        if (((pteV.pieceProperty & PieceProperty.Giant) != 0))
+        {
+            bool giantIncompatible = false;
+            switch (specialType)
+            {
+                //things that are fine
+                /*
+                case Move.SpecialType.Normal:
+                case Move.SpecialType.MoveOnly:
+                case Move.SpecialType.CaptureOnly:
+                case Move.SpecialType.FlyingMoveOnly:
+                case Move.SpecialType.SelfMove:
+                case Move.SpecialType.FireCapture:
+                case Move.SpecialType.FireCaptureOnly:
+                case Move.SpecialType.LongLeaper:
+                case Move.SpecialType.FireCapturePush:
+                case Move.SpecialType.PullMove:
+                case Move.SpecialType.PushMove:
+                case Move.SpecialType.Advancer:
+                case Move.SpecialType.Withdrawer:
+                case Move.SpecialType.AdvancerWithdrawer:
+                case Move.SpecialType.TandemMovementPawns:
+                case Move.SpecialType.TandemMovementNonPawns:
+                case Move.SpecialType.SlipMove:
+                case Move.SpecialType.PlantMove:
+                case Move.SpecialType.AllyAbility:
+                case Move.SpecialType.EnemyAbility:
+                case Move.SpecialType.EmptyAbility:
+                case Move.SpecialType.PassiveAbility:
+                    break;
+                */
+                case Move.SpecialType.Castling:
+                //case Move.SpecialType.Convert:        I don't want Giants to just have EnchantImmune and NoTerrain for free so I'll make them weak to some stuff still
+                //case Move.SpecialType.ConvertPawn:
+                case Move.SpecialType.Spawn:
+                case Move.SpecialType.RangedPull:
+                case Move.SpecialType.RangedPullAllyOnly:
+                case Move.SpecialType.RangedPush:
+                case Move.SpecialType.RangedPushAllyOnly:
+                case Move.SpecialType.AllySwap:
+                case Move.SpecialType.AnyoneSwap:
+                case Move.SpecialType.MorphIntoTarget:
+                    giantIncompatible = true;
+                    break;
+            }
+
+            if (giantIncompatible)
+            {
+                return true;
+            }
+        }
+
+        PieceModifier pm = GetPieceModifier(piece);        
+
+        //Deadly overrides all of this
+        if ((pteA.pieceProperty & PieceProperty.Deadly) != 0)
+        {
+            return false;
+        }
+
+        if (pm == PieceModifier.Shielded || pm == PieceModifier.HalfShielded)
+        {
+            return true;
+        }
+
+        if ((pteV.pieceProperty & PieceProperty.Invincible) != 0)
+        {
+            return true;
+        }
+
+        //invincible from range 1
+        if ((pteV.pieceProperty & PieceProperty.InvincibleClose) != 0)
+        {
+            int dx = attackerX - x;
+            int dy = attackerY - y;
+
+            //-1 -> 1
+            //faster than Math.Abs?
+            dx *= dx;
+            dy *= dy;
+            if (dx <= 1 && dy <= 1)
+            {
+                return true;
+            }
+        }
+
+        //range 2 invincible
+        if ((pteV.pieceProperty & PieceProperty.InvincibleClose2) != 0)
+        {
+            int dx = attackerX - x;
+            int dy = attackerY - y;
+
+            //-1 -> 1
+            //faster than Math.Abs?
+            dx *= dx;
+            dy *= dy;
+            if (dx <= 4 && dy <= 4)
+            {
+                return true;
+            }
+        }
+
+        //invincible from front
+        //If attacker is white, can't capture if attacker Y is less
+        if ((pteV.pieceProperty & PieceProperty.InvincibleFront) != 0 && ((Piece.GetPieceAlignment(attackerPiece) == PieceAlignment.White ? (attackerY - y) : -(attackerY - y)) < 0))
+        {
+            return true;
+        }
+
+        //invincible from non pawns
+        if ((pteV.pieceProperty & PieceProperty.InvincibleNonPawns) != 0 && pteA.promotionType == PieceType.Null)
+        {
+            return true;
+        }
+
+        //invincible from pawns
+        if ((pteV.pieceProperty & PieceProperty.InvinciblePawns) != 0 && pteA.promotionType != PieceType.Null)
+        {
+            return true;
+        }
+
+        //can only attack Pride if attacker is >= value (or deadly condition above)
+        if ((pteV.pieceProperty & PieceProperty.InvinciblePride) != 0)
+        {
+            if ((pteA.pieceValueX2 < pteV.pieceValueX2))
+            {
+                //new: last moved piece can attack Pride
+                //So Pride has more possible targets but can get hit by a few more things
+                int lastMovedLocation = 0;
+                if (paA == PieceAlignment.White)
+                {
+                    lastMovedLocation = b.whitePerPlayerInfo.lastPieceMovedLocation;
+                }
+                if (paA == PieceAlignment.Black)
+                {
+                    lastMovedLocation = b.blackPerPlayerInfo.lastPieceMovedLocation;
+                }
+                if ((attackerX + (attackerY << 3) != lastMovedLocation))
+                {
+                    return true;
+                }
+            }
+        }
+
+        if ((pteV.pieceProperty & PieceProperty.InvincibleWrongColor) != 0 && (x + y + attackerX + attackerY % 2 != 0))
+        {
+            return true;
+        }
+
+        //capture restrictions
+        //Debug.Log(ptA + " vs " + ptV + " and pteV promotion is " + pteV.promotionType);
+        if ((pteA.pieceProperty & PieceProperty.OnlyCapturePawns) != 0 && pteV.promotionType == PieceType.Null)
+        {
+            return true;
+        }
+
+        //pride can capture deadly pieces (includes Kings)
+        if ((pteA.pieceProperty & PieceProperty.InvinciblePride) != 0)
+        {
+            if ((pteV.pieceValueX2 < pteA.pieceValueX2) && (pteV.pieceProperty & PieceProperty.Deadly) == 0)
+            {
+                //new: last moved piece can attack Pride
+                //So Pride has more possible targets but can get hit by a few more things
+                int lastMovedLocation = 0;
+                if (pa == PieceAlignment.White)
+                {
+                    lastMovedLocation = b.whitePerPlayerInfo.lastPieceMovedLocation;
+                }
+                if (pa == PieceAlignment.Black)
+                {
+                    lastMovedLocation = b.blackPerPlayerInfo.lastPieceMovedLocation;
+                }
+                if ((x + (y << 3) != lastMovedLocation))
+                {
+                    return true;
+                }
+            }
+        }
+
+        //Clockwork Turtle
+        if (ptV == PieceType.ClockworkTurtle)
+        {
+            ulong allyBitboard = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesBlack : b.globalData.bitboard_piecesWhite;
+            allyBitboard = MainManager.SmearBitboard(allyBitboard & ~(1uL << x + y * 8));
+
+            //MainManager.PrintBitboard(allyBitboard);
+
+            if (((1uL << x + y * 8) & allyBitboard) == 0)
+            {
+                return true;
+            }
+        }
+
+        //Temperance restriction
+        //currently hardcoded number
+        if (ptA == PieceType.Temperance && (pteV.pieceValueX2 <= 9 - b.GetMissingPieces(Piece.GetPieceAlignment(attackerPiece) == PieceAlignment.Black)))
+        {
+            return true;
+        }
+
+        return false;
+    }
+}
