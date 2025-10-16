@@ -8360,8 +8360,8 @@ MonoBehaviour:
   bs: {fileID: 411647727}
   army: 
   em: 0
-  pieceClass: 0
-  targetNonkingValue: 6
+  pieceClass: 1
+  targetNonkingValue: 216
   lowPieceBias: 1
 --- !u!65 &1842133742
 BoxCollider:

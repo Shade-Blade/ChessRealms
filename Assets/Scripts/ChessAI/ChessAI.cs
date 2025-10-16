@@ -1114,7 +1114,7 @@ public class ChessAI
                 //Reduce the score (check for < alpha)
                 if (zte.flags == ZTableEntry.BOUND_ALPHA)
                 {
-                    if (zte.score < beta)
+                    if (zte.score < alpha)
                     {
                         nodesTransposed++;
                         return (zte.move, zte.score);
@@ -1125,7 +1125,7 @@ public class ChessAI
                 //Increase the score (check for > beta)
                 if (zte.flags == ZTableEntry.BOUND_BETA)
                 {
-                    if (zte.score > alpha)
+                    if (zte.score > beta)
                     {
                         nodesTransposed++;
                         return (zte.move, zte.score);
@@ -1193,7 +1193,7 @@ public class ChessAI
 
         int newExt = ext;
 
-        /*
+        
         //Null move pruning is buggy right now so I turned it off
         bool allowNullEvaluation = depth > 1;
         allowNullEvaluation = false;
@@ -1248,7 +1248,6 @@ public class ChessAI
                 }
             }
         }
-        */
 
         /*
         if (killerMoves != null && killerMoves.Count > 0)
@@ -1299,7 +1298,7 @@ public class ChessAI
         //Debug.Log("Post order");
 
         int passiveMoves = 0;
-        int lateReductionThreshold = moves.Count / 4;
+        int lateReductionThreshold = moves.Count / 2;
         if (lateReductionThreshold < 4)
         {
             lateReductionThreshold = 4;
@@ -1841,7 +1840,7 @@ public class ChessAI
                 {
                     prunes++;
                     //Populate the Z table
-                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, 0, ZTableEntry.BOUND_EXACT, bestMove, evaluation));
+                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, 0, ZTableEntry.BOUND_ALPHA, bestMove, evaluation));
                     return (bestMove, PenalizeMove(evaluation, repetitionPenalty));
                 }
             }
@@ -1863,7 +1862,7 @@ public class ChessAI
                 {
                     prunes++;
                     //Populate the Z table
-                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, 0, ZTableEntry.BOUND_EXACT, bestMove, evaluation));
+                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, 0, ZTableEntry.BOUND_BETA, bestMove, evaluation));
                     return (bestMove, PenalizeMove(evaluation, repetitionPenalty));
                 }
             }
