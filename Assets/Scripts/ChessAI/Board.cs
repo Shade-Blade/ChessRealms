@@ -1124,6 +1124,10 @@ public class Board
         int ylevel = 6;
         while (newpieces.Count > 0 && pushOrder.Count > 0)
         {
+            if (pieces[(ylevel - 2) * 8 + pushOrder[0]] != 0)
+            {
+                pieces[(ylevel - 3) * 8 + pushOrder[0]] = pieces[(ylevel - 2) * 8 + pushOrder[0]];
+            }
             if (pieces[(ylevel - 1) * 8 + pushOrder[0]] != 0)
             {
                 pieces[(ylevel - 2) * 8 + pushOrder[0]] = pieces[(ylevel - 1) * 8 + pushOrder[0]];
@@ -2057,11 +2061,11 @@ public class Board
                         PieceTableEntry pteP = GlobalPieceManager.Instance.GetPieceTableEntry(pteO.promotionType);
                         if (opa == PieceAlignment.White)
                         {
-                            whitePerPlayerInfo.pieceValueSumX2 -= (short)(pteP.pieceValueX2 - pteO.pieceValueX2);
+                            whitePerPlayerInfo.pieceValueSumX2 += (short)(pteP.pieceValueX2 - pteO.pieceValueX2);
                         }
                         if (opa == PieceAlignment.Black)
                         {
-                            blackPerPlayerInfo.pieceValueSumX2 -= (short)(pteP.pieceValueX2 - pteO.pieceValueX2);
+                            blackPerPlayerInfo.pieceValueSumX2 += (short)(pteP.pieceValueX2 - pteO.pieceValueX2);
                         }
                         pieceChange = true;
                     }

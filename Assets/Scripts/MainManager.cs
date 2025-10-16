@@ -419,6 +419,48 @@ public class MainManager : MonoBehaviour
         return shiftedPattern;
     }
 
+    public static List<T> ShuffleList<T>(List<T> list)
+    {
+        List<T> output = new List<T>();
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            output.Insert(UnityEngine.Random.Range(0, output.Count), list[i]);
+        }
+
+        return output;
+    }
+    public static List<T> ShuffleListSegments<T>(List<T> list, int segmentSize)
+    {
+        List<List<T>> subLists = new List<List<T>>();
+
+        List<T> output = new List<T>();
+        for (int i = 0; i < Mathf.CeilToInt(list.Count / (segmentSize + 0f)); i++)
+        {
+            subLists.Add(new List<T>());
+            for (int j = 0; j < segmentSize; j++)
+            {
+                if (j + i * segmentSize >= list.Count)
+                {
+                    break;
+                }
+
+                subLists[i].Add(list[j + i * segmentSize]);
+            }
+            subLists[i] = ShuffleList<T>(subLists[i]);
+            for (int j = 0; j < segmentSize; j++)
+            {
+                if (j >= subLists[i].Count)
+                {
+                    break;
+                }
+                output.Add(subLists[i][j]);
+            }
+        }
+
+        return output;
+    }
+
     public static void PrintMoveSet(HashSet<uint> moveSet)
     {
         if (moveSet == null || moveSet.Count == 0)

@@ -57,7 +57,7 @@ public class ChessAI
     public float valueMult;
     public float randomDeviation;
     public float openingDeviation;
-
+    public float blunderDeviation;
 
     public bool keepSearching = false;
     public float searchDuration;        //How long to search maximum (making it more like other engines where it's fixed time instead of fixed depth)
@@ -86,12 +86,27 @@ public class ChessAI
 
         //easy mode
         //0.6 value mult
+        //0.1 opening deviance
         //0.1 random deviance
+        //3 blunder deviance
         //but even "max difficulty" is still too easy because of problems
+        /*
+        valueMult = 0.6f;
+        openingDeviation = 0.1f;   //Opening value roughly shifts by +- this (bigger on turn 1)
+        randomDeviation = 0.3f;    //Value roughly shifts by +- this
+        blunderDeviation = 3f;
+        */
 
+        //normal
+        //Probably still very easy for a chess master to win because the engine is not very good
+        //1 value mult
+        //0.05 opening deviance
+        //0.05 random deviance
+        //0 blunder deviance
         valueMult = 1;
-        openingDeviation = 0.04f;   //Opening value roughly shifts by +- this (bigger on turn 1)
-        randomDeviation = 0.05f;    //Value roughly shifts by +- this
+        openingDeviation = 0.05f;
+        randomDeviation = 0.05f;
+        blunderDeviation = 0;
 
         moveFound = false;
     }
@@ -261,7 +276,7 @@ public class ChessAI
         value += pstDelta;
 
         float kingSafety = EvaluateKingSafety(ref b, endgameValue);
-        value += kingSafety * valueMult;
+        value += kingSafety * valueMult * valueMult;    //Bad AI undervalues king safety
 
         float passedPawns = GetPassedPawns(ref b, endgameValue);
         value += passedPawns;
@@ -274,6 +289,10 @@ public class ChessAI
 
         //Random delta
         value += ((boardHash & 15) / 16f) * randomDeviation;
+        if ((boardHash & 511) < 6)   //6/512 (since this shows up in the search tree this will be worse than it looks?)
+        {
+            value += blunderDeviation * (((boardHash & 31) - 16) / 16f);
+        }
 
         //Debug.Log("End eval");
 
@@ -926,7 +945,7 @@ public class ChessAI
             }
         }
 
-        Debug.Log((b.blackToMove ? "Black" : "White") + " Bestmove = " + (Move.ConvertToString(this.bestMove)) + " Eval = " + TranslateEval(realBestEvaluation) + " Search took " + (dt / 1000d) + " seconds for " + (nodesSearched + nodesTransposed + quiNodeSearched) + " positions with " + prunes + " prunes, " + nodesTransposed + " transposes at depth + " + maxDepthReached + " = " + "(" + ((nodesSearched + nodesTransposed + quiNodeSearched) / (dt / 1000d)) + " nodes/sec)");
+        Debug.Log((b.blackToMove ? "Black" : "White") + " Bestmove = " + (Move.ConvertToString(this.bestMove)) + " Eval = " + TranslateEval(realBestEvaluation) + " Search took " + (dt / 1000d) + " seconds for " + (nodesSearched + nodesTransposed + quiNodeSearched) + " positions with " + prunes + " prunes, " + nodesTransposed + " transposes, " + quiNodeSearched + " qui nodes at depth + " + maxDepthReached + " = " + "(" + ((nodesSearched + nodesTransposed + quiNodeSearched) / (dt / 1000d)) + " nodes/sec)");
 
         moveFound = true;
         //this.bestMove = bestMove;
@@ -934,7 +953,7 @@ public class ChessAI
         //return bestMove;
     }
 
-    public float MoveScore(ref Board b, ref Board copy, ulong oldHash, uint move)
+    public float MoveScore(ref Board b, ref Board copy, ulong oldHash, uint move, Dictionary<uint, bool> nonpassiveDict)
     {
         float score = 0;
 
@@ -965,7 +984,7 @@ public class ChessAI
             }
 
             score += zte.score * mult * 1 + 1000;
-            return score;
+            //return score;
         }
 
         //MVV LVA
@@ -979,6 +998,12 @@ public class ChessAI
         } else
         {
             lostMaterial = b.blackPerPlayerInfo.pieceValueSumX2 - copy.blackPerPlayerInfo.pieceValueSumX2;
+        }
+
+        if (score != 0)
+        {
+            nonpassiveDict.Add(move, true);
+            return score;
         }
 
         score += lostMaterial * 1f;
@@ -1163,6 +1188,7 @@ public class ChessAI
         //My engine is still glacially slow :(
         //I think this will kill my performance but idk how else to do this
         Dictionary<uint, float> scoreDict = new Dictionary<uint, float>();
+        Dictionary<uint, bool> nonpassiveDict = new Dictionary<uint, bool>();
 
 
         int newExt = ext;
@@ -1239,7 +1265,7 @@ public class ChessAI
             //If a move is better according to the table the idiotic moves should get pruned out
 
             //King capture is always sorted to the front
-            scoreDict[moves[i]] = MoveScore(ref b, ref copy, boardOldHash, moves[i]);
+            scoreDict[moves[i]] = MoveScore(ref b, ref copy, boardOldHash, moves[i], nonpassiveDict);
 
             //Don't touch hash move scores with this?
             //Maybe touching MVVLVA scores is fine
@@ -1272,7 +1298,12 @@ public class ChessAI
 
         //Debug.Log("Post order");
 
-        int lateReductionThreshold = moves.Count / 2;
+        int passiveMoves = 0;
+        int lateReductionThreshold = moves.Count / 4;
+        if (lateReductionThreshold < 4)
+        {
+            lateReductionThreshold = 4;
+        }
         bool doReduction = false;
 
         for (int i = 0; i < moves.Count; i++)
@@ -1307,13 +1338,17 @@ public class ChessAI
             */
 
             int newRed = red;
-            if (newRed < 1 + (depth * 0.2f))
+            if (newRed < 0 + (depth * 0.5f))
             {
-                newRed = (int)(1 + (depth * 0.2f));
+                newRed = (int)(0 + (depth * 0.5f));
             }
-            if (i >= lateReductionThreshold && scoreDict[moves[i]] == 0)
+            if (!nonpassiveDict.ContainsKey(moves[i]))
             {
-                doReduction = true;
+                passiveMoves++;
+                if (depth > 2 && passiveMoves >= lateReductionThreshold) // && scoreDict[moves[i]] == 0)
+                {
+                    doReduction = true;
+                }
             }
 
             uint candidateMove;
@@ -1365,7 +1400,7 @@ public class ChessAI
                     */
                 }
 
-                if (bestEvaluation > beta)
+                if (bestEvaluation < beta)
                 {
                     beta = bestEvaluation;
                 }
@@ -1408,7 +1443,7 @@ public class ChessAI
                     bestMove = moves[i];
                 }
 
-                if (bestEvaluation < alpha)
+                if (bestEvaluation > alpha)
                 {
                     alpha = bestEvaluation;
                 }
@@ -1499,7 +1534,7 @@ public class ChessAI
         //Something has gone catastrophically wrong
         //need to limit it so it doesn't stack overflow
         //Unfortunately for me a stack overflow in the AI thread is invisible and doesn't show me any error messages >:(
-        if (qdepth >= 30)
+        if (qdepth >= 20)
         {
             Debug.LogError("Too much quiescence");
             return (0, float.NaN);

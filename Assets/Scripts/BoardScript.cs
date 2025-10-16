@@ -404,6 +404,25 @@ public class BoardScript : MonoBehaviour
                 }
                 return;
             }
+
+            if (!blackIsAI)
+            {
+                bool checkAI = Board.PositionIsCheck(ref board);
+                bool stalemateAI = Board.PositionIsStalemate(ref board);
+
+                if (checkAI && stalemateAI)
+                {
+                    winnerPA = PieceAlignment.White;
+                    Debug.Log("White win");
+                    gameOver = true;
+                }
+                else if (stalemateAI)
+                {
+                    winnerPA = PieceAlignment.Null;
+                    Debug.Log("Draw (Black stalemated)");
+                    gameOver = true;
+                }
+            }
         } else
         {
             Debug.Log("Move is illegal because of " + Move.ConvertToString(Board.MoveIllegalByCheckFindRefutation(ref board, move)));
@@ -509,7 +528,7 @@ public class BoardScript : MonoBehaviour
         gameOver = false;
         drawError = false;
         historyIndex--;
-        board = historyList[historyIndex];
+        board.CopyOverwrite(historyList[historyIndex]);
         //Destroy the future history
         chessAI.history.Remove(chessAI.HashFromScratch(historyList[historyIndex + 1]));
         RegenerateMoveList();
@@ -528,7 +547,7 @@ public class BoardScript : MonoBehaviour
         gameOver = false;
         drawError = false;
         historyIndex++;
-        board = historyList[historyIndex];
+        board.CopyOverwrite(historyList[historyIndex]);
         chessAI.history.Add(chessAI.HashFromScratch(historyList[historyIndex]));
         RegenerateMoveList();
         ResetSelected();
@@ -717,8 +736,9 @@ public class BoardScript : MonoBehaviour
             turnText.text += "<size=50%> " + board.bonusPly + " bonus</size>";
         }
 
+        float kingValue = (GlobalPieceManager.Instance.GetPieceTableEntry(PieceType.King).pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE);
         scoreText.text = "Pieces\n" + (board.whitePerPlayerInfo.pieceCount) + "\n<color=#000000>" + (board.blackPerPlayerInfo.pieceCount) + "</color>";
-        scoreText.text += "\n\nValues\n" + ((board.whitePerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)/2f) + "\n" + (board.whitePerPlayerInfo.pieceValueSumX2 / GlobalPieceManager.KING_VALUE_BONUS) + " king(s)\n<color=#000000>" + ((board.blackPerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) / 2f) + "\n" + (board.blackPerPlayerInfo.pieceValueSumX2 / GlobalPieceManager.KING_VALUE_BONUS) + " king(s)\n</color>";
+        scoreText.text += "\n\nValues\n" + (((board.whitePerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) - kingValue)/2f) + "\n" + (board.whitePerPlayerInfo.pieceValueSumX2 / GlobalPieceManager.KING_VALUE_BONUS) + " king(s)\n<color=#000000>" + (((board.blackPerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) - kingValue) / 2f) + "\n" + (board.blackPerPlayerInfo.pieceValueSumX2 / GlobalPieceManager.KING_VALUE_BONUS) + " king(s)\n</color>";
         if (gameOver)
         {
             if (winnerPA == PieceAlignment.Null)
