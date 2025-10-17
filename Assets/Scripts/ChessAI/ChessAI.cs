@@ -63,14 +63,17 @@ public class ChessAI
     public float searchDuration;        //How long to search maximum (making it more like other engines where it's fixed time instead of fixed depth)
     public float searchTime;
 
+    public int maxDepth;
     public bool moveFound = false;
     public uint bestMove;
     public Board board;
 
+    public int difficulty;
+
     //to stop double coroutines or threads from appearing if you stop and start the AI
     public int version = 0;
 
-    public void InitAI()
+    public void InitAI(int difficulty)
     {
         Debug.Log("AI init");
         boardCache = new Dictionary<int, Board>();
@@ -83,6 +86,32 @@ public class ChessAI
         version++;
 
         //0.2 = too easy?
+
+        this.difficulty = difficulty;
+        switch (difficulty)
+        {
+            case 0:
+                valueMult = 0.6f;
+                openingDeviation = 0.1f;   //Opening value roughly shifts by +- this (bigger on turn 1)
+                randomDeviation = 0.3f;    //Value roughly shifts by +- this
+                blunderDeviation = 3f;
+                maxDepth = 3;   //very fast
+                break;
+            case 1:
+                valueMult = 1;
+                openingDeviation = 0.05f;
+                randomDeviation = 0.075f;
+                blunderDeviation = 0.15f;
+                maxDepth = 4;   //pretty fast
+                break;
+            case 2:
+                valueMult = 1;
+                openingDeviation = 0.05f;
+                randomDeviation = 0.05f;
+                blunderDeviation = 0;
+                maxDepth = 12;  //this is impossible to get without running this on a supercomputer probably :P
+                break;
+        }
 
         //easy mode
         //0.6 value mult
@@ -97,16 +126,23 @@ public class ChessAI
         blunderDeviation = 3f;
         */
 
+        //mid mode
+        //Normal with max depth = 3?
+        //Maybe 0.2 blunder deviance and 0.1 random deviance
+
         //normal
         //Probably still very easy for a chess master to win because the engine is not very good
         //1 value mult
         //0.05 opening deviance
         //0.05 random deviance
         //0 blunder deviance
+        /*
         valueMult = 1;
         openingDeviation = 0.05f;
         randomDeviation = 0.05f;
         blunderDeviation = 0;
+        maxDepth = 12;  //this is impossible to get without running this on a supercomputer probably :P
+        */
 
         moveFound = false;
     }
@@ -185,7 +221,10 @@ public class ChessAI
         //Because if one side is weak then the king can start to be aggressive
         float output = 0;
 
-        int pvmin = b.whitePerPlayerInfo.pieceValueSumX2 < b.blackPerPlayerInfo.pieceValueSumX2 ? b.whitePerPlayerInfo.pieceValueSumX2 : b.blackPerPlayerInfo.pieceValueSumX2;
+        int whiteValue = b.whitePerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE;
+        int blackValue = b.blackPerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE;
+
+        int pvmin = whiteValue < blackValue ? whiteValue : blackValue;
 
         output = pvmin / 2f;
 
@@ -782,7 +821,11 @@ public class ChessAI
             //Uh oh
             if (!moveFound && searchThread.ThreadState == ThreadState.Stopped && keepSearching && !timeUp)
             {
-                Debug.LogError("Search thread stopped for some reason");
+                //successful search ends it early
+                if (localVersion == version)
+                {
+                    Debug.LogError("Search thread stopped for some reason");
+                }
                 yield break;
             }
 
@@ -883,7 +926,7 @@ public class ChessAI
     public void AlphaBetaAI(object o)
     {
         //I can make this as big as I want now :)
-        int maxDepth = 1000;
+        int maxDepth = this.maxDepth;
 
         //there might be some thread unsafe data manipulation causing weird blunders?
         Board b = new Board(board);
@@ -951,6 +994,9 @@ public class ChessAI
         //this.bestMove = bestMove;
 
         //return bestMove;
+
+        //invalidate the thread looper thing
+        version++;
     }
 
     public float MoveScore(ref Board b, ref Board copy, ulong oldHash, uint move, Dictionary<uint, bool> nonpassiveDict)
@@ -1002,7 +1048,10 @@ public class ChessAI
 
         if (score != 0)
         {
-            nonpassiveDict.Add(move, true);
+            if (lostMaterial > 0 && !nonpassiveDict.ContainsKey(move))
+            {
+                nonpassiveDict.Add(move, true);
+            }
             return score;
         }
 
@@ -1100,35 +1149,41 @@ public class ChessAI
 
         //Usable?
         //Triggers instant cutoff?
-        if (zte.hash == boardOldHash && zte.depth >= depth && !history.Contains(boardOldHash))
-        {
-            //Exact number: can use immediately
-            if (zte.flags == ZTableEntry.BOUND_EXACT)
-            {
-                nodesTransposed++;
-                return (zte.move, zte.score);
-            }
 
-            if (b.blackToMove)
+        //Root node does not check transpose table to avoid repetition
+        if (alpha != float.PositiveInfinity)
+        {
+            if (zte.hash == boardOldHash && zte.depth >= depth && !history.Contains(boardOldHash))
             {
-                //Reduce the score (check for < alpha)
-                if (zte.flags == ZTableEntry.BOUND_ALPHA)
+                //Exact number: can use immediately
+                if (zte.flags == ZTableEntry.BOUND_EXACT)
                 {
-                    if (zte.score < alpha)
+                    nodesTransposed++;
+                    return (zte.move, zte.score);
+                }
+
+                if (b.blackToMove)
+                {
+                    //Reduce the score (check for < alpha)
+                    if (zte.flags == ZTableEntry.BOUND_ALPHA)
                     {
-                        nodesTransposed++;
-                        return (zte.move, zte.score);
+                        if (zte.score < alpha)
+                        {
+                            nodesTransposed++;
+                            return (zte.move, zte.score);
+                        }
                     }
                 }
-            } else
-            {
-                //Increase the score (check for > beta)
-                if (zte.flags == ZTableEntry.BOUND_BETA)
+                else
                 {
-                    if (zte.score > beta)
+                    //Increase the score (check for > beta)
+                    if (zte.flags == ZTableEntry.BOUND_BETA)
                     {
-                        nodesTransposed++;
-                        return (zte.move, zte.score);
+                        if (zte.score > beta)
+                        {
+                            nodesTransposed++;
+                            return (zte.move, zte.score);
+                        }
                     }
                 }
             }
@@ -1195,6 +1250,7 @@ public class ChessAI
 
         
         //Null move pruning is buggy right now so I turned it off
+        /*
         bool allowNullEvaluation = depth > 1;
         allowNullEvaluation = false;
 
@@ -1248,6 +1304,7 @@ public class ChessAI
                 }
             }
         }
+        */
 
         /*
         if (killerMoves != null && killerMoves.Count > 0)
@@ -1298,10 +1355,10 @@ public class ChessAI
         //Debug.Log("Post order");
 
         int passiveMoves = 0;
-        int lateReductionThreshold = moves.Count / 2;
-        if (lateReductionThreshold < 4)
+        int lateReductionThreshold = moves.Count / 3;
+        if (lateReductionThreshold < 3)
         {
-            lateReductionThreshold = 4;
+            lateReductionThreshold = 3;
         }
         bool doReduction = false;
 
@@ -1533,16 +1590,16 @@ public class ChessAI
         //Something has gone catastrophically wrong
         //need to limit it so it doesn't stack overflow
         //Unfortunately for me a stack overflow in the AI thread is invisible and doesn't show me any error messages >:(
-        if (qdepth >= 20)
+        if (qdepth >= 15)
         {
-            Debug.LogError("Too much quiescence");
+            Debug.LogError("Too much quiescence, last move = " + Move.ConvertToString(b.GetLastMove()));
             return (0, float.NaN);
         }
 
         //Try to find it in the Z table
         ZTableEntry zte = GetZTableEntry(boardOldHash);
 
-        float repetitionPenalty = 0.5f;
+        float repetitionPenalty = 0.25f;
         if (!history.Contains(boardOldHash))
         {
             repetitionPenalty = 1;

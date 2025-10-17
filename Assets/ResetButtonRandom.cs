@@ -51,6 +51,10 @@ public class ResetButtonRandom : MonoBehaviour
             {
                 continue;
             }
+            if ((piecePool[i].type == PieceType.MoonIllusion) || (piecePool[i].type == PieceType.King))
+            {
+                continue;
+            }
             if ((piecePool[i].pieceProperty & Piece.PieceProperty.Giant) != 0)
             {
                 continue;
@@ -176,6 +180,10 @@ public class ResetButtonRandom : MonoBehaviour
         army = new Piece.PieceType[32];
         int offset = 4 - (rowSize / 2);
         int topOffset = 4 - ((subArmy.Count % rowSize)/2);
+        if (subArmy.Count % rowSize == 0)
+        {
+            topOffset = offset;
+        }
         int numRows = Mathf.CeilToInt(subArmy.Count / (rowSize + 0f));
         for (int i = 0; i < numRows; i++)
         {
