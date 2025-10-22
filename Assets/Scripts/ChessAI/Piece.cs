@@ -438,11 +438,11 @@ public static class Piece
     public enum PieceStatusEffect : byte
     {
         None,
-        Stunned,    //can't move for X turns
+        Frozen,    //can't move for X turns
         Poisoned,   //die after X turns
-        Voided,   //No capturing and no enemy targetting abilities (and generates no auras)
+        Soaked,   //No capturing and no enemy targetting abilities (and generates no auras)
         Bloodlust,  //Die in X turns, removed on capture, can only capture
-        Zapped, //Die in X turns, removed on move
+        Burned, //Die in X turns, removed on move
         Ghostly, //Enemy version of Spectral (enemy pieces can pass through)
         Fragile,    //Acts as "destroy on capture"
     }
@@ -471,7 +471,7 @@ public static class Piece
         EnemyKingTeleport = 1uL << 2,   //x
         PawnSwapTeleport = 1uL << 3,    //x
         AllySwapTeleport = 1uL << 4,    //x
-        AllyBehindTeleport = 1uL << 0,
+        AllyBehindTeleport = 1uL << 0,  //x
         AnywhereTeleport = 1uL << 5,    //x
         HomeRangeTeleport = 1uL << 58,  //x
         KingSwapTeleport = 1uL << 59,   //x
@@ -575,6 +575,22 @@ public static class Piece
         PassivePushStrong = 1uL << 63,
     }
 
+    //You know what? I can make as many bits as I want for properties
+    //128 bits go brr
+    //64 bit limit isn't even a problem
+    //There is no problem that mandates I only use 1 flag (outside of avoiding a problem of knowing which variable to check)
+    //(Though I have to check B-properties against the B property flag value)
+    [Flags]
+    public enum PiecePropertyB : ulong
+    {
+        None = 0,
+
+        ChargeEnhanceStack = 1uL,   //ChargeEnhance but the range of the enhanced moves are increased (additively, so 2 base gets +1 per charge so I can put in 2 range stuff when you get 1 charge, then 3 with 2 charge...) by the charges
+        ChargeEnhanceStackReset = 1uL << 1,   //ChargeEnhanceStack but the charges reset to 0 on charge move
+        PartialForcedMoves = 1uL << 2,  //Check bittable for piece: if empty only then get secondary moves (So the first later moves get priority)
+
+        PromoteWarp = 1uL << 3,     //Warp on promotion (except capturing)
+    }
 
     public static uint PackPieceData(PieceType pt, byte pspd, PieceModifier pm, PieceStatusEffect pse, byte psed, PieceAlignment pa)
     {
@@ -705,7 +721,7 @@ public static class Piece
         PieceTableEntry pteV = GlobalPieceManager.Instance.GetPieceTableEntry(ptV);
 
         //Voided can't capture
-        if (Piece.GetPieceStatusEffect(attackerPiece) == PieceStatusEffect.Voided)
+        if (Piece.GetPieceStatusEffect(attackerPiece) == PieceStatusEffect.Soaked)
         {
             return true;
         }

@@ -7,6 +7,7 @@ using UnityEngine;
 using static Move;
 using static Piece;
 using static Unity.Collections.AllocatorManager;
+using static UnityEngine.GraphicsBuffer;
 
 //Data that remains static over the course of the game
 //Being space efficient with this is not very important?
@@ -136,6 +137,7 @@ public struct BoardPlayerInfo
     public bool canCastle;
 
     public uint lastMove;  //= -1 if null move?
+    public uint lastPieceMoved;                     //Note: lastPieceMovedType is a relic of the old time where I didn't have the full data set (Potentially still saves a tiny bit of time to have 2 separate variables?)
     public Piece.PieceType lastPieceMovedType;
     public int lastPieceMovedLocation;     //
     public short pieceValueSumX2;
@@ -150,6 +152,7 @@ public struct BoardPlayerInfo
         capturedLastTurn = false;
         pieceValueSumX2 = 0;
         lastPieceMovedType = Piece.PieceType.Null;
+        lastPieceMoved = 0;
         lastPieceMovedLocation = -1;
 
         for (int i = 0; i < pieces.Length; i++)
@@ -1590,11 +1593,15 @@ public class Board
 
     public void ApplyNullMove()
     {
-        RunTurnEnd(blackToMove);
+        RunTurnEnd(blackToMove, null);
         bonusPly = 0;
         blackToMove = !blackToMove;
     }
     public void ApplyMove(uint move)
+    {
+        ApplyMove(move, null);
+    }
+    public void ApplyMove(uint move, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         int fx = Move.GetFromX(move);
         int fy = Move.GetFromY(move);
@@ -1613,7 +1620,7 @@ public class Board
         if (opt == PieceType.Null)
         {
             //not a legal
-            RunTurnEnd(blackToMove);
+            RunTurnEnd(blackToMove, boardUpdateMetadata);
 
             ply++;
             if (blackToMove)
@@ -1632,6 +1639,7 @@ public class Board
         if (blackToMove)
         {
             blackPerPlayerInfo.lastMove = move;
+            blackPerPlayerInfo.lastPieceMoved = oldPiece;
             blackPerPlayerInfo.lastPieceMovedType = opt;
             blackPerPlayerInfo.capturedLastTurn = false;
             if (lastMoveStationary)
@@ -1646,6 +1654,7 @@ public class Board
         else
         {
             whitePerPlayerInfo.lastMove = move;
+            whitePerPlayerInfo.lastPieceMoved = oldPiece;
             whitePerPlayerInfo.lastPieceMovedType = opt;
             whitePerPlayerInfo.capturedLastTurn = false;
             if (lastMoveStationary)
@@ -1663,8 +1672,8 @@ public class Board
 
         if ((pteO.pieceProperty & PieceProperty.Giant) != 0)
         {
-            ApplyGiantMove(oldPiece, opa, fx, fy, tx, ty, pteO);
-            RunTurnEnd(blackToMove);
+            ApplyGiantMove(oldPiece, opa, fx, fy, tx, ty, pteO, boardUpdateMetadata);
+            RunTurnEnd(blackToMove, boardUpdateMetadata);
 
             ply++;
             if (blackToMove)
@@ -1685,7 +1694,7 @@ public class Board
         Piece.PieceAlignment tpa = Piece.GetPieceAlignment(targetPiece);
 
         //zapped
-        if (Piece.GetPieceStatusEffect(oldPiece) == PieceStatusEffect.Zapped)
+        if (Piece.GetPieceStatusEffect(oldPiece) == PieceStatusEffect.Burned)
         {
             oldPiece = Piece.SetPieceStatusEffect(0, oldPiece);
             oldPiece = Piece.SetPieceStatusDuration(0, oldPiece);
@@ -1962,7 +1971,7 @@ public class Board
                                         blackPerPlayerInfo.pieceValueSumX2 -= pteE.pieceValueX2;
                                     }
 
-                                    DeletePieceAtCoordinate(tx + i, ty + j, pteE, opa);
+                                    DeletePieceAtCoordinate(tx + i, ty + j, pteE, opa, boardUpdateMetadata);
                                     //SetPieceAtCoordinate(tx + i, ty + j, 0);
                                 }
                             }
@@ -2026,7 +2035,7 @@ public class Board
                                         blackPerPlayerInfo.pieceValueSumX2 -= pteE.pieceValueX2;
                                     }
 
-                                    DeletePieceAtCoordinate(tx + i, ty + j, pteE, opa);
+                                    DeletePieceAtCoordinate(tx + i, ty + j, pteE, opa, boardUpdateMetadata);
                                     //SetPieceAtCoordinate(tx + i, ty + j, 0);
                                 }
                             }
@@ -2087,7 +2096,7 @@ public class Board
                         DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, residuePiece);
                         if (!passiveMove)
                         {
-                            CapturePieceAtCoordinate(tx, ty, oldPiece, pteO, opa, pteT, tpa);
+                            CapturePieceAtCoordinate(tx, ty, oldPiece, pteO, opa, pteT, tpa, boardUpdateMetadata);
                         }
                         else
                         {
@@ -2096,7 +2105,7 @@ public class Board
 
                         if (oldPiece == 0)
                         {
-                            DeletePieceAtCoordinate(tx, ty, pteO, opa);
+                            DeletePieceAtCoordinate(tx, ty, pteO, opa, boardUpdateMetadata);
                         }
 
                         //pull move is just normal with an extra step
@@ -2134,7 +2143,7 @@ public class Board
                         DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, residuePiece);
                         if (!passiveMove)
                         {
-                            CapturePieceAtCoordinate(tx, ty, oldPiece, pteO, opa, pteT, tpa);
+                            CapturePieceAtCoordinate(tx, ty, oldPiece, pteO, opa, pteT, tpa, boardUpdateMetadata);
                         }
                         else
                         {
@@ -2143,7 +2152,7 @@ public class Board
 
                         if (oldPiece == 0)
                         {
-                            DeletePieceAtCoordinate(tx, ty, pteO, opa);
+                            DeletePieceAtCoordinate(tx, ty, pteO, opa, boardUpdateMetadata);
                         }
                         break;
                 }
@@ -2206,7 +2215,7 @@ public class Board
                     SetPieceAtCoordinate(tx + gdx, ty + gdy, Piece.SetPieceAlignment(opa, GetPieceAtCoordinate(tx + gdx, ty + gdy)));
                 } else
                 {
-                    DeletePieceAtCoordinate(tx, ty, pteT, tpa);
+                    DeletePieceAtCoordinate(tx, ty, pteT, tpa, boardUpdateMetadata);
                     SetPieceAtCoordinate(tx, ty, Piece.SetPieceAlignment(opa, targetPiece));
                 }
                 break;
@@ -2250,7 +2259,7 @@ public class Board
                         }
 
                         //Delete piece at target
-                        DeletePieceAtCoordinate(tempX, tempY, GlobalPieceManager.GetPieceTableEntry(leapTarget), Piece.GetPieceAlignment(leapTarget));
+                        DeletePieceAtCoordinate(tempX, tempY, GlobalPieceManager.GetPieceTableEntry(leapTarget), Piece.GetPieceAlignment(leapTarget), boardUpdateMetadata);
                     }
 
                     //it is a bug if this happens
@@ -2344,7 +2353,7 @@ public class Board
                         oldPiece = Piece.SetPieceStatusDuration(0, oldPiece);
                     }
 
-                    DeletePieceAtCoordinate(tx, ty, pteT, tpa);
+                    DeletePieceAtCoordinate(tx, ty, pteT, tpa, boardUpdateMetadata);
                     SetPieceAtCoordinate(tx, ty, Piece.SetPieceAlignment(opa, targetPiece));
                 }
                 break;
@@ -2420,7 +2429,7 @@ public class Board
 
                     //Delete piece at target
                     //SetPieceAtCoordinate(tx, ty, 0);
-                    DeletePieceAtCoordinate(tx, ty, pteT, tpa);
+                    DeletePieceAtCoordinate(tx, ty, pteT, tpa, boardUpdateMetadata);
                 }
                 break;
             case Move.SpecialType.FireCapturePush:
@@ -2455,7 +2464,7 @@ public class Board
                 //priestess gets a bigger push
                 if (opt == PieceType.ArcanaPriestess)
                 {
-                    TryPiecePushStrong(tx, ty, rpushdx, rpushdy, null);
+                    TryPiecePushStrong(tx, ty, rpushdx, rpushdy, null, boardUpdateMetadata);
                 }
                 else
                 {
@@ -2471,7 +2480,7 @@ public class Board
                 rpulldy = -rpulldy;
                 if (opt == PieceType.ArcanaPriestess)
                 {
-                    TryPiecePullStrong(tx, ty, rpulldx, rpulldy, pteT);
+                    TryPiecePullStrong(tx, ty, rpulldx, rpulldy, pteT, boardUpdateMetadata);
                 } else
                 {
                     SetPieceAtCoordinate(tx + rpulldx, ty + rpulldy, GetPieceAtCoordinate(tx, ty));
@@ -2514,7 +2523,7 @@ public class Board
                     oldPiece = Piece.SetPieceStatusEffect(0, oldPiece);
                     oldPiece = Piece.SetPieceStatusDuration(0, oldPiece);
                 }
-                DeletePieceAtCoordinate(tx + a2dx, ty + a2dy, GlobalPieceManager.GetPieceTableEntry(a2Piece), opa);
+                DeletePieceAtCoordinate(tx + a2dx, ty + a2dy, GlobalPieceManager.GetPieceTableEntry(a2Piece), opa, boardUpdateMetadata);
                 goto case Move.SpecialType.Withdrawer;
             case Move.SpecialType.AdvancerPush:
             case Move.SpecialType.Advancer:
@@ -2562,7 +2571,7 @@ public class Board
                     oldPiece = Piece.SetPieceStatusEffect(0, oldPiece);
                     oldPiece = Piece.SetPieceStatusDuration(0, oldPiece);
                 }
-                DeletePieceAtCoordinate(tx + advdx, ty + advdy, GlobalPieceManager.GetPieceTableEntry(advPiece), opa);
+                DeletePieceAtCoordinate(tx + advdx, ty + advdy, GlobalPieceManager.GetPieceTableEntry(advPiece), opa, boardUpdateMetadata);
                 if (specialType == Move.SpecialType.WrathCapturer)
                 {
                     goto case Move.SpecialType.Normal;
@@ -2608,7 +2617,7 @@ public class Board
                     oldPiece = Piece.SetPieceStatusEffect(0, oldPiece);
                     oldPiece = Piece.SetPieceStatusDuration(0, oldPiece);
                 }
-                DeletePieceAtCoordinate(fx + withdx, fy + withdy, pteW, opa);
+                DeletePieceAtCoordinate(fx + withdx, fy + withdy, pteW, opa, boardUpdateMetadata);
                 goto case Move.SpecialType.MoveOnly;
             case SpecialType.FlankingCapturer:
                 ulong bitindexF = MainManager.SmearBitboard(1uL << fx + (fy << 3));
@@ -2649,7 +2658,7 @@ public class Board
                         oldPiece = Piece.SetPieceStatusEffect(0, oldPiece);
                         oldPiece = Piece.SetPieceStatusDuration(0, oldPiece);
                     }
-                    DeletePieceAtCoordinate(flankX, flankY, pteF, opa);
+                    DeletePieceAtCoordinate(flankX, flankY, pteF, opa, boardUpdateMetadata);
                 }
                 goto case Move.SpecialType.MoveOnly;
             case Move.SpecialType.AllySwap:
@@ -2950,27 +2959,27 @@ public class Board
 
         if ((pteO.pieceProperty & PieceProperty.PassivePush) != 0)
         {
-            DoPassivePush(px, py, opa);
+            DoPassivePush(px, py, opa, boardUpdateMetadata);
         }
         if ((pteO.pieceProperty & PieceProperty.PassivePushStrong) != 0)
         {
-            DoPassivePushStrong(px, py, opa);
+            DoPassivePushStrong(px, py, opa, boardUpdateMetadata);
         }
         if ((pteO.pieceProperty & PieceProperty.PassivePull) != 0)
         {
-            DoPassivePull(px, py, opa);
+            DoPassivePull(px, py, opa, boardUpdateMetadata);
         }
         if ((pteO.pieceProperty & PieceProperty.PassivePushDiag) != 0)
         {
-            DoPassivePushDiag(px, py, opa);
+            DoPassivePushDiag(px, py, opa, boardUpdateMetadata);
         }
         if ((pteO.pieceProperty & PieceProperty.PassivePullStrong) != 0)
         {
-            DoPassivePullStrong(px, py, opa);
+            DoPassivePullStrong(px, py, opa, boardUpdateMetadata);
         }
         if ((pteO.pieceProperty & PieceProperty.PassivePushStrongDiag) != 0)
         {
-            DoPassivePushStrongDiag(px, py, opa);
+            DoPassivePushStrongDiag(px, py, opa, boardUpdateMetadata);
         }
 
         //special extra stuff
@@ -3003,87 +3012,87 @@ public class Board
                     switch (dir)
                     {
                         case Move.Dir.Down:
-                            TryPiecePushAlly(fx - 1, fy - 1, 0, -1, opa);
-                            //TryPiecePushAlly(fx, fy - 1, 0, -1, opa);
-                            TryPiecePushAlly(fx + 1, fy - 1, 0, -1, opa);
-                            TryPiecePushAlly(fx - 1, fy, 0, -1, opa);
-                            TryPiecePushAlly(fx + 1, fy, 0, -1, opa);
-                            TryPiecePushAlly(fx - 1, fy + 1, 0, -1, opa);
-                            TryPiecePushAlly(fx, fy + 1, 0, -1, opa);
-                            TryPiecePushAlly(fx + 1, fy + 1, 0, -1, opa);
+                            TryPiecePushAlly(fx - 1, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                            //TryPiecePushAlly(fx, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy + 1, 0, -1, opa, boardUpdateMetadata);
                             break;
                         case Move.Dir.Left:
-                            TryPiecePushAlly(fx - 1, fy + 1, -1, 0, opa);
-                            //TryPiecePushAlly(fx - 1, fy, -1, 0, opa);
-                            TryPiecePushAlly(fx - 1, fy - 1, -1, 0, opa);
-                            TryPiecePushAlly(fx, fy + 1, -1, 0, opa);
-                            TryPiecePushAlly(fx, fy - 1, -1, 0, opa);
-                            TryPiecePushAlly(fx + 1, fy + 1, -1, 0, opa);
-                            TryPiecePushAlly(fx + 1, fy, -1, 0, opa);
-                            TryPiecePushAlly(fx + 1, fy - 1, -1, 0, opa);
+                            TryPiecePushAlly(fx - 1, fy + 1, -1, 0, opa, boardUpdateMetadata);
+                            //TryPiecePushAlly(fx - 1, fy, -1, 0, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy - 1, -1, 0, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy + 1, -1, 0, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy - 1, -1, 0, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy + 1, -1, 0, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy, -1, 0, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy - 1, -1, 0, opa, boardUpdateMetadata);
                             break;
                         case Move.Dir.Right:
-                            TryPiecePushAlly(fx + 1, fy + 1, 1, 0, opa);
-                            //TryPiecePushAlly(fx + 1, fy, 1, 0, opa);
-                            TryPiecePushAlly(fx + 1, fy - 1, 1, 0, opa);
-                            TryPiecePushAlly(fx, fy + 1, 1, 0, opa);
-                            TryPiecePushAlly(fx, fy - 1, 1, 0, opa);
-                            TryPiecePushAlly(fx - 1, fy + 1, 1, 0, opa);
-                            TryPiecePushAlly(fx - 1, fy, 1, 0, opa);
-                            TryPiecePushAlly(fx - 1, fy - 1, 1, 0, opa);
+                            TryPiecePushAlly(fx + 1, fy + 1, 1, 0, opa, boardUpdateMetadata);
+                            //TryPiecePushAlly(fx + 1, fy, 1, 0, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy - 1, 1, 0, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy + 1, 1, 0, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy - 1, 1, 0, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy + 1, 1, 0, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy, 1, 0, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy - 1, 1, 0, opa, boardUpdateMetadata);
                             break;
                         case Move.Dir.Up:
-                            TryPiecePushAlly(fx - 1, fy + 1, 0, 1, opa);
-                            //TryPiecePushAlly(fx, fy + 1, 0, 1, opa);
-                            TryPiecePushAlly(fx + 1, fy + 1, 0, 1, opa);
-                            TryPiecePushAlly(fx - 1, fy, 0, 1, opa);
-                            TryPiecePushAlly(fx + 1, fy, 0, 1, opa);
-                            TryPiecePushAlly(fx - 1, fy - 1, 0, 1, opa);
-                            TryPiecePushAlly(fx, fy - 1, 0, 1, opa);
-                            TryPiecePushAlly(fx + 1, fy - 1, 0, 1, opa);
+                            TryPiecePushAlly(fx - 1, fy + 1, 0, 1, opa, boardUpdateMetadata);
+                            //TryPiecePushAlly(fx, fy + 1, 0, 1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy + 1, 0, 1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy, 0, 1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy, 0, 1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy - 1, 0, 1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy - 1, 0, 1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy - 1, 0, 1, opa, boardUpdateMetadata);
                             break;
                         case Dir.DownLeft:
                             //order by down and left first
-                            TryPiecePushAlly(fx - 1, fy - 1, 0, -1, opa);
-                            TryPiecePushAlly(fx, fy - 1, 0, -1, opa);
-                            TryPiecePushAlly(fx + 1, fy - 1, 0, -1, opa);
-                            TryPiecePushAlly(fx - 1, fy, 0, -1, opa);
-                            TryPiecePushAlly(fx + 1, fy, 0, -1, opa);
-                            TryPiecePushAlly(fx - 1, fy + 1, 0, -1, opa);
-                            TryPiecePushAlly(fx, fy + 1, 0, -1, opa);
-                            TryPiecePushAlly(fx + 1, fy + 1, 0, -1, opa);
+                            TryPiecePushAlly(fx - 1, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy + 1, 0, -1, opa, boardUpdateMetadata);
                             break;
                         case Dir.DownRight:
-                            TryPiecePushAlly(fx + 1, fy - 1, 0, -1, opa);
-                            TryPiecePushAlly(fx, fy - 1, 0, -1, opa);
-                            TryPiecePushAlly(fx - 1, fy - 1, 0, -1, opa);
-                            TryPiecePushAlly(fx + 1, fy, 0, -1, opa);
-                            TryPiecePushAlly(fx - 1, fy, 0, -1, opa);
-                            TryPiecePushAlly(fx + 1, fy + 1, 0, -1, opa);
-                            TryPiecePushAlly(fx, fy + 1, 0, -1, opa);
-                            TryPiecePushAlly(fx - 1, fy + 1, 0, -1, opa);
+                            TryPiecePushAlly(fx + 1, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy + 1, 0, -1, opa, boardUpdateMetadata);
                             break;
                         case Dir.Null:
                             break;
                         case Dir.UpLeft:
-                            TryPiecePushAlly(fx - 1, fy + 1, 0, -1, opa);
-                            TryPiecePushAlly(fx, fy + 1, 0, -1, opa);
-                            TryPiecePushAlly(fx + 1, fy + 1, 0, -1, opa);
-                            TryPiecePushAlly(fx - 1, fy, 0, -1, opa);
-                            TryPiecePushAlly(fx + 1, fy, 0, -1, opa);
-                            TryPiecePushAlly(fx - 1, fy - 1, 0, -1, opa);
-                            TryPiecePushAlly(fx, fy - 1, 0, -1, opa);
-                            TryPiecePushAlly(fx + 1, fy - 1, 0, -1, opa);
+                            TryPiecePushAlly(fx - 1, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy - 1, 0, -1, opa, boardUpdateMetadata);
                             break;
                         case Dir.UpRight:
-                            TryPiecePushAlly(fx + 1, fy + 1, 0, -1, opa);
-                            TryPiecePushAlly(fx, fy + 1, 0, -1, opa);
-                            TryPiecePushAlly(fx - 1, fy + 1, 0, -1, opa);
-                            TryPiecePushAlly(fx + 1, fy, 0, -1, opa);
-                            TryPiecePushAlly(fx - 1, fy, 0, -1, opa);
-                            TryPiecePushAlly(fx + 1, fy - 1, 0, -1, opa);
-                            TryPiecePushAlly(fx, fy - 1, 0, -1, opa);
-                            TryPiecePushAlly(fx - 1, fy - 1, 0, -1, opa);
+                            TryPiecePushAlly(fx + 1, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx + 1, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                            TryPiecePushAlly(fx - 1, fy - 1, 0, -1, opa, boardUpdateMetadata);
                             break;
                     }
                 }
@@ -3094,29 +3103,28 @@ public class Board
                 //No vertical swappage because that seems overpowered? (Pull the enemy king up 2 squares if you sacrifice a Uranus on the piece in front of the king)
                 //  But you lose point value in the process
                 //ehh, why not, Uranuses are worth 7 points so a 7 point sacrifice is very high risk
-                TryPieceSwapEnemy(px, py - 1, px, py + 1, opa);
-                //TryPieceSwap(px - 2, py, px + 2, py);
-                TryPieceSwapEnemy(px - 1, py, px + 1, py, opa);
+                TryPieceSwapEnemy(px, py - 1, px, py + 1, opa, boardUpdateMetadata);
+                TryPieceSwapEnemy(px - 1, py, px + 1, py, opa, boardUpdateMetadata);
                 break;
             case PieceType.Libra:
                 int uy = opa == PieceAlignment.Black ? -1 : 1;
                 //Being able to rearrange 4 enemy pieces with 1 piece move is pretty overpowered
                 //So nerfing this to 2 pieces
-                //TryPiecePushEnemy(px - 2, py + uy, 0, -uy, opa);
-                TryPiecePushEnemy(px - 1, py + uy, 0, -uy, opa);
-                TryPiecePushEnemy(px + 1, py + uy, 0, -uy, opa);
-                //TryPiecePushEnemy(px + 2, py + uy, 0, -uy, opa);
-                //TryPiecePushEnemy(px - 2, py - uy, 0, uy, opa);
-                TryPiecePushEnemy(px - 1, py - uy, 0, uy, opa);
-                TryPiecePushEnemy(px + 1, py - uy, 0, uy, opa);
-                //TryPiecePushEnemy(px + 2, py - uy, 0, uy, opa);
+                //TryPiecePushEnemy(px - 2, py + uy, 0, -uy, opa, boardUpdateMetadata);
+                TryPiecePushEnemy(px - 1, py + uy, 0, -uy, opa, boardUpdateMetadata);
+                TryPiecePushEnemy(px + 1, py + uy, 0, -uy, opa, boardUpdateMetadata);
+                //TryPiecePushEnemy(px + 2, py + uy, 0, -uy, opa, boardUpdateMetadata);
+                //TryPiecePushEnemy(px - 2, py - uy, 0, uy, opa, boardUpdateMetadata);
+                TryPiecePushEnemy(px - 1, py - uy, 0, uy, opa, boardUpdateMetadata);
+                TryPiecePushEnemy(px + 1, py - uy, 0, uy, opa, boardUpdateMetadata);
+                //TryPiecePushEnemy(px + 2, py - uy, 0, uy, opa, boardUpdateMetadata);
                 break;
             case PieceType.Pincer:
-                DoPincerCheck(px, py, opa);
+                DoPincerCheck(px, py, opa, boardUpdateMetadata);
                 break;
             case PieceType.ElectroPawn:
                 int ey = opa == PieceAlignment.Black ? -1 : 1;
-                TryPiecePushEnemy(px, py + 2 * ey, 0, -ey, opa);
+                TryPiecePushEnemy(px, py + 2 * ey, 0, -ey, opa, boardUpdateMetadata);
                 break;
         }
 
@@ -3144,94 +3152,94 @@ public class Board
                 switch (dir)
                 {
                     case Move.Dir.Down:
-                        TryPiecePushAlly(fx - 1, fy - 1, 0, -1, opa);
-                        //TryPiecePushAlly(fx, fy - 1, 0, -1, opa);
-                        TryPiecePushAlly(fx + 1, fy - 1, 0, -1, opa);
-                        TryPiecePushAlly(fx - 1, fy, 0, -1, opa);
-                        TryPiecePushAlly(fx + 1, fy, 0, -1, opa);
-                        TryPiecePushAlly(fx - 1, fy + 1, 0, -1, opa);
-                        TryPiecePushAlly(fx, fy + 1, 0, -1, opa);
-                        TryPiecePushAlly(fx + 1, fy + 1, 0, -1, opa);
+                        TryPiecePushAlly(fx - 1, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                        //TryPiecePushAlly(fx, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy - 1, 0, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy, 0, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy, 0, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy + 1, 0, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy + 1, 0, -1, opa, boardUpdateMetadata);
                         break;
                     case Move.Dir.Left:
-                        TryPiecePushAlly(fx - 1, fy + 1, -1, 0, opa);
-                        //TryPiecePushAlly(fx - 1, fy, -1, 0, opa);
-                        TryPiecePushAlly(fx - 1, fy - 1, -1, 0, opa);
-                        TryPiecePushAlly(fx, fy + 1, -1, 0, opa);
-                        TryPiecePushAlly(fx, fy - 1, -1, 0, opa);
-                        TryPiecePushAlly(fx + 1, fy + 1, -1, 0, opa);
-                        TryPiecePushAlly(fx + 1, fy, -1, 0, opa);
-                        TryPiecePushAlly(fx + 1, fy - 1, -1, 0, opa);
+                        TryPiecePushAlly(fx - 1, fy + 1, -1, 0, opa, boardUpdateMetadata);
+                        //TryPiecePushAlly(fx - 1, fy, -1, 0, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy - 1, -1, 0, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy + 1, -1, 0, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy - 1, -1, 0, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy + 1, -1, 0, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy, -1, 0, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy - 1, -1, 0, opa, boardUpdateMetadata);
                         break;
                     case Move.Dir.Right:
-                        TryPiecePushAlly(fx + 1, fy + 1, 1, 0, opa);
-                        //TryPiecePushAlly(fx + 1, fy, 1, 0, opa);
-                        TryPiecePushAlly(fx + 1, fy - 1, 1, 0, opa);
-                        TryPiecePushAlly(fx, fy + 1, 1, 0, opa);
-                        TryPiecePushAlly(fx, fy - 1, 1, 0, opa);
-                        TryPiecePushAlly(fx - 1, fy + 1, 1, 0, opa);
-                        TryPiecePushAlly(fx - 1, fy, 1, 0, opa);
-                        TryPiecePushAlly(fx - 1, fy - 1, 1, 0, opa);
+                        TryPiecePushAlly(fx + 1, fy + 1, 1, 0, opa, boardUpdateMetadata);
+                        //TryPiecePushAlly(fx + 1, fy, 1, 0, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy - 1, 1, 0, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy + 1, 1, 0, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy - 1, 1, 0, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy + 1, 1, 0, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy, 1, 0, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy - 1, 1, 0, opa, boardUpdateMetadata);
                         break;
                     case Move.Dir.Up:
-                        TryPiecePushAlly(fx - 1, fy + 1, 0, 1, opa);
-                        //TryPiecePushAlly(fx, fy + 1, 0, 1, opa);
-                        TryPiecePushAlly(fx + 1, fy + 1, 0, 1, opa);
-                        TryPiecePushAlly(fx - 1, fy, 0, 1, opa);
-                        TryPiecePushAlly(fx + 1, fy, 0, 1, opa);
-                        TryPiecePushAlly(fx - 1, fy - 1, 0, 1, opa);
-                        TryPiecePushAlly(fx, fy - 1, 0, 1, opa);
-                        TryPiecePushAlly(fx + 1, fy - 1, 0, 1, opa);
+                        TryPiecePushAlly(fx - 1, fy + 1, 0, 1, opa, boardUpdateMetadata);
+                        //TryPiecePushAlly(fx, fy + 1, 0, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy + 1, 0, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy, 0, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy, 0, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy - 1, 0, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy - 1, 0, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy - 1, 0, 1, opa, boardUpdateMetadata);
                         break;
                     case Dir.DownLeft:
                         //order by down and left first
-                        //TryPiecePushAlly(fx - 1, fy - 1, -1, -1, opa);
-                        TryPiecePushAlly(fx, fy - 1, -1, -1, opa);
-                        TryPiecePushAlly(fx + 1, fy - 1, -1, -1, opa);
-                        TryPiecePushAlly(fx - 1, fy, -1, -1, opa);
-                        TryPiecePushAlly(fx + 1, fy, -1, -1, opa);
-                        TryPiecePushAlly(fx - 1, fy + 1, -1, -1, opa);
-                        TryPiecePushAlly(fx, fy + 1, -1, -1, opa);
-                        TryPiecePushAlly(fx + 1, fy + 1, -1, -1, opa);
+                        //TryPiecePushAlly(fx - 1, fy - 1, -1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy - 1, -1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy - 1, -1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy, -1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy, -1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy + 1, -1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy + 1, -1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy + 1, -1, -1, opa, boardUpdateMetadata);
                         break;
                     case Dir.DownRight:
-                        //TryPiecePushAlly(fx + 1, fy - 1, 1, -1, opa);
-                        TryPiecePushAlly(fx, fy - 1, 1, -1, opa);
-                        TryPiecePushAlly(fx - 1, fy - 1, 1, -1, opa);
-                        TryPiecePushAlly(fx + 1, fy, 1, -1, opa);
-                        TryPiecePushAlly(fx - 1, fy, 1, -1, opa);
-                        TryPiecePushAlly(fx + 1, fy + 1, 1, -1, opa);
-                        TryPiecePushAlly(fx, fy + 1, 1, -1, opa);
-                        TryPiecePushAlly(fx - 1, fy + 1, 1, -1, opa);
+                        //TryPiecePushAlly(fx + 1, fy - 1, 1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy - 1, 1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy - 1, 1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy, 1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy, 1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy + 1, 1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy + 1, 1, -1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy + 1, 1, -1, opa, boardUpdateMetadata);
                         break;
                     case Dir.Null:
                         break;
                     case Dir.UpLeft:
-                        //TryPiecePushAlly(fx - 1, fy + 1, -1, 1, opa);
-                        TryPiecePushAlly(fx, fy + 1, -1, 1, opa);
-                        TryPiecePushAlly(fx + 1, fy + 1, -1, 1, opa);
-                        TryPiecePushAlly(fx - 1, fy, -1, 1, opa);
-                        TryPiecePushAlly(fx + 1, fy, -1, 1, opa);
-                        TryPiecePushAlly(fx - 1, fy - 1, -1, 1, opa);
-                        TryPiecePushAlly(fx, fy - 1, -1, 1, opa);
-                        TryPiecePushAlly(fx + 1, fy - 1, -1, 1, opa);
+                        //TryPiecePushAlly(fx - 1, fy + 1, -1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy + 1, -1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy + 1, -1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy, -1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy, -1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy - 1, -1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy - 1, -1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy - 1, -1, 1, opa, boardUpdateMetadata);
                         break;
                     case Dir.UpRight:
-                        //TryPiecePushAlly(fx + 1, fy + 1, 1, 1, opa);
-                        TryPiecePushAlly(fx, fy + 1, 1, 1, opa);
-                        TryPiecePushAlly(fx - 1, fy + 1, 1, 1, opa);
-                        TryPiecePushAlly(fx + 1, fy, 1, 1, opa);
-                        TryPiecePushAlly(fx - 1, fy, 1, 1, opa);
-                        TryPiecePushAlly(fx + 1, fy - 1, 1, 1, opa);
-                        TryPiecePushAlly(fx, fy - 1, 1, 1, opa);
-                        TryPiecePushAlly(fx - 1, fy - 1, 1, 1, opa);
+                        //TryPiecePushAlly(fx + 1, fy + 1, 1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy + 1, 1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy + 1, 1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy, 1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy, 1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx + 1, fy - 1, 1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx, fy - 1, 1, 1, opa, boardUpdateMetadata);
+                        TryPiecePushAlly(fx - 1, fy - 1, 1, 1, opa, boardUpdateMetadata);
                         break;
                 }
             }
         }
 
 
-        RunTurnEnd(blackToMove);
+        RunTurnEnd(blackToMove, boardUpdateMetadata);
 
         ply++;
 
@@ -3273,8 +3281,17 @@ public class Board
             bonusPly++;
         }
     }
-    public void ApplyGiantMove(uint oldPiece, Piece.PieceAlignment opa, int fx, int fy, int tx, int ty, PieceTableEntry pteO)
+    public void ApplyGiantMove(uint oldPiece, Piece.PieceAlignment opa, int fx, int fy, int tx, int ty, PieceTableEntry pteO, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
+        //First entry will be moving from f to t (but only for non stationary moves)
+        //ehhh I decided against this
+        /*
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, pteO.type, BoardUpdateMetadata.BoardUpdateType.Move));
+        }
+        */
+
         //More complex than normal movement
 
         ulong bitindex = 1uL << fx + fy * 8;
@@ -3351,13 +3368,27 @@ public class Board
                         pieceChange = 1;
                     }
                     //destroy target
-                    DeletePieceAtCoordinate(targetX, targetY, pteT, tpa);
+                    DeletePieceAtCoordinate(targetX, targetY, pteT, tpa, boardUpdateMetadata);
                 }
             }
         }
 
         //out of move loop: now do the move
         DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, 0);
+
+        if (boardUpdateMetadata != null)
+        {
+            //update for the giant
+            if (pieceChange == 2)
+            {
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, pteO.type, BoardUpdateMetadata.BoardUpdateType.Capture));
+            }
+
+            if (pieceChange == 1)
+            {
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.GetPieceType(oldPiece), BoardUpdateMetadata.BoardUpdateType.TypeChange));
+            }
+        }
 
         if (oldPiece == 0)
         {
@@ -3390,12 +3421,17 @@ public class Board
         }
     }
 
-    public void DeletePieceAtCoordinate(int x, int y, PieceTableEntry pte, Piece.PieceAlignment pa)
+    public void DeletePieceAtCoordinate(int x, int y, PieceTableEntry pte, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         //PieceTableEntry pte = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(GetPieceAtCoordinate(x, y)));
         if (pte == null)
         {
             return;
+        }
+
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, pte.type, BoardUpdateMetadata.BoardUpdateType.Capture));
         }
 
         if ((pte.pieceProperty & PieceProperty.Giant) != 0)
@@ -3407,7 +3443,7 @@ public class Board
         switch (pte.type) {
             case PieceType.ArcanaMoon:
             case PieceType.MoonIllusion:
-                DeleteArcanaMoon(pa == PieceAlignment.Black);
+                DeleteArcanaMoon(pa == PieceAlignment.Black, boardUpdateMetadata);
                 break;
             case PieceType.Revenant:
                 //is the revenant power depleted
@@ -3415,7 +3451,7 @@ public class Board
                 {
                     break;
                 }
-                TryReplaceRevenant(x, y);
+                TryReplaceRevenant(x, y, boardUpdateMetadata);
                 break;
             case PieceType.Lich:
                 //Lich is a rechargeable revenant (but starts without a charge)
@@ -3423,24 +3459,24 @@ public class Board
                 {
                     break;
                 }
-                TryReplaceLich(x, y, GetPieceAtCoordinate(x, y));
+                TryReplaceLich(x, y, GetPieceAtCoordinate(x, y), boardUpdateMetadata);
                 break;
             case PieceType.BigSlime:
-                SpawnSplitSlimes(x, y);
+                SpawnSplitSlimes(x, y, boardUpdateMetadata);
                 break;
             case PieceType.PawnStack:
-                SpawnSplitPiece(x, y, PieceType.Pawn);
+                SpawnSplitPiece(x, y, PieceType.Pawn, boardUpdateMetadata);
                 break;
             case PieceType.KangarooQueen:
-                SpawnSplitPiece(x, y, PieceType.KangarooPrincess);
+                SpawnSplitPiece(x, y, PieceType.KangarooPrincess, boardUpdateMetadata);
                 break;
         }
 
         SetPieceAtCoordinate(x, y, 0);
     }
-    public void CapturePieceAtCoordinate(int x, int y, uint newPiece, PieceTableEntry pte, Piece.PieceAlignment pa, PieceTableEntry pteT, Piece.PieceAlignment paT)
+    public void CapturePieceAtCoordinate(int x, int y, uint newPiece, PieceTableEntry pte, Piece.PieceAlignment pa, PieceTableEntry pteT, Piece.PieceAlignment paT, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
-        DeletePieceAtCoordinate(x, y, pteT, paT);
+        DeletePieceAtCoordinate(x, y, pteT, paT, boardUpdateMetadata);
         PlaceMovedPiece(newPiece, x, y, pte, pa);
     }
     public void DeletePieceMovedFromCoordinate(int x, int y, PieceTableEntry pte, Piece.PieceAlignment pa, uint residuePiece = 0)
@@ -3455,7 +3491,7 @@ public class Board
 
         SetPieceAtCoordinate(x, y, residuePiece);
     }
-    public void DeleteArcanaMoon(bool black)
+    public void DeleteArcanaMoon(bool black, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         //Note: the capture check reduces point score by one of them
         //This is why I made Moon Illusion the same value as Arcana Moon (it doesn't increase when it spawns stuff)
@@ -3481,12 +3517,21 @@ public class Board
                 whitePerPlayerInfo.pieceCount--;
             }
 
+            if (boardUpdateMetadata != null)
+            {
+                //Double check is here
+                if (pieces[index] != 0)
+                {
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, Piece.PieceType.MoonIllusion, BoardUpdateMetadata.BoardUpdateType.Capture));
+                }
+            }
+
             //no double check
             //I'm just going to assume the bitboard is correct I guess
             pieces[index] = 0;
         }
     }
-    public void TryReplaceLich(int x, int y, uint piece)
+    public void TryReplaceLich(int x, int y, uint piece, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         int tx = x;
         int ty = y;
@@ -3532,6 +3577,12 @@ public class Board
         pieces[tx + ty * 8] = GetPieceAtCoordinate(x, y);
         pieces[tx + ty * 8] = Piece.SetPieceSpecialData((byte)(Piece.GetPieceSpecialData(piece) - 1), pieces[tx + ty * 8]);
 
+        if (boardUpdateMetadata != null)
+        {
+            //Spawn a new lich
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.PieceType.Lich, BoardUpdateMetadata.BoardUpdateType.Spawn));
+        }
+
         PieceTableEntry pteR = GlobalPieceManager.Instance.GetPieceTableEntry(PieceType.Lich);
         //code will undo the piece value decrease
         if (pa == PieceAlignment.White)
@@ -3545,7 +3596,7 @@ public class Board
             blackPerPlayerInfo.pieceCount++;
         }
     }
-    public void TryReplaceRevenant(int x, int y)
+    public void TryReplaceRevenant(int x, int y, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         int tx = x;
         int ty = y;
@@ -3591,6 +3642,12 @@ public class Board
         pieces[tx + ty * 8] = GetPieceAtCoordinate(x, y);
         pieces[tx + ty * 8] = Piece.SetPieceSpecialData(1, pieces[tx + ty * 8]);
 
+        if (boardUpdateMetadata != null)
+        {
+            //Spawn a new lich
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, Piece.PieceType.Lich, BoardUpdateMetadata.BoardUpdateType.Spawn));
+        }
+
         PieceTableEntry pteR = GlobalPieceManager.Instance.GetPieceTableEntry(PieceType.Revenant);
         //code will undo the piece value decrease
         if (pa == PieceAlignment.White)
@@ -3605,7 +3662,7 @@ public class Board
         }
     }
     //kill a big slime, spawn slimes behind 2
-    public void SpawnSplitSlimes(int x, int y)
+    public void SpawnSplitSlimes(int x, int y, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         int dx = 0;
         int dy = -1;
@@ -3642,6 +3699,11 @@ public class Board
 
         PieceTableEntry pteS = GlobalPieceManager.Instance.GetPieceTableEntry(PieceType.Slime);
 
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x + dx, y + dy, Piece.PieceType.Slime, BoardUpdateMetadata.BoardUpdateType.Spawn));
+        }
+
         //Spawn a thing
         pieces[(x + dx) + (y + dy) * 8] = Piece.SetPieceType(PieceType.Slime, GetPieceAtCoordinate(x, y));
         if (pa == PieceAlignment.White)
@@ -3664,6 +3726,11 @@ public class Board
             return;
         }
 
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x + dx * 2, y + dy * 2, Piece.PieceType.Slime, BoardUpdateMetadata.BoardUpdateType.Spawn));
+        }
+
         //Spawn a thing
         pieces[(x + dx * 2) + (y + dy * 2) * 8] = Piece.SetPieceType(PieceType.Slime, GetPieceAtCoordinate(x, y));
         if (pa == PieceAlignment.White)
@@ -3677,7 +3744,7 @@ public class Board
             blackPerPlayerInfo.pieceCount++;
         }
     }
-    public void SpawnSplitPiece(int x, int y, PieceType newPiece)
+    public void SpawnSplitPiece(int x, int y, PieceType newPiece, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         int dx = 0;
         int dy = -1;
@@ -3713,6 +3780,11 @@ public class Board
         }
 
         PieceTableEntry pteS = GlobalPieceManager.Instance.GetPieceTableEntry(newPiece);
+
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x + dx, y + dy, newPiece, BoardUpdateMetadata.BoardUpdateType.Spawn));
+        }
 
         //Spawn a thing
         pieces[(x + dx) + (y + dy) * 8] = Piece.SetPieceType(newPiece, GetPieceAtCoordinate(x, y));
@@ -3817,7 +3889,7 @@ public class Board
     }
 
 
-    public void RunTurnEnd(bool black)
+    public void RunTurnEnd(bool black, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         //note: piece bitboards will be out of date as this is after ApplyMove
 
@@ -3827,11 +3899,11 @@ public class Board
         //It would be a lot of conditionals to place stuff and fix the bitboards
         MoveGeneratorInfoEntry.GeneratePieceBitboards(this);
 
-        ApplyAutoMovers(!black);
-        ApplyPromotion(black);
-        TickDownStatusEffects(black);
-        ApplySquareEffectsTurnEnd(black);
-        ApplyZenithEffect();
+        ApplyAutoMovers(!black, boardUpdateMetadata);
+        ApplyPromotion(black, boardUpdateMetadata);
+        TickDownStatusEffects(black, boardUpdateMetadata);
+        ApplySquareEffectsTurnEnd(black, boardUpdateMetadata);
+        ApplyZenithEffect(boardUpdateMetadata);
     }
 
     //this should be idempotent and also not have immediate effect
@@ -3904,7 +3976,7 @@ public class Board
         */
     }
 
-    public void ApplyAutoMovers(bool black)
+    public void ApplyAutoMovers(bool black, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         
         /*
@@ -3986,7 +4058,7 @@ public class Board
             Piece.PieceAlignment tpa = Piece.GetPieceAlignment(targetPiece);
 
             bool attackSuccessful = false;
-            (oldPiece, attackSuccessful) = AutoMoverAttack(black, pteO, opa, fx, fy, tx, ty, targetPiece, oldPiece, tpa);
+            (oldPiece, attackSuccessful) = AutoMoverAttack(black, pteO, opa, fx, fy, tx, ty, targetPiece, oldPiece, tpa, boardUpdateMetadata);
         }
         while (bladebeast != 0)
         {
@@ -4023,7 +4095,7 @@ public class Board
             }
             targetPiece = pieces[tx + ty * 8];
             tpa = Piece.GetPieceAlignment(targetPiece);
-            (oldPiece, attackSuccessful) = AutoMoverAttack(black, pteO, opa, fx, fy, tx, ty, targetPiece, oldPiece, tpa);
+            (oldPiece, attackSuccessful) = AutoMoverAttack(black, pteO, opa, fx, fy, tx, ty, targetPiece, oldPiece, tpa, boardUpdateMetadata);
             if (attackSuccessful)
             {
                 continue;
@@ -4036,7 +4108,7 @@ public class Board
             }
             targetPiece = pieces[tx + ty * 8];
             tpa = Piece.GetPieceAlignment(targetPiece);
-            (oldPiece, attackSuccessful) = AutoMoverAttack(black, pteO, opa, fx, fy, tx, ty, targetPiece, oldPiece, tpa);
+            (oldPiece, attackSuccessful) = AutoMoverAttack(black, pteO, opa, fx, fy, tx, ty, targetPiece, oldPiece, tpa, boardUpdateMetadata);
             if (attackSuccessful)
             {
                 continue;
@@ -4049,7 +4121,7 @@ public class Board
             }
             targetPiece = pieces[tx + ty * 8];
             tpa = Piece.GetPieceAlignment(targetPiece);
-            (oldPiece, attackSuccessful) = AutoMoverAttack(black, pteO, opa, fx, fy, tx, ty, targetPiece, oldPiece, tpa);
+            (oldPiece, attackSuccessful) = AutoMoverAttack(black, pteO, opa, fx, fy, tx, ty, targetPiece, oldPiece, tpa, boardUpdateMetadata);
             if (attackSuccessful)
             {
                 continue;
@@ -4062,7 +4134,7 @@ public class Board
             }
             targetPiece = pieces[tx + ty * 8];
             tpa = Piece.GetPieceAlignment(targetPiece);
-            (oldPiece, attackSuccessful) = AutoMoverAttack(black, pteO, opa, fx, fy, tx, ty, targetPiece, oldPiece, tpa);
+            (oldPiece, attackSuccessful) = AutoMoverAttack(black, pteO, opa, fx, fy, tx, ty, targetPiece, oldPiece, tpa, boardUpdateMetadata);
         }
 
         if (black)
@@ -4114,6 +4186,10 @@ public class Board
 
                     pieces[newindex] = pieces[index];
                     pieces[index] = 0;
+                    if (boardUpdateMetadata != null)
+                    {
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, newindex & 7, newindex >> 3, Piece.PieceType.Zombie, BoardUpdateMetadata.BoardUpdateType.Shift));
+                    }
                 }
             }
             while (abominationBitboard != 0)
@@ -4182,13 +4258,18 @@ public class Board
 
                     pieces[newindex] = pieces[index];
                     pieces[index] = 0;
+                    if (boardUpdateMetadata != null)
+                    {
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, newindex & 7, newindex >> 3, Piece.PieceType.Abomination, BoardUpdateMetadata.BoardUpdateType.Shift));
+                    }
                 }
             }
         }
 
-        (uint, bool) AutoMoverAttack(bool black, PieceTableEntry pteO, PieceAlignment opa, int fx, int fy, int tx, int ty, uint targetPiece, uint oldPiece, PieceAlignment tpa)
+        (uint, bool) AutoMoverAttack(bool black, PieceTableEntry pteO, PieceAlignment opa, int fx, int fy, int tx, int ty, uint targetPiece, uint oldPiece, PieceAlignment tpa, List<BoardUpdateMetadata> boardUpdateMetadata)
         {
             //Does the attack bonk?
+            //Note that this is specifically auto mover "attack" so no passive moves are allowed
             if (opa == tpa || targetPiece == 0 || Piece.IsPieceInvincible(this, targetPiece, tx, ty, oldPiece, fx, fy, SpecialType.CaptureOnly))
             {
                 return (oldPiece, false);
@@ -4275,12 +4356,17 @@ public class Board
                 pieceChange = true;
             }
 
+            if (boardUpdateMetadata != null)
+            {
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, pteO.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+            }
+
             DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, 0);
-            CapturePieceAtCoordinate(tx, ty, oldPiece, pteO, opa, pteT, tpa);
+            CapturePieceAtCoordinate(tx, ty, oldPiece, pteO, opa, pteT, tpa, boardUpdateMetadata);
 
             if (oldPiece == 0)
             {
-                DeletePieceAtCoordinate(tx, ty, pteO, opa);
+                DeletePieceAtCoordinate(tx, ty, pteO, opa, boardUpdateMetadata);
             }
 
             ulong bitindexOld = 1uL << (fx + fy * 8);
@@ -4311,7 +4397,7 @@ public class Board
             return (oldPiece, true);
         }
     }
-    public void ApplyPromotion(bool black)
+    public void ApplyPromotion(bool black, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         int yLevel = 7;
 
@@ -4332,6 +4418,11 @@ public class Board
 
                 if (pte.promotionType != PieceType.Null)
                 {
+                    if (boardUpdateMetadata != null)
+                    {
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i, yLevel, pte.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                    }
+
                     pieces[i + yLevel * 8] = Piece.SetPieceType(pte.promotionType, piece);
 
                     if ((pte.pieceProperty & PieceProperty.Giant) != 0)
@@ -4353,7 +4444,7 @@ public class Board
         }
     }
 
-    public void TickDownStatusEffects(bool black)
+    public void TickDownStatusEffects(bool black, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         //Turns tick down at the end of the other player's turn
         //This is so that things applied to a King don't cause problems
@@ -4390,8 +4481,24 @@ public class Board
                 Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(pieces[i]);
 
                 //Rip
-                if (pse == PieceStatusEffect.Poisoned || pse == PieceStatusEffect.Zapped || pse == PieceStatusEffect.Bloodlust)
+                if (pse == PieceStatusEffect.Poisoned || pse == PieceStatusEffect.Burned || pse == PieceStatusEffect.Bloodlust)
                 {
+                    PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pieces[i]);
+
+                    if (!black)
+                    {
+                        blackPerPlayerInfo.pieceValueSumX2 += (short)(pte.pieceValueX2);
+                    }
+                    else
+                    {
+                        whitePerPlayerInfo.pieceValueSumX2 += (short)(pte.pieceValueX2);
+                    }
+
+                    if (boardUpdateMetadata != null)
+                    {
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pte.type, BoardUpdateMetadata.BoardUpdateType.Capture));
+                    }
+
                     pieces[i] = 0;
                     continue;
                 }
@@ -4401,32 +4508,32 @@ public class Board
             pieces[i] = Piece.SetPieceStatusDuration(psed, pieces[i]);
         }
     }
-    public bool TryPiecePushAlly(int x, int y, int dx, int dy, Piece.PieceAlignment pa)
+    public bool TryPiecePushAlly(int x, int y, int dx, int dy, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         if (x < 0 || x > 7 || y < 0 || y > 7 || Piece.GetPieceAlignment(pieces[x + y * 8]) != pa)
         {
             return false;
         }
 
-        return TryPiecePush(x, y, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + y * 8]));
+        return TryPiecePush(x, y, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + y * 8]), boardUpdateMetadata);
     }
-    public bool TryPiecePushEnemy(int x, int y, int dx, int dy, Piece.PieceAlignment pa)
+    public bool TryPiecePushEnemy(int x, int y, int dx, int dy, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         if (x < 0 || x > 7 || y < 0 || y > 7 || Piece.GetPieceAlignment(pieces[x + y * 8]) == pa)
         {
             return false;
         }
 
-        return TryPiecePush(x, y, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + y * 8]));
+        return TryPiecePush(x, y, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + y * 8]), boardUpdateMetadata);
     }
-    public void DoPincerCheck(int x, int y, Piece.PieceAlignment pa)
+    public void DoPincerCheck(int x, int y, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
-        TryPincerCapture(x, y, 1, 0, pa);
-        TryPincerCapture(x, y, -1, 0, pa);
-        TryPincerCapture(x, y, 0, 1, pa);
-        TryPincerCapture(x, y, 0, -1, pa);
+        TryPincerCapture(x, y, 1, 0, pa, boardUpdateMetadata);
+        TryPincerCapture(x, y, -1, 0, pa, boardUpdateMetadata);
+        TryPincerCapture(x, y, 0, 1, pa, boardUpdateMetadata);
+        TryPincerCapture(x, y, 0, -1, pa, boardUpdateMetadata);
     }
-    public void TryPincerCapture(int x, int y, int dx, int dy, Piece.PieceAlignment pa)
+    public void TryPincerCapture(int x, int y, int dx, int dy, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         int ox = x;
         int oy = y;
@@ -4458,9 +4565,14 @@ public class Board
         {
             //Destroy x, y
             PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pieces[x + y * 8]);
-            if (pte == null || (pte.pieceProperty & PieceProperty.NoTerrain) != 0)
+            if (pte == null)
             {
                 return;
+            }
+
+            if (boardUpdateMetadata != null)
+            {
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, pte.type, BoardUpdateMetadata.BoardUpdateType.Capture));
             }
 
             Piece.PieceAlignment targetPA = Piece.GetPieceAlignment(pieces[x + y * 8]);
@@ -4473,15 +4585,15 @@ public class Board
                 blackPerPlayerInfo.pieceValueSumX2 -= (pte.pieceValueX2);
             }
 
-            DeletePieceAtCoordinate(x, y, pte, targetPA);
+            DeletePieceAtCoordinate(x, y, pte, targetPA, boardUpdateMetadata);
         }
     }
 
-    public bool TryPiecePush(int x, int y, int dx, int dy)
+    public bool TryPiecePush(int x, int y, int dx, int dy, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
-        return TryPiecePush(x, y, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + y * 8]));
+        return TryPiecePush(x, y, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + y * 8]), boardUpdateMetadata);
     }
-    public bool TryPiecePush(int x, int y, int dx, int dy, PieceTableEntry pte)
+    public bool TryPiecePush(int x, int y, int dx, int dy, PieceTableEntry pte, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         int tx = x + dx;
         int ty = y + dy;
@@ -4510,7 +4622,12 @@ public class Board
 
         if (pieces[tx + ty * 8] == 0 && (pte.pieceProperty & (PieceProperty.Giant | PieceProperty.NoTerrain)) == 0)
         {
-            //blow wind upwards
+            if (boardUpdateMetadata != null)
+            {
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+            }
+
+            //blow wind towards ty
             pieces[tx + ty * 8] = pieces[x + y * 8];
             pieces[x + y * 8] = 0;
             return true;
@@ -4518,7 +4635,7 @@ public class Board
 
         return false;
     }
-    public bool TryPieceSwapEnemy(int x, int y, int x2, int y2, Piece.PieceAlignment pa)
+    public bool TryPieceSwapEnemy(int x, int y, int x2, int y2, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         if (x < 0 || x > 7 || y < 0 || y > 7)
         {
@@ -4541,12 +4658,21 @@ public class Board
             return false;
         }
 
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x2, y2, pteA.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+        }
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x2, y2, x, y, pteB.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+        }
+
         uint temp = pieces[x + y * 8];
         pieces[x + y * 8] = pieces[x2 + y2 * 8];
         pieces[x2 + y2 * 8] = temp;
         return true;
     }
-    public bool TryPieceSwap(int x, int y, int x2, int y2)
+    public bool TryPieceSwap(int x, int y, int x2, int y2, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         if (x < 0 || x > 7 || y < 0 || y > 7)
         {
@@ -4565,31 +4691,40 @@ public class Board
             return false;
         }
 
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x2, y2, pteA.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+        }
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x2, y2, x, y, pteB.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+        }
+
         uint temp = pieces[x + y * 8];
         pieces[x + y * 8] = pieces[x2 + y2 * 8];
         pieces[x2 + y2 * 8] = temp;
         return true;
     }
-    public bool TryPiecePull(int x, int y, int dx, int dy)
+    public bool TryPiecePull(int x, int y, int dx, int dy, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         if (x < 0 || x > 7 || y < 0 || y > 7 || pieces[x + y * 8] == 0)
         {
             return false;
         }
 
-        return TryPiecePull(x, y, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + y * 8]));
+        return TryPiecePull(x, y, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + y * 8]), boardUpdateMetadata);
     }
-    public bool TryPiecePull(int x, int y, int dx, int dy, PieceTableEntry pte)
+    public bool TryPiecePull(int x, int y, int dx, int dy, PieceTableEntry pte, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         //inverse push
-        return TryPiecePush(x, y, -dx, -dy, pte);
+        return TryPiecePush(x, y, -dx, -dy, pte, boardUpdateMetadata);
     }
-    public bool TryPiecePullStrong(int x, int y, int dx, int dy, PieceTableEntry pte)
+    public bool TryPiecePullStrong(int x, int y, int dx, int dy, PieceTableEntry pte, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         //inverse push
-        return TryPiecePushStrong(x, y, -dx, -dy, pte);
+        return TryPiecePushStrong(x, y, -dx, -dy, pte, boardUpdateMetadata);
     }
-    public bool TryPiecePullRanged(int x, int y, int dx, int dy, Piece.PieceAlignment target)
+    public bool TryPiecePullRanged(int x, int y, int dx, int dy, Piece.PieceAlignment target, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         int tx = x;
         int ty = y;
@@ -4627,13 +4762,18 @@ public class Board
             return false;
         }
 
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, (tx - dx), (ty - dy), pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+        }
+
         //obstacle at tx, ty, pull to 1 step earlier
         pieces[(tx - dx) + (ty - dy) * 8] = pieces[tx + ty * 8];
         pieces[tx + ty * 8] = 0;
 
         return true;
     }
-    public bool TryPiecePushStrong(int x, int y, int dx, int dy, PieceTableEntry pte)
+    public bool TryPiecePushStrong(int x, int y, int dx, int dy, PieceTableEntry pte, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         if (pte != null && (pte.pieceProperty & (PieceProperty.Giant | PieceProperty.NoTerrain)) != 0)
         {
@@ -4684,13 +4824,18 @@ public class Board
         tx -= dx;
         ty -= dy;
 
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+        }
+
         //Debug.Log("L: " + x + " " + y + " " + dx + " " + dy + " " + tx + " " + ty + " " + Piece.GetPieceType(pieces[tx + ty * 8]));
         pieces[tx + ty * 8] = pieces[x + y * 8];
         pieces[x + y * 8] = 0;
 
         return true;
     }
-    public void DoPassivePush(int x, int y, Piece.PieceAlignment pa)
+    public void DoPassivePush(int x, int y, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         for (int i = 0; i < 8; i++)
         {
@@ -4711,10 +4856,10 @@ public class Board
                 continue;
             }
 
-            TryPiecePush(x + dx, y + dy, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + dx + (y + dy) * 8]));
+            TryPiecePush(x + dx, y + dy, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + dx + (y + dy) * 8]), boardUpdateMetadata);
         }
     }
-    public void DoPassivePushStrong(int x, int y, Piece.PieceAlignment pa)
+    public void DoPassivePushStrong(int x, int y, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         for (int i = 0; i < 8; i++)
         {
@@ -4736,10 +4881,10 @@ public class Board
             }
 
             //Debug.Log("Passive strong");
-            TryPiecePushStrong(x + dx, y + dy, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + dx + (y + dy) * 8]));
+            TryPiecePushStrong(x + dx, y + dy, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + dx + (y + dy) * 8]), boardUpdateMetadata);
         }
     }
-    public void DoPassivePull(int x, int y, Piece.PieceAlignment pa)
+    public void DoPassivePull(int x, int y, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         for (int i = 0; i < 8; i++)
         {
@@ -4760,10 +4905,10 @@ public class Board
                 continue;
             }
 
-            TryPiecePull(x + dx * 2, y + dy * 2, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + dx * 2 + (y + dy * 2) * 8]));
+            TryPiecePull(x + dx * 2, y + dy * 2, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + dx * 2 + (y + dy * 2) * 8]), boardUpdateMetadata);
         }
     }
-    public void DoPassivePullStrong(int x, int y, Piece.PieceAlignment pa)
+    public void DoPassivePullStrong(int x, int y, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         for (int i = 0; i < 8; i++)
         {
@@ -4779,10 +4924,10 @@ public class Board
                 continue;
             }
 
-            TryPiecePullRanged(x, y, dx, dy, pa);
+            TryPiecePullRanged(x, y, dx, dy, pa, boardUpdateMetadata);
         }
     }
-    public void DoPassivePushDiag(int x, int y, Piece.PieceAlignment pa)
+    public void DoPassivePushDiag(int x, int y, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         for (int i = 0; i < 2; i++)
         {
@@ -4805,11 +4950,11 @@ public class Board
                     continue;
                 }
 
-                TryPiecePush(x + dx, y + dy, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + dx + (y + dy) * 8]));
+                TryPiecePush(x + dx, y + dy, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + dx + (y + dy) * 8]), boardUpdateMetadata);
             }
         }
     }
-    public void DoPassivePushStrongDiag(int x, int y, Piece.PieceAlignment pa)
+    public void DoPassivePushStrongDiag(int x, int y, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         for (int i = 0; i < 2; i++)
         {
@@ -4833,12 +4978,12 @@ public class Board
                 }
 
                 //Debug.Log("Passive strong");
-                TryPiecePushStrong(x + dx, y + dy, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + dx + (y + dy) * 8]));
+                TryPiecePushStrong(x + dx, y + dy, dx, dy, GlobalPieceManager.GetPieceTableEntry(pieces[x + dx + (y + dy) * 8]), boardUpdateMetadata);
             }
         }
     }
 
-    public void ApplySquareEffectsTurnEnd(bool black)
+    public void ApplySquareEffectsTurnEnd(bool black, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         //Rebuild the piece bitboards
         //MoveGeneratorInfoEntry.GeneratePieceBitboards(this);
@@ -4885,6 +5030,11 @@ public class Board
                 //Up push
                 if (lastMoveIndex < 56 && pieces[lastMoveIndex + 8] == 0 && (pte.pieceProperty & PieceProperty.Giant) == 0)
                 {
+                    if (boardUpdateMetadata != null)
+                    {
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7), (lastMoveIndex >> 3) + 1, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                    }
+
                     //blow wind upwards
                     pieces[lastMoveIndex + 8] = pieces[lastMoveIndex];
                     pieces[lastMoveIndex] = 0;
@@ -4902,7 +5052,11 @@ public class Board
                     //left 
                     if ((lastMoveIndex & 7) > 0 && pieces[lastMoveIndex - 1] == 0 && (pte.pieceProperty & PieceProperty.Giant) == 0)
                     {
-                        //blow wind upwards
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7) - 1, (lastMoveIndex >> 3), pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                        }
+
                         pieces[lastMoveIndex - 1] = pieces[lastMoveIndex];
                         pieces[lastMoveIndex] = 0;
                         processedSquares |= 1uL << lastMoveIndex - 1;
@@ -4913,7 +5067,11 @@ public class Board
                     //right
                     if ((lastMoveIndex & 7) < 7 && pieces[lastMoveIndex + 1] == 0 && (pte.pieceProperty & PieceProperty.Giant) == 0)
                     {
-                        //blow wind upwards
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7) + 1, (lastMoveIndex >> 3), pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                        }
+
                         pieces[lastMoveIndex + 1] = pieces[lastMoveIndex];
                         pieces[lastMoveIndex] = 0;
                         processedSquares |= 1uL << lastMoveIndex + 1;
@@ -4930,6 +5088,11 @@ public class Board
                 case Square.SquareType.WindUp:
                     if (lastMoveIndex < 56 && pieces[lastMoveIndex + 8] == 0 && (pte.pieceProperty & PieceProperty.Giant) == 0)
                     {
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7), (lastMoveIndex >> 3) + 1, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                        }
+
                         //blow wind upwards
                         pieces[lastMoveIndex + 8] = pieces[lastMoveIndex];
                         pieces[lastMoveIndex] = 0;
@@ -4939,7 +5102,11 @@ public class Board
                 case Square.SquareType.WindDown:
                     if (lastMoveIndex > 7 && pieces[lastMoveIndex - 8] == 0 && (pte.pieceProperty & PieceProperty.Giant) == 0)
                     {
-                        //blow wind upwards
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7), (lastMoveIndex >> 3) - 1, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                        }
+
                         pieces[lastMoveIndex - 8] = pieces[lastMoveIndex];
                         pieces[lastMoveIndex] = 0;
                         processedSquares |= 1uL << lastMoveIndex - 8;
@@ -4948,7 +5115,11 @@ public class Board
                 case Square.SquareType.WindLeft:
                     if ((lastMoveIndex & 7) > 0 && pieces[lastMoveIndex - 1] == 0 && (pte.pieceProperty & PieceProperty.Giant) == 0)
                     {
-                        //blow wind upwards
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7) - 1, (lastMoveIndex >> 3), pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                        }
+
                         pieces[lastMoveIndex - 1] = pieces[lastMoveIndex];
                         pieces[lastMoveIndex] = 0;
                         processedSquares |= 1uL << lastMoveIndex - 1;
@@ -4957,13 +5128,17 @@ public class Board
                 case Square.SquareType.WindRight:
                     if ((lastMoveIndex & 7) < 7 && pieces[lastMoveIndex + 1] == 0 && (pte.pieceProperty & PieceProperty.Giant) == 0)
                     {
-                        //blow wind upwards
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7) + 1, (lastMoveIndex >> 3), pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                        }
+
                         pieces[lastMoveIndex + 1] = pieces[lastMoveIndex];
                         pieces[lastMoveIndex] = 0;
                         processedSquares |= 1uL << lastMoveIndex + 1;
                     }
                     break;
-                case Square.SquareType.Ice:
+                case Square.SquareType.Slippery:
                     int iceDx = 0;
                     int iceDy = 0;
                     if (!lastMoveStationary && Move.GetDir(lastMove) != Move.Dir.Null)
@@ -4976,6 +5151,11 @@ public class Board
                         //check ice move legality
                         if (iceDx >= 0 && iceDx <= 7 && iceDy >= 0 && iceDy <= 7 && pieces[iceDx + iceDy * 8] == 0)
                         {
+                            if (boardUpdateMetadata != null)
+                            {
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, iceDx, iceDy, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                            }
+
                             processedSquares |= 1uL << (iceDx + iceDy * 8);
                             pieces[iceDx + iceDy * 8] = pieces[lastMoveIndex];
                             pieces[lastMoveIndex] = 0;
@@ -4996,6 +5176,11 @@ public class Board
                         //bouncy move legality
                         if (bouncyDx >= 0 && bouncyDx <= 7 && bouncyDy >= 0 && bouncyDy <= 7 && pieces[bouncyDx + bouncyDy * 8] == 0)
                         {
+                            if (boardUpdateMetadata != null)
+                            {
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, bouncyDx, bouncyDy, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                            }
+
                             processedSquares |= 1uL << (bouncyDx + bouncyDy * 8);
                             pieces[bouncyDx + bouncyDy * 8] = pieces[lastMoveIndex];
                             pieces[lastMoveIndex] = 0;
@@ -5031,13 +5216,18 @@ public class Board
                         {
                             whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
                         }
+
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                        }
                     }
                     break;
-                case Square.SquareType.Electrified:
+                case Square.SquareType.Frost:
                     //Zap the piece
                     if (Piece.GetPieceStatusEffect(pieces[lastMoveIndex]) == PieceStatusEffect.None)
                     {
-                        pieces[lastMoveIndex] = Piece.SetPieceStatusEffect(PieceStatusEffect.Stunned, pieces[lastMoveIndex]);
+                        pieces[lastMoveIndex] = Piece.SetPieceStatusEffect(PieceStatusEffect.Frozen, pieces[lastMoveIndex]);
                         pieces[lastMoveIndex] = Piece.SetPieceStatusDuration(2, pieces[lastMoveIndex]);
                     }
                     break;
@@ -5070,7 +5260,7 @@ public class Board
                     continue;
                 }
 
-                DeletePieceAtCoordinate(index & 7, (index & 56) >> 3, pte, Piece.PieceAlignment.White);
+                DeletePieceAtCoordinate(index & 7, (index & 56) >> 3, pte, Piece.PieceAlignment.White, boardUpdateMetadata);
                 //pieces[index] = 0;
                 whitePerPlayerInfo.pieceValueSumX2 -= (pte.pieceValueX2);
             }
@@ -5092,7 +5282,7 @@ public class Board
                     continue;
                 }
 
-                DeletePieceAtCoordinate(index & 7, (index & 56) >> 3, pte, Piece.PieceAlignment.Black);
+                DeletePieceAtCoordinate(index & 7, (index & 56) >> 3, pte, Piece.PieceAlignment.Black, boardUpdateMetadata);
                 //pieces[index] = 0;
                 blackPerPlayerInfo.pieceValueSumX2 -= (pte.pieceValueX2);
             }
@@ -5146,11 +5336,16 @@ public class Board
                         whitePerPlayerInfo.pieceValueSumX2 -= (pteI.pieceValueX2);
                     }
 
-                    DeletePieceAtCoordinate(index & 7, (index & 56) >> 3, pte, black ? Piece.PieceAlignment.Black : Piece.PieceAlignment.White);
+                    DeletePieceAtCoordinate(index & 7, (index & 56) >> 3, pte, black ? Piece.PieceAlignment.Black : Piece.PieceAlignment.White, boardUpdateMetadata);
                     break;
                 case Square.SquareType.WindUp:
                     if (index < 56 && pieces[index + 8] == 0 && (pte.pieceProperty & PieceProperty.Giant) == 0)
                     {
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7), (index >> 3) + 1, pteI.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                        }
+
                         //blow wind upwards
                         pieces[index + 8] = pieces[index];
                         pieces[index] = 0;
@@ -5160,7 +5355,11 @@ public class Board
                 case Square.SquareType.WindDown:
                     if (index > 7 && pieces[index - 8] == 0 && (pte.pieceProperty & PieceProperty.Giant) == 0)
                     {
-                        //blow wind upwards
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7), (index >> 3) - 1, pteI.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                        }
+
                         pieces[index - 8] = pieces[index];
                         pieces[index] = 0;
                         processedSquares |= 1uL << index - 8;
@@ -5169,7 +5368,11 @@ public class Board
                 case Square.SquareType.WindLeft:
                     if ((index & 7) > 0 && pieces[index - 1] == 0 && (pte.pieceProperty & PieceProperty.Giant) == 0)
                     {
-                        //blow wind upwards
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7) - 1, (index >> 3), pteI.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                        }
+
                         pieces[index - 1] = pieces[index];
                         pieces[index] = 0;
                         processedSquares |= 1uL << index - 1;
@@ -5178,7 +5381,11 @@ public class Board
                 case Square.SquareType.WindRight:
                     if ((index & 7) < 7 && pieces[index + 1] == 0 && (pte.pieceProperty & PieceProperty.Giant) == 0)
                     {
-                        //blow wind upwards
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7) + 1, (index >> 3), pteI.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                        }
+
                         pieces[index + 1] = pieces[index];
                         pieces[index] = 0;
                         processedSquares |= 1uL << index + 1;
@@ -5204,6 +5411,11 @@ public class Board
                         }
 
                         PieceTableEntry pteB = GlobalPieceManager.Instance.GetPieceTableEntry(pte.promotionType);
+
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                        }
 
                         if (black)
                         {
@@ -5231,19 +5443,19 @@ public class Board
             {
                 if (Piece.GetPieceAlignment(pieces[index]) == PieceAlignment.White)
                 {
-                    DeletePieceAtCoordinate(index & 7, (index & 56) >> 3, pteH, Piece.PieceAlignment.White);
+                    DeletePieceAtCoordinate(index & 7, (index & 56) >> 3, pteH, Piece.PieceAlignment.White, boardUpdateMetadata);
                     whitePerPlayerInfo.pieceValueSumX2 -= (pte.pieceValueX2);
                 }
                 if (Piece.GetPieceAlignment(pieces[index]) == PieceAlignment.Black)
                 {
-                    DeletePieceAtCoordinate(index & 7, (index & 56) >> 3, pteH, Piece.PieceAlignment.Black);
+                    DeletePieceAtCoordinate(index & 7, (index & 56) >> 3, pteH, Piece.PieceAlignment.Black, boardUpdateMetadata);
                     blackPerPlayerInfo.pieceValueSumX2 -= (pte.pieceValueX2);
                 }
             }
         }
     }
 
-    public void ApplyZenithEffect()
+    public void ApplyZenithEffect(List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         if ((globalData.enemyModifier & Board.EnemyModifier.Zenith) != 0 && blackPerPlayerInfo.pieceValueSumX2 < GlobalPieceManager.KING_VALUE_BONUS)
         {
@@ -5257,6 +5469,12 @@ public class Board
                     PieceTableEntry pteK = GlobalPieceManager.Instance.GetPieceTableEntry(PieceType.King);
 
                     blackPerPlayerInfo.pieceValueSumX2 += (short)(pteK.pieceValueX2 - pteO.pieceValueX2);
+
+                    if (boardUpdateMetadata != null)
+                    {
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(subindex & 7, subindex >> 3, PieceType.King, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                    }
+
                     pieces[subindex] = Piece.SetPieceType(PieceType.King, pieces[subindex]);
                     break;
                 }
@@ -5372,7 +5590,7 @@ public class Board
     public static bool PositionIsStalemate(ref Board b)
     {
         List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White);
+        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
 
         for (int i = 0; i < moves.Count; i++)
         {
@@ -5413,11 +5631,18 @@ public class Board
 
         return FindKingCaptureMove(ref copy);
     }
+    public static (uint, List<MoveMetadata>) MoveIllegalByCheckFindRefutationPath(ref Board b, uint move)
+    {
+        Board copy = new Board(b);
+        copy.ApplyMove(move);
+
+        return FindKingCaptureMovePath(ref copy);
+    }
 
     public static bool IsKingCapturePossible(ref Board b)
     {
         List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White);
+        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
 
         return IsKingCapturePossible(ref b, moves);
     }
@@ -5445,7 +5670,7 @@ public class Board
     public static uint FindKingCaptureMove(ref Board b)
     {
         List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White);
+        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
 
         Board copy = new Board();
         for (int i = 0; i < moves.Count; i++)
@@ -5460,6 +5685,25 @@ public class Board
 
         return 0;
     }
+    public static (uint, List<MoveMetadata>) FindKingCaptureMovePath(ref Board b)
+    {
+        List<uint> moves = new List<uint>();
+        Dictionary<uint, MoveMetadata> moveDict = new Dictionary<uint, MoveMetadata>();
+        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, moveDict);
+
+        Board copy = new Board();
+        for (int i = 0; i < moves.Count; i++)
+        {
+            copy.CopyOverwrite(b);
+            copy.ApplyMove(moves[i]);
+            if (!copy.CheckForKings())
+            {
+                return (moves[i], moveDict[Move.RemoveNonLocation(moves[i])].TracePath(Move.GetFromX(moves[i]), Move.GetFromY(moves[i]), Move.GetDir(moves[i])));
+            }
+        }
+
+        return (0, null);
+    }
 
 
     public static ulong PerftTest(ref Board b, int depth)
@@ -5471,7 +5715,7 @@ public class Board
         }
 
         List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White);
+        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
 
         Board copy = new Board();
         for (int i = 0; i < moves.Count; i++)
@@ -5505,13 +5749,13 @@ public struct Square
         WindDown,
         WindLeft,
         WindRight,
-        Ice,            //If you move onto it: get Pushed 1 square in Dir
+        Slippery,       //If you move onto it: get Pushed 1 square in Dir
         Bouncy,         //Opposite of Ice: pulls you back 1 when you move on them
         Bright,         //Immune
         Promotion,      //Promote early
         Cursed,         //If not adjacent to allies: get destroyed
         CaptureOnly,    //If on them: piece can only leave by capturing
-        Electrified,    //Whatever moves onto them gets applied stun for 1 turn
+        Frost,    //Whatever moves onto them gets applied stun for 1 turn
 
         //Special objectives
         BronzeTreasure, //Spawns on rank 6
@@ -5601,6 +5845,18 @@ public static class Move
         PassiveAbility,     //generic passive ability
     }
 
+    public static string PositionToString(int x, int y)
+    {
+        int fx = x;
+        int fy = y;
+        return FileToLetter(fx) + "" + (fy + 1);
+    }
+    public static string PositionToString(int index)
+    {
+        int fx = index & 7;
+        int fy = index >> 3;
+        return FileToLetter(fx) + "" + (fy + 1);
+    }
     public static string ConvertToString(uint moveInfo)
     {
         int fx = GetFromX(moveInfo);
@@ -5702,6 +5958,32 @@ public static class Move
         output += (uint)(((toY) & (0x0000000f)) << 12);
         output += (((uint)dir & 0x000000ff) << 16);
         output += ((uint)specialType << 24);
+
+        return output;
+    }
+    public static uint PackMove(byte fromX, byte fromY, byte toX, byte toY, SpecialType specialType)
+    {
+        uint output = 0;
+
+        output += (uint)((fromX) & (0x0000000f));
+        output += (uint)(((fromY) & (0x0000000f)) << 4);
+        output += (uint)(((toX) & (0x0000000f)) << 8);
+        output += (uint)(((toY) & (0x0000000f)) << 12);
+        //output += (((uint)dir & 0x000000ff) << 16);
+        output += ((uint)specialType << 24);
+
+        return output;
+    }
+    public static uint PackMove(byte fromX, byte fromY, byte toX, byte toY)
+    {
+        uint output = 0;
+
+        output += (uint)((fromX) & (0x0000000f));
+        output += (uint)(((fromY) & (0x0000000f)) << 4);
+        output += (uint)(((toX) & (0x0000000f)) << 8);
+        output += (uint)(((toY) & (0x0000000f)) << 12);
+        //output += (((uint)dir & 0x000000ff) << 16);
+        //output += ((uint)specialType << 24);
 
         return output;
     }

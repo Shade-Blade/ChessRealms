@@ -3,17 +3,19 @@
 //so a move from A to B will be in a list showing the complete path from A to B
 //I can make this data structure set more inefficient because it isn't something the chess engine should work with
 using System.Collections.Generic;
+using UnityEngine;
 
 //Index this with Dictionary<uint, MoveMetadata>
 //The root of the tree should be the pieces original position
 
+//only turn on serializable for path debug
+//Unity inspector gets angry and laggy because there are cycles in the path data structures (because predecessor has pointer to successor, successor has pointer to predecessor)
+//[System.Serializable]
 public class MoveMetadata
 {
     public uint piece;
-    public int fx;
-    public int fy;
-    public int tx;
-    public int ty;
+    public int x;
+    public int y;
     public PathType path;
     public Move.SpecialType moveSpecial;
     public List<MoveMetadata> predecessors;
@@ -25,13 +27,31 @@ public class MoveMetadata
         Leaper,
         Teleport,
 
+        //can calculate these by seeing that the offset is too large
+        //(for reflected it doesn't need anything because it is just a path turning in a different direction which just draws a normal line turn)
+        /*
         SliderCylinder,
         SliderTubular,
         SliderReflected,
         LeaperCylinder,
         LeaperTubular,
         LeaperReflected,
+        */
+
         //No teleport cylinder or teleport tubular etc because that doesn't really do anything
+    }
+
+    public MoveMetadata(uint piece, int tx, int ty, PathType path, Move.SpecialType moveSpecial = Move.SpecialType.Normal)
+    {
+        this.piece = piece;
+        //this.fx = fx;
+        //this.fy = fy;
+        this.x = tx;
+        this.y = ty;
+        this.path = path;
+        this.moveSpecial = moveSpecial;
+        predecessors = new List<MoveMetadata>();
+        successors = new List<MoveMetadata>();
     }
 
     public void AddSuccessor(MoveMetadata successor)
@@ -43,29 +63,117 @@ public class MoveMetadata
         if (successor.predecessors == null)
         {
             successor.predecessors = new List<MoveMetadata>();
-            successor.predecessors.Add(this);
         }
+        successors.Add(successor);
+        successor.predecessors.Add(this);
     }
-
-    public List<MoveMetadata> SearchForPath(int targetX, int targetY, MoveMetadata treeBase)
+    public void AddPredecessor(MoveMetadata predecessor)
     {
-        //Fail to search: return null
+        if (predecessors == null)
+        {
+            predecessors = new List<MoveMetadata>();
+        }
+        if (predecessor.successors == null)
+        {
+            predecessor.successors = new List<MoveMetadata>();
+        }
+        predecessors.Add(predecessor);
+        predecessor.successors.Add(this);
+    }
+    //More useful: starts at the end and just goes back
+    //If the paths are set up correctly they should not loop (Especially because there is some code to prevent overwriting)
+    public List<MoveMetadata> TracePath(int startX, int startY, Move.Dir startDir = Move.Dir.Null)
+    {
+        MoveMetadata node = this;
         List<MoveMetadata> output = new List<MoveMetadata>();
 
-        SubSearch(targetX, targetY, treeBase, output);
+        output.Insert(0, node);
 
-        if (output.Count == 0)
+        int lastDeltaX = 0;
+        int lastDeltaY = 0;
+
+        //build a path
+        //Attempt to choose such that the deltas are the same (To fix path chatter? Otherwise the path might get confused if your piece can reach a square by multiple paths and display a path with characteristics of both paths)
+        //Tryfixpath will fix crooked paths being wrong because of this code
+
+        MoveMetadata subNode = node;
+        while (subNode != null && subNode.predecessors != null && subNode.predecessors.Count > 0)
         {
-            return null;
+            MoveMetadata childToAdd = subNode.predecessors[0];
+
+            for (int i = 0; i < subNode.predecessors.Count; i++)
+            {
+                if (lastDeltaX == 0 && lastDeltaY == 0)
+                {
+                    //try to use Dir
+                    switch (startDir)
+                    {
+                        case Move.Dir.DownLeft:
+                            lastDeltaX = -1;
+                            lastDeltaY = -1;
+                            break;
+                        case Move.Dir.Down:
+                            lastDeltaX = 0;
+                            lastDeltaY = -1;
+                            break;
+                        case Move.Dir.DownRight:
+                            lastDeltaX = 1;
+                            lastDeltaY = -1;
+                            break;
+                        case Move.Dir.Left:
+                            lastDeltaX = -1;
+                            lastDeltaY = 0;
+                            break;
+                        case Move.Dir.Null:
+                            break;
+                        case Move.Dir.Right:
+                            lastDeltaX = 1;
+                            lastDeltaY = 0;
+                            break;
+                        case Move.Dir.UpLeft:
+                            lastDeltaX = -1;
+                            lastDeltaY = 1;
+                            break;
+                        case Move.Dir.Up:
+                            lastDeltaX = 0;
+                            lastDeltaY =-1;
+                            break;
+                        case Move.Dir.UpRight:
+                            lastDeltaX = 1;
+                            lastDeltaY = 1;
+                            break;
+                    }
+                }
+                if (subNode.x - subNode.predecessors[i].x == lastDeltaX && subNode.y - subNode.predecessors[i].y == lastDeltaY)
+                {
+                    childToAdd = subNode.predecessors[i];
+                }
+            }
+
+            lastDeltaX = childToAdd.x - subNode.x;
+            lastDeltaY = childToAdd.y - subNode.y;
+            subNode = childToAdd;
+
+            //Infinite loop (some paths go in a circle)
+            if (subNode.x == startX && subNode.y == startY)
+            {
+                break;
+            }
+
+            output.Insert(0, subNode);
         }
 
-        //sub search doesn't include the first one so add it here later
-        output.Insert(0, treeBase);
-
-        //fix it
-        output = TryFixPath(targetX, targetY, output);
+        output = TryFixPath(startX, startY, output);
 
         return output;
+    }
+    public bool IsDeltaCylindrical(int dx, int dy)
+    {
+        return (dx >= 4 || dx <= -4);
+    }
+    public bool IsDeltaTubular(int dx, int dy)
+    {
+        return (dy >= 4 || dy <= -4);
     }
     public MoveMetadata SubSearch(int targetX, int targetY, MoveMetadata parent, List<MoveMetadata> outputList)
     {
@@ -73,7 +181,7 @@ public class MoveMetadata
 
         foreach (MoveMetadata child in parent.successors)
         {
-            if (child.tx == targetX && child.ty == targetY)
+            if (child.x == targetX && child.y == targetY)
             {
                 return child;
             }
@@ -97,17 +205,94 @@ public class MoveMetadata
     //Path to A to B should exclusively go left or right, but the above code has no way to stop that
     //This can't be solved by search ordering as the direction change may be forced by a blocked path on one side
     //  (so a left bias would not work if the left path is blocked and the true path is actually to the right
-    public List<MoveMetadata> TryFixPath(int targetX, int targetY, List<MoveMetadata> oldList)
+    public List<MoveMetadata> TryFixPath(int startX, int startY, List<MoveMetadata> oldList)
     {
         //The correct side to take is determined by the ending path so iteration goes in reverse
         List<MoveMetadata> output = new List<MoveMetadata>();
 
         for (int i = oldList.Count - 1; i >= 0; i--)
         {
-            //try to do a diamond check for adding i
-            //A different path from 
             bool didAdd = false;
-            if (i - 1 >= 0 && i + 2 <= oldList.Count - 1)
+
+            int pastX = 0;
+            int pastY = 0;
+            if (i == 0)
+            {
+                pastX = startX;
+                pastY = startY;
+            } else
+            {
+                pastX = oldList[i - 1].x;
+                pastY = oldList[i - 1].y;
+            }
+
+            //if (i + 2 <= oldList.Count - 1)
+            if (output.Count >= 2)
+            {
+                //old path
+                //  ...     ...
+                //  i+2       x
+                //      i+1
+                //  (i?)     (i?)
+                //      i-1
+
+                //Want to check delta between +2 and +1 vs 0 and -1 is the same
+
+                //int dxA = (oldList[i + 2].x - oldList[i + 1].x);
+                //int dyA = (oldList[i + 2].y - oldList[i + 1].y);
+                int dxA = (output[1].x - output[0].x);
+                int dyA = (output[1].y - output[0].y);
+
+                MoveMetadata bestCandidate = null;
+
+                foreach (MoveMetadata suc in oldList[i + 1].predecessors)
+                {
+                    if (i > 0 && !(oldList[i - 1].successors.Contains(suc)))
+                    {
+                        continue;
+                    }
+
+                    bestCandidate = suc;
+
+                    int dxB = (oldList[i].x - pastX);
+                    int dyB = (oldList[i].y - pastY);
+
+                    //Debug.Log(Move.PositionToString(output[1].x, output[1].y) + " " + Move.PositionToString(output[0].x, output[0].y) + " " + Move.PositionToString(suc.x, suc.y) + "? " + (i <= 0 ? ("(start )" + Move.PositionToString(startX,startY)) : Move.PositionToString(oldList[i - 1].x, oldList[i - 1].y)));
+                    //Debug.Log("Check " + dxA + " " + dyA + " vs " + dxB + " " + dyB);
+                    if (dxA == dxB && dyA == dyB)
+                    {
+                        output.Insert(0, suc);
+                        didAdd = true;
+                        break;
+                    }
+                }
+
+                if (!didAdd && bestCandidate != null)
+                {
+                    output.Insert(0, bestCandidate);
+                    didAdd = true;
+                }
+            }
+
+            if (didAdd)
+            {
+                continue;
+            }
+
+            //add it normally
+            output.Insert(0, oldList[i]);
+        }
+
+
+        /*
+        for (int i = oldList.Count - 1; i >= 0; i--)
+        {
+            //try to do a diamond check for adding i
+            bool didAdd = false;
+
+
+            //note: first square in the path is 0 which is 1 step beyond the start
+            if (i >= 0 && i + 3 <= oldList.Count - 1)
             {
                 //old path
                 //  ...     ...
@@ -119,32 +304,34 @@ public class MoveMetadata
 
                 //Want to check delta between +2 and +1 vs 0 and -1 is the same
 
-                int dxA = (oldList[i + 2].tx - oldList[i + 2].fx);
-                int dyA = (oldList[i + 2].ty - oldList[i + 2].fy);
+                int dxA = (oldList[i + 3].x - oldList[i + 2].x);
+                int dyA = (oldList[i + 3].y - oldList[i + 2].y);
 
                 MoveMetadata bestCandidate = null;
 
                 foreach (MoveMetadata suc in oldList[i + 1].predecessors)
                 {
-                    if (!(oldList[i - 1].successors.Contains(suc)))
+                    if (i > 0 && !(oldList[i - 1].successors.Contains(suc)))
                     {
                         continue;
                     }
 
-                    bestCandidate = this;
+                    bestCandidate = suc;
 
-                    int dxB = (suc.tx - suc.fx);
-                    int dyB = (suc.ty - suc.fy);
+                    int dxB = (oldList[i + 1].x - suc.x);
+                    int dyB = (oldList[i + 1].y - suc.y);
 
+                    Debug.Log(Move.PositionToString(oldList[i + 3].x, oldList[i + 3].y) + " " + Move.PositionToString(oldList[i + 2].x, oldList[i + 2].y) + " " + Move.PositionToString(oldList[i + 1].x, oldList[i + 1].y) + " " + Move.PositionToString(suc.x, suc.y) + "? " + (i <= 0 ? "(start)" : Move.PositionToString(oldList[i - 1].x, oldList[i - 1].y)));
+                    Debug.Log("Check " + dxA + " " + dyA + " vs " + dxB + " " + dyB);
                     if (dxA == dxB && dyA == dyB)
                     {
-                        output.Insert(0, oldList[i]);
+                        output.Insert(0, suc);
                         didAdd = true;
                         break;
                     }
                 }
 
-                if (!didAdd)
+                if (!didAdd && bestCandidate != null)
                 {
                     output.Insert(0, bestCandidate);
                     didAdd = true;
@@ -159,6 +346,84 @@ public class MoveMetadata
             output.Insert(0, oldList[i]);
         }
 
+        //Run a different kind of iteration to fix position 0
+        //  2       x
+        //      1
+        //  (0?)     (0?)
+        //      (-1)
+
+        if (output.Count > 2)
+        {
+            MoveMetadata bestCandidate0 = output[0];
+
+            int dx2 = (output[2].x - output[1].x);
+            int dy2 = (output[2].y - output[1].y);
+
+            foreach (MoveMetadata suc in oldList[1].predecessors)
+            {
+                bestCandidate0 = suc;
+
+                int dx0 = (suc.x - startX);
+                int dy0 = (suc.y - startY);
+
+                Debug.Log(Move.PositionToString(output[2].x, output[2].y) + " " + Move.PositionToString(output[1].x, output[1].y) + " " + Move.PositionToString(suc.x, suc.y) + "? " + Move.PositionToString(startX, startY) + " (true start)");
+                Debug.Log("Check final " + dx2 + " " + dy2 + " vs " + dx0 + " " + dy0);
+                if (dx2 == dx0 && dy2 == dy0)
+                {
+                    bestCandidate0 = suc;
+                    break;
+                }
+            }
+
+            output[0] = bestCandidate0;
+        }
+        */
+
         return output;
+    }
+}
+
+//Another inefficient data structure
+//Generated by board.ApplyMove
+//This is after the move metadata path is used so there is no move metadata here
+//This refers to anything that happens to other pieces that aren't the moved piece (so the specific special types of moves are handled elsewhere)
+public class BoardUpdateMetadata
+{
+    public int fx;
+    public int fy;
+    public int tx;
+    public int ty;
+    public Piece.PieceType pieceType;  //for type change stuff (promotion or other things)
+    public BoardUpdateType type;
+
+    public enum BoardUpdateType
+    {
+        Move,
+        Capture,
+        //Fire,     //Current setup doesn't let me do this yet (later I might add particles for each move so I add more enum values)
+        Spawn,
+        Shift,
+        TypeChange,  //promotion / lycanthrope conversion
+        AlignmentChange,
+    }
+
+    public BoardUpdateMetadata(int fx, int fy, int tx, int ty, Piece.PieceType pieceType, BoardUpdateType type)
+    {
+        this.fx = fx;
+        this.fy = fy;
+        this.tx = tx;
+        this.ty = ty;
+        this.pieceType = pieceType;
+        this.type = type;
+    }
+
+    public BoardUpdateMetadata(int fx, int fy, Piece.PieceType pieceType, BoardUpdateType type)
+    {
+        this.fx = fx;
+        this.fy = fy;
+        this.tx = -1;
+        this.ty = -1;
+        this.pieceType = pieceType;
+        this.type = type;
     }
 }

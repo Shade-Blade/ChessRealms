@@ -120,7 +120,7 @@ public class SquareScript : MonoBehaviour
                 windArrow.color = new Color(1, 1f, 1f);
                 image.color = isBlack ? new Color(0.3f, 0.6f, 0.3f) : new Color(0.5f, 0.85f, 0.5f);
                 break;
-            case Square.SquareType.Ice:
+            case Square.SquareType.Slippery:
                 image.color = isBlack ? new Color(0.1f, 0.5f, 0.5f) : new Color(0.1f, 1f, 1f);
                 break;
             case Square.SquareType.Bouncy:
@@ -146,7 +146,7 @@ public class SquareScript : MonoBehaviour
             case Square.SquareType.CaptureOnly:
                 image.color = isBlack ? new Color(0.5f, 0.1f, 0.1f) : new Color(1, 0.1f, 0.1f);
                 break;
-            case Square.SquareType.Electrified:
+            case Square.SquareType.Frost:
                 image.color = isBlack ? new Color(0.5f, 0.5f, 0.1f) : new Color(1, 1f, 0.1f);
                 break;
             case Square.SquareType.BronzeTreasure:

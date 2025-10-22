@@ -11,6 +11,7 @@ public class BoardScript : MonoBehaviour
 
     public GameObject squareTemplate;
     public GameObject pieceTemplate;
+    public GameObject moveTrailTemplate;
 
     public GameObject squareHolder;
     public GameObject pieceHolder;
@@ -24,8 +25,14 @@ public class BoardScript : MonoBehaviour
     public Board board;
 
     public List<uint> moveList;
+    public Dictionary<uint, MoveMetadata> moveMetadata;
+    public MoveTrailScript lastMoveTrail;
 
     public List<uint> enemyMoveList;
+    public Dictionary<uint, MoveMetadata> enemyMoveMetadata;
+    public MoveTrailScript illegalMoveTrail;
+
+    public List<MoveTrailScript> extraMoveTrails;
 
     public PieceScript selectedPiece;
 
@@ -55,7 +62,10 @@ public class BoardScript : MonoBehaviour
 
     //offset by SQUARE_SIZE
     //so this is the center of each square
-    public Vector3 GetSpritePositionFromCoordinates(int x, int y, float z)
+    //Board coordinates for x, y
+    //  (so 0,0 = bottom left corner square)
+    //  Float values for drawing stuff at the edges of the board (-0.5, +7.5)
+    public static Vector3 GetSpritePositionFromCoordinates(float x, float y, float z)
     {
         return new Vector3(-(BOARD_SIZE / 2 - SQUARE_SIZE / 2) + x * SQUARE_SIZE, -(BOARD_SIZE / 2 - SQUARE_SIZE / 2) + y * SQUARE_SIZE, z);
     }
@@ -92,6 +102,7 @@ public class BoardScript : MonoBehaviour
 
     public void ResetBoard(Board.BoardPreset bp)
     {
+        DestroyLastMovedTrail();
         whiteIsAI = false;  //so you can make your own move
         ResetSelected();
         board = new Board();
@@ -114,6 +125,7 @@ public class BoardScript : MonoBehaviour
     }
     public void ResetBoard(Piece.PieceType[] army, Board.EnemyModifier em)
     {
+        DestroyLastMovedTrail();
         whiteIsAI = false;  //so you can make your own move
         ResetSelected();
         board = new Board();
@@ -145,7 +157,7 @@ public class BoardScript : MonoBehaviour
         board.Setup();
         historyList.Add(new Board(board));
         historyIndex = 0;
-
+        
         for (int i = 0; i < 64; i++)
         {
             int subX = i % 8;
@@ -181,6 +193,8 @@ public class BoardScript : MonoBehaviour
     public void SelectPiece(PieceScript piece)
     {
         ResetSelected(false);
+
+        DestroyIllegalTrail();
 
         ulong bitboard = 0;
         ulong legalBitboard = 0;
@@ -282,12 +296,41 @@ public class BoardScript : MonoBehaviour
 
         selectedPiece = piece;
     }
+    public void DestroyLastMovedTrail()
+    {
+        DestroyIllegalTrail();
+
+        if (lastMoveTrail != null)
+        {
+            Destroy(lastMoveTrail.gameObject);
+        }
+
+        if (extraMoveTrails != null)
+        {
+            for (int i = 0; i < extraMoveTrails.Count; i++)
+            {
+                if (extraMoveTrails[i] != null)
+                {
+                    Destroy(extraMoveTrails[i].gameObject);
+                }
+            }
+            extraMoveTrails = null;
+        }
+    }
+    public void DestroyIllegalTrail()
+    {
+        //destroy when you click on a piece
+        if (illegalMoveTrail != null)
+        {
+            Destroy(illegalMoveTrail.gameObject);
+        }
+    }
     public void ResetSelected(bool forceDeselect = true)
     {
         for (int i = 0; i < 64; i++)
         {
             squares[i].ResetColor();
-        }        
+        }
 
         if (board.GetLastMove() != 0)
         {
@@ -300,6 +343,10 @@ public class BoardScript : MonoBehaviour
             squares[toX + toY * 8].SetLastMovedSquare();
         }
 
+        if (selectedPiece == null || forceDeselect)
+        {
+            DestroyIllegalTrail();
+        }
         if (selectedPiece != null && forceDeselect)
         {
             selectedPiece.ForceDeselect();
@@ -355,6 +402,7 @@ public class BoardScript : MonoBehaviour
 
         uint move = FindMoveInMoveList(x, y, newX, newY);
 
+        //null move or move not in the list
         if (move == 0)
         {
             ResetSelected();
@@ -367,6 +415,8 @@ public class BoardScript : MonoBehaviour
 
         if (Board.IsMoveLegal(ref board, move, board.blackToMove))
         {
+            List<MoveMetadata> moveTrail = moveMetadata[Move.RemoveNonLocation(move)].TracePath(Move.GetFromX(move), Move.GetFromY(move), Move.GetDir(move));
+
             /*
             if (!whiteIsAI)
             {
@@ -375,7 +425,9 @@ public class BoardScript : MonoBehaviour
             */
             Debug.Log("Apply " + Move.ConvertToString(move));
 
-            board.ApplyMove(move);
+            List<BoardUpdateMetadata> boardUpdateMetadata = new List<BoardUpdateMetadata>();
+
+            board.ApplyMove(move, boardUpdateMetadata);
             awaitingMove = false;
             chessAI.moveFound = false;
             while (historyList.Count > historyIndex + 1)
@@ -386,6 +438,38 @@ public class BoardScript : MonoBehaviour
             historyIndex++;
             chessAI.history.Add(chessAI.HashFromScratch(ref board));
             ResetSelected();
+
+            if (lastMoveTrail != null)
+            {
+                Destroy(lastMoveTrail.gameObject);
+            }
+            lastMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+            lastMoveTrail.SetColorMove();
+            lastMoveTrail.Setup(Move.GetFromX(move), Move.GetFromY(move), moveTrail);
+
+            if (extraMoveTrails != null)
+            {
+                for (int i = 0; i < extraMoveTrails.Count; i++)
+                {
+                    if (extraMoveTrails[i] != null)
+                    {
+                        Destroy(extraMoveTrails[i].gameObject);
+                    }
+                }
+                extraMoveTrails = null;
+            }
+            extraMoveTrails = new List<MoveTrailScript>();
+            for (int i = 0; i < boardUpdateMetadata.Count; i++)
+            {
+                if (boardUpdateMetadata[i].tx != -1)
+                {
+                    MoveTrailScript mtsE = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+                    extraMoveTrails.Add(mtsE);
+                    mtsE.SetColorMoveSecondary();
+                    mtsE.Setup(boardUpdateMetadata[i].fx, boardUpdateMetadata[i].fy, boardUpdateMetadata[i].tx, boardUpdateMetadata[i].ty);
+                }
+            }
+
             FixBoardBasedOnPosition();
 
             RegenerateMoveList();
@@ -427,7 +511,30 @@ public class BoardScript : MonoBehaviour
             }
         } else
         {
-            Debug.Log("Move is illegal because of " + Move.ConvertToString(Board.MoveIllegalByCheckFindRefutation(ref board, move)));
+            (uint refMove, List<MoveMetadata> illegalPath) = Board.MoveIllegalByCheckFindRefutationPath(ref board, move);
+            //Debug.Log("Move is illegal because of " + Move.ConvertToString(move));
+
+            string pathString = Move.PositionToString(Move.GetFromX(refMove), Move.GetFromY(refMove));
+            for (int i = 0; i < illegalPath.Count; i++)
+            {
+                if (illegalPath[i] == null)
+                {
+                    pathString += " X";
+                }
+                else
+                {
+                    pathString += " " + Move.PositionToString(illegalPath[i].x, illegalPath[i].y);
+                }
+            }
+            Debug.Log("Refutation " + Move.ConvertToString(move) + " move path: " + pathString);
+
+            if (illegalMoveTrail != null)
+            {
+                Destroy(illegalMoveTrail.gameObject);
+            }
+            illegalMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+            illegalMoveTrail.SetColorMoveIllegal();
+            illegalMoveTrail.Setup(Move.GetFromX(refMove), Move.GetFromY(refMove), illegalPath);
 
             FixBoardBasedOnPosition();
         }
@@ -470,7 +577,16 @@ public class BoardScript : MonoBehaviour
             return;
         }
 
-        board.ApplyMove(aiMove);
+        //lastmove for AI
+        Dictionary<uint, MoveMetadata> moveDict = new Dictionary<uint, MoveMetadata>();
+        List<uint> moveList = new List<uint>();
+        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moveList, ref board, PieceAlignment.Black, moveDict);
+
+
+        List<MoveMetadata> moveTrail = moveMetadata[Move.RemoveNonLocation(aiMove)].TracePath(Move.GetFromX(aiMove), Move.GetFromY(aiMove), Move.GetDir(aiMove));
+        List<BoardUpdateMetadata> boardUpdateMetadata = new List<BoardUpdateMetadata>();
+
+        board.ApplyMove(aiMove, boardUpdateMetadata);
         awaitingMove = false;
         chessAI.moveFound = false;
         while (historyList.Count > historyIndex + 1)
@@ -482,6 +598,39 @@ public class BoardScript : MonoBehaviour
         chessAI.history.Add(chessAI.HashFromScratch(ref board));
         RegenerateMoveList();
         ResetSelected();
+
+        if (lastMoveTrail != null)
+        {
+            Destroy(lastMoveTrail.gameObject);
+        }
+        lastMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+        lastMoveTrail.SetColorMove();
+        lastMoveTrail.Setup(Move.GetFromX(aiMove), Move.GetFromY(aiMove), moveTrail);
+        Debug.Log("Make last move trail");
+
+        if (extraMoveTrails != null)
+        {
+            for (int i = 0; i < extraMoveTrails.Count; i++)
+            {
+                if (extraMoveTrails[i] != null)
+                {
+                    Destroy(extraMoveTrails[i].gameObject);
+                }
+            }
+            extraMoveTrails = null;
+        }
+        extraMoveTrails = new List<MoveTrailScript>();
+        for (int i = 0; i < boardUpdateMetadata.Count; i++)
+        {
+            if (boardUpdateMetadata[i].tx != -1)
+            {
+                MoveTrailScript mtsE = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+                extraMoveTrails.Add(mtsE);
+                mtsE.SetColorMoveSecondary();
+                mtsE.Setup(boardUpdateMetadata[i].fx, boardUpdateMetadata[i].fy, boardUpdateMetadata[i].tx, boardUpdateMetadata[i].ty);
+            }
+        }
+
         FixBoardBasedOnPosition();
 
         bool check = Board.PositionIsCheck(ref board);
@@ -533,6 +682,7 @@ public class BoardScript : MonoBehaviour
         board.CopyOverwrite(historyList[historyIndex]);
         //Destroy the future history
         chessAI.history.Remove(chessAI.HashFromScratch(historyList[historyIndex + 1]));
+        DestroyLastMovedTrail();    //it is annoying to get the correct trail so I'll just destroy it 
         RegenerateMoveList();
         ResetSelected();
         FixBoardBasedOnPosition();
@@ -551,6 +701,7 @@ public class BoardScript : MonoBehaviour
         historyIndex++;
         board.CopyOverwrite(historyList[historyIndex]);
         chessAI.history.Add(chessAI.HashFromScratch(historyList[historyIndex]));
+        DestroyLastMovedTrail();    //it is annoying to get the correct trail so I'll just destroy it 
         RegenerateMoveList();
         ResetSelected();
         FixBoardBasedOnPosition();
@@ -658,7 +809,8 @@ public class BoardScript : MonoBehaviour
         }
 
         moveList = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moveList, ref board, board.blackToMove ? PieceAlignment.Black : PieceAlignment.White);
+        moveMetadata = new Dictionary<uint, MoveMetadata>();
+        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moveList, ref board, board.blackToMove ? PieceAlignment.Black : PieceAlignment.White, moveMetadata);
         //MoveGeneratorInfoEntry.GenerateMovesForPlayer(moveList, ref board, PieceAlignment.White);
 
         board.globalData.mbtactiveInverse.MakeInverse(board.globalData.mbtactive);
@@ -683,7 +835,8 @@ public class BoardScript : MonoBehaviour
         }
 
         enemyMoveList = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(enemyMoveList, ref board, !board.blackToMove ? PieceAlignment.Black : PieceAlignment.White);
+        enemyMoveMetadata = new Dictionary<uint, MoveMetadata>();
+        MoveGeneratorInfoEntry.GenerateMovesForPlayer(enemyMoveList, ref board, !board.blackToMove ? PieceAlignment.Black : PieceAlignment.White, enemyMoveMetadata);
         //MoveGeneratorInfoEntry.GenerateMovesForPlayer(enemyMoveList, ref board, PieceAlignment.Black);
 
         board.globalData.mbtactiveInverse.MakeInverse(board.globalData.mbtactive);

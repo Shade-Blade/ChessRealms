@@ -9,11 +9,16 @@ public class ResetButtonRandom : MonoBehaviour
     public Piece.PieceType[] army;
     public Board.EnemyModifier em;
     public Piece.PieceClass pieceClass;
-    public float targetNonkingValue;
+    public float targetNonKingValue;
     public float lowPieceBias;
+
+    public TMPro.TMP_InputField inputField;
 
     public void OnMouseDown()
     {
+        float tryValue = targetNonKingValue;
+        float.TryParse(inputField.text, out tryValue);
+
         List<PieceTableEntry> piecePool = new List<PieceTableEntry>();
 
         for (int i = 0; i < GlobalPieceManager.Instance.pieceTable.Length; i++)
@@ -43,11 +48,11 @@ public class ResetButtonRandom : MonoBehaviour
         List<IRandomTableEntry<PieceTableEntry>> pieceTableEntries = new List<IRandomTableEntry<PieceTableEntry>>();
         for (int i = 0; i < piecePool.Count; i++)
         {
-            if (piecePool[i].pieceValueX2 > (targetNonkingValue * 1.33f))    //Too much value concentration
+            if (piecePool[i].pieceValueX2 > (tryValue * 1.33f))    //Too much value concentration
             {
                 continue;
             }
-            if (piecePool[i].pieceValueX2 < (targetNonkingValue / 64f))    //Too much value concentration
+            if (piecePool[i].pieceValueX2 < (tryValue / 64f))    //Too much value concentration
             {
                 continue;
             }
@@ -81,7 +86,7 @@ public class ResetButtonRandom : MonoBehaviour
 
         float lowerBound = 0;
 
-        while (cumulativeCount < targetNonkingValue && subArmy.Count < 23)
+        while (cumulativeCount < tryValue && subArmy.Count < 23)
         {
             iterations++;
             if (iterations > 50000)
@@ -137,7 +142,7 @@ public class ResetButtonRandom : MonoBehaviour
         //subArmy.Reverse();
 
         //try to get it closer to the target
-        if (cumulativeCount > targetNonkingValue)
+        if (cumulativeCount > tryValue)
         {
             for (int i = 0; i < subArmy.Count; i++)
             {
@@ -147,7 +152,7 @@ public class ResetButtonRandom : MonoBehaviour
                 }
 
                 PieceTableEntry pte = subArmy[i];
-                if (pte.pieceValueX2 / 2f < 2 * (cumulativeCount - targetNonkingValue))
+                if (pte.pieceValueX2 / 2f < 2 * (cumulativeCount - tryValue))
                 {
                     cumulativeCount -= pte.pieceValueX2 / 2f;
                     subArmy.RemoveAt(i);

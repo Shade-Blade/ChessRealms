@@ -451,7 +451,7 @@ public class ChessAI
             else if (pte.promotionType != Piece.PieceType.Null)
             {
                 //Get top center a little bit even outside of endgame
-                psqt += (0.85f * endgameValue + 0.15f) * GlobalPieceManager.Instance.ReadPSTTopCenter(pa, i) + (0.85f - 0.85f * endgameValue) * GlobalPieceManager.Instance.ReadPSTCenter(pa, i);
+                psqt += (0.85f * endgameValue + 0.15f) * GlobalPieceManager.Instance.ReadPSTTopCenterKing(pa, i) + (0.85f - 0.85f * endgameValue) * GlobalPieceManager.Instance.ReadPSTCenter(pa, i);
             }
             else
             {
@@ -896,7 +896,7 @@ public class ChessAI
         Board b = board;
 
         List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White);
+        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
 
         float bestEvaluation = WHITE_VICTORY;
         uint bestMove = 0;
@@ -1151,7 +1151,7 @@ public class ChessAI
         //Triggers instant cutoff?
 
         //Root node does not check transpose table to avoid repetition
-        if (alpha != float.PositiveInfinity)
+        if (alpha != float.MinValue)
         {
             if (zte.hash == boardOldHash && zte.depth >= depth && !history.Contains(boardOldHash))
             {
@@ -1207,7 +1207,7 @@ public class ChessAI
         copy.CopyOverwrite(b);
 
         List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White);
+        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
 
         //If you already won then just return that immediately
         PieceAlignment winner = b.GetVictoryCondition();
@@ -1250,6 +1250,7 @@ public class ChessAI
 
         
         //Null move pruning is buggy right now so I turned it off
+        //It also isn't helping me at all?
         /*
         bool allowNullEvaluation = depth > 1;
         allowNullEvaluation = false;
@@ -1258,7 +1259,7 @@ public class ChessAI
         {
             allowNullEvaluation = false;
         }
-        if (alpha == float.MaxValue || alpha == beta)    //Root node should not try null move, don't use multi null moves
+        if (alpha == float.MinValue || alpha == beta)    //Root node should not try null move, don't use multi null moves
         {
             allowNullEvaluation = false;
         }
@@ -1653,7 +1654,7 @@ public class ChessAI
         copy.CopyOverwrite(b);
 
         List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White);
+        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
         boardOldHash = b.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref copy, boardOldHash);
 
         //Null move might actually better?

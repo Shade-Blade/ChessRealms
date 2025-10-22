@@ -68,7 +68,10 @@ public class MainManager : MonoBehaviour
         //Just adding the status effect tick down loop reduced it from 800k to 600k
         //  = 30% time increase just by adding that one loop
         //:(
-        //I guess this game is not going to work at all ugh
+
+        //It is now 250k :((
+        //Well at least I got depth 6 AI working?
+        //But if it isn't possible to make that good enough then I guess I'll have to scrap this game
 
         /*
         for (int i = 0; i <= 4; i++)

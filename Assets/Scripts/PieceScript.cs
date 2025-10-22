@@ -59,7 +59,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
         this.x = x;
         this.y = y;
-        transform.position = bs.GetSpritePositionFromCoordinates(x, y, -0.5f);
+        transform.position = BoardScript.GetSpritePositionFromCoordinates(x, y, -0.5f);
     }
 
     public void Setup(string pieceType, Color color)
@@ -111,6 +111,9 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             {
                 bs.TryMove(this, bs.board.blackToMove ? Piece.PieceAlignment.Black : Piece.PieceAlignment.White, x, y, bs.hoverX, bs.hoverY);
                 //bs.TryMove(this, Piece.GetPieceAlignment(piece), x, y, bs.hoverX, bs.hoverY);
+            } else
+            {
+
             }
         }
         else
@@ -118,11 +121,14 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             if (!(x == bs.hoverX && y == bs.hoverY))
             {
                 bs.TryMove(this, Piece.PieceAlignment.White, x, y, bs.hoverX, bs.hoverY);
+            } else
+            {
+
             }
         }
         x = bs.hoverX;
         y = bs.hoverY;
-        transform.position = bs.GetSpritePositionFromCoordinates(bs.hoverX, bs.hoverY, -0.5f);
+        transform.position = BoardScript.GetSpritePositionFromCoordinates(bs.hoverX, bs.hoverY, -0.5f);
         bs.FixBoardBasedOnPosition();
     }
 
@@ -130,7 +136,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     {
         x = nx;
         y = ny;
-        transform.position = bs.GetSpritePositionFromCoordinates(nx, ny, -0.5f);
+        transform.position = BoardScript.GetSpritePositionFromCoordinates(nx, ny, -0.5f);
     }
 
     public void ResetColor()

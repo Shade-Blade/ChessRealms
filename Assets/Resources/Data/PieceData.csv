@@ -77,7 +77,7 @@ Torcher,5,"Wf(2,0)",,FireCapture,FALSE,,Fire
 Vestal,9,"bFf(2,2)Wf(2,0)",,FireCapture,FALSE,,Fire
 MatchPawn,2,mfWrfF,,FireCapture,FALSE,,Fire
 Hypnotist,5.5,WFpRpB,,,FALSE,,Enchanter
-Attractor,7,R2,,Unique,FALSE,,Enchanter
+Attractor,7,R2,,,FALSE,,Enchanter
 Repulser,6,"Ff(0,2)",,Unique,FALSE,,Enchanter
 Immobilizer,7,mWmF,,EnchantImmune|Unique,FALSE,,Enchanter
 Jester,4,Q,,SwapCapture,FALSE,,Enchanter
@@ -303,8 +303,8 @@ GlassRook,3.5,R,,DestroyOnCapture,FALSE,,Glass
 GlassBishop,2,B,,DestroyOnCapture,FALSE,,Glass
 GlassKnight,2,"(1,2)",,DestroyOnCapture,FALSE,,Glass
 GlassPawn,0.5,mifR2=mfWcfF,,DestroyOnCapture,FALSE,GlassQueen,Glass
-QuickKnight,9,"(1,2)",,BonusMove,FALSE,,Quick
-QuickHog,7,R-,,BonusMove,FALSE,,Quick
+QuickKnight,10,"Fm(1,2)",,BonusMove,FALSE,,Quick
+QuickHog,9,cFmR0-,,BonusMove,FALSE,,Quick
 Hummingbird,7,"Wm(2,2)",,BonusMove,FALSE,,Quick
 QuickSlug,5,F,,BonusMove,FALSE,,Quick
 QuickPawn,3,mifR2=mfWcfF,,BonusMove,FALSE,QuickKnight,Quick

@@ -201,10 +201,13 @@ MonoBehaviour:
   showEnemyMove: 0
   isHighlightedLegal: 0
   isHighlightedIllegal: 0
+  specialMoveType: 0
   isLastMovedSquare: 0
   czhHighlight: 0
   czhWhite: 0
   czhBlack: 0
+  sq:
+    type: 0
 --- !u!65 &2283867815508020015
 BoxCollider:
   m_ObjectHideFlags: 0
