@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.tvOS;
 using static Piece;
 
 public class BoardScript : MonoBehaviour
@@ -270,26 +271,26 @@ public class BoardScript : MonoBehaviour
             if ((bitIndex & legalBitboard) != 0)
             {
                 squares[i].showEnemyMove = false;
-                squares[i].HighlightLegal((bitIndex & specialBitboard) != 0);
+                squares[i].HighlightLegal((bitIndex & specialBitboard) != 0, piece.isGiant);
                 continue;
             }
             if ((bitIndex & (bitboard)) != 0)
             {
                 squares[i].showEnemyMove = false;
-                squares[i].HighlightIllegal((bitIndex & specialBitboard) != 0);
+                squares[i].HighlightIllegal((bitIndex & specialBitboard) != 0, piece.isGiant);
                 continue;
             }
 
             if ((bitIndex & enemylegalBitboard) != 0)
             {
                 squares[i].showEnemyMove = true;
-                squares[i].HighlightLegal((bitIndex & enemySpecialBitboard) != 0);
+                squares[i].HighlightLegal((bitIndex & enemySpecialBitboard) != 0, piece.isGiant);
                 continue;
             }
             if ((bitIndex & (enemybitboard)) != 0)
             {
                 squares[i].showEnemyMove = true;
-                squares[i].HighlightIllegal((bitIndex & enemySpecialBitboard) != 0);
+                squares[i].HighlightIllegal((bitIndex & enemySpecialBitboard) != 0, piece.isGiant);
                 continue;
             }
         }
@@ -334,6 +335,8 @@ public class BoardScript : MonoBehaviour
 
         if (board.GetLastMove() != 0)
         {
+            bool isGiant = (GlobalPieceManager.GetPieceTableEntry(board.GetLastMovedPiece()).pieceProperty & PieceProperty.Giant) != 0;
+
             int fromX = Move.GetFromX(board.GetLastMove());
             int fromY = Move.GetFromY(board.GetLastMove());
             int toX = Move.GetToX(board.GetLastMove());
@@ -341,6 +344,16 @@ public class BoardScript : MonoBehaviour
 
             squares[fromX + fromY * 8].SetLastMovedSquare();
             squares[toX + toY * 8].SetLastMovedSquare();
+
+            if (isGiant)
+            {
+                squares[fromX + 1 + fromY * 8].SetLastMovedSquare();
+                squares[toX + 1 + toY * 8].SetLastMovedSquare();
+                squares[fromX + (fromY + 1) * 8].SetLastMovedSquare();
+                squares[toX + (toY + 1) * 8].SetLastMovedSquare();
+                squares[fromX + 1 + (fromY + 1) * 8].SetLastMovedSquare();
+                squares[toX + 1 + (toY + 1) * 8].SetLastMovedSquare();
+            }
         }
 
         if (selectedPiece == null || forceDeselect)
@@ -415,7 +428,24 @@ public class BoardScript : MonoBehaviour
 
         if (Board.IsMoveLegal(ref board, move, board.blackToMove))
         {
-            List<MoveMetadata> moveTrail = moveMetadata[Move.RemoveNonLocation(move)].TracePath(Move.GetFromX(move), Move.GetFromY(move), Move.GetDir(move));
+            List<MoveMetadata> moveTrail = null;
+            if (moveMetadata.ContainsKey(Move.RemoveNonLocation(move))) {
+                moveTrail = moveMetadata[Move.RemoveNonLocation(move)].TracePath(Move.GetFromX(move), Move.GetFromY(move), Move.GetDir(move));
+            }
+
+            string pathString = Move.PositionToString(Move.GetFromX(move), Move.GetFromY(move));
+            for (int i = 0; i < moveTrail.Count; i++)
+            {
+                if (moveTrail[i] == null)
+                {
+                    pathString += " X";
+                }
+                else
+                {
+                    pathString += " " + Move.PositionToString(moveTrail[i].x, moveTrail[i].y) + "(" + moveTrail[i].pathTags[0] + ")";
+                }
+            }
+            Debug.Log("Move Path " + Move.ConvertToString(move) + " move path: " + pathString);
 
             /*
             if (!whiteIsAI)
@@ -444,8 +474,24 @@ public class BoardScript : MonoBehaviour
                 Destroy(lastMoveTrail.gameObject);
             }
             lastMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
-            lastMoveTrail.SetColorMove();
-            lastMoveTrail.Setup(Move.GetFromX(move), Move.GetFromY(move), moveTrail);
+
+            if (board.GetLastMoveStationary())
+            {
+                lastMoveTrail.SetColorMoveStationary();
+            } else
+            {
+                lastMoveTrail.SetColorMove();
+            }
+
+            if (moveTrail == null)
+            {
+                Debug.LogError("Failsafe move trail");
+                lastMoveTrail.Setup(Move.GetFromX(move), Move.GetFromY(move), Move.GetToX(move), Move.GetToY(move));
+            }
+            else
+            {
+                lastMoveTrail.Setup(Move.GetFromX(move), Move.GetFromY(move), moveTrail);
+            }
 
             if (extraMoveTrails != null)
             {
@@ -582,10 +628,18 @@ public class BoardScript : MonoBehaviour
         List<uint> moveList = new List<uint>();
         MoveGeneratorInfoEntry.GenerateMovesForPlayer(moveList, ref board, PieceAlignment.Black, moveDict);
 
-
-        List<MoveMetadata> moveTrail = moveMetadata[Move.RemoveNonLocation(aiMove)].TracePath(Move.GetFromX(aiMove), Move.GetFromY(aiMove), Move.GetDir(aiMove));
+        List<MoveMetadata> moveTrail = null;
         List<BoardUpdateMetadata> boardUpdateMetadata = new List<BoardUpdateMetadata>();
 
+        if (!moveMetadata.ContainsKey(Move.RemoveNonLocation(aiMove)))
+        {
+            RegenerateMoveList();
+        } else
+        {
+            moveTrail = moveMetadata[Move.RemoveNonLocation(aiMove)].TracePath(Move.GetFromX(aiMove), Move.GetFromY(aiMove), Move.GetDir(aiMove));
+        }
+
+        ResetSelected();
         board.ApplyMove(aiMove, boardUpdateMetadata);
         awaitingMove = false;
         chessAI.moveFound = false;
@@ -604,9 +658,23 @@ public class BoardScript : MonoBehaviour
             Destroy(lastMoveTrail.gameObject);
         }
         lastMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
-        lastMoveTrail.SetColorMove();
-        lastMoveTrail.Setup(Move.GetFromX(aiMove), Move.GetFromY(aiMove), moveTrail);
-        Debug.Log("Make last move trail");
+        if (board.GetLastMoveStationary())
+        {
+            lastMoveTrail.SetColorMoveStationary();
+        }
+        else
+        {
+            lastMoveTrail.SetColorMove();
+        }
+        if (moveTrail == null)
+        {
+            Debug.LogWarning("Failsafe move trail");
+            lastMoveTrail.Setup(Move.GetFromX(aiMove), Move.GetFromY(aiMove), Move.GetToX(aiMove), Move.GetToY(aiMove));
+        }
+        else
+        {
+            lastMoveTrail.Setup(Move.GetFromX(aiMove), Move.GetFromY(aiMove), moveTrail);
+        }
 
         if (extraMoveTrails != null)
         {
@@ -965,6 +1033,7 @@ public class BoardScript : MonoBehaviour
                     }
 
                     whiteIsAI = false;
+                    chessAI.moveFound = false;
                     Debug.Log("Self play ended");
                     drawError = true;
                     gameOver = true;

@@ -39,7 +39,7 @@ public class ChessAI
     ulong[][] zobristHashes;
     ulong[] zobristSupplemental;
 
-    public const float KING_CAPTURE = 1000000000; //(1 << 30);        //illegal position: invalidates any position that leads to it (Can't move into check)
+    public const float KING_CAPTURE = 160000000000; //(1 << 30);        //illegal position: invalidates any position that leads to it (Can't move into check)
     public const float WHITE_VICTORY = 100000; //(1 << 24);     //White wins (mate in X = this - X)
     public const float BLACK_VICTORY = -100000; //-(1 << 24);    //Black wins (mate in X = this + X)
 
@@ -91,24 +91,24 @@ public class ChessAI
         switch (difficulty)
         {
             case 0:
-                valueMult = 0.6f;
+                valueMult = 0.5f;
                 openingDeviation = 0.1f;   //Opening value roughly shifts by +- this (bigger on turn 1)
-                randomDeviation = 0.3f;    //Value roughly shifts by +- this
-                blunderDeviation = 3f;
+                randomDeviation = 0.4f;    //Value roughly shifts by +- this
+                blunderDeviation = 9f;
                 maxDepth = 3;   //very fast
                 break;
             case 1:
-                valueMult = 1;
+                valueMult = 0.8f;
                 openingDeviation = 0.05f;
-                randomDeviation = 0.075f;
-                blunderDeviation = 0.15f;
+                randomDeviation = 0.1f;
+                blunderDeviation = 2f;
                 maxDepth = 4;   //pretty fast
                 break;
             case 2:
                 valueMult = 1;
                 openingDeviation = 0.05f;
                 randomDeviation = 0.05f;
-                blunderDeviation = 0;
+                blunderDeviation = 0f;
                 maxDepth = 12;  //this is impossible to get without running this on a supercomputer probably :P
                 break;
         }
@@ -152,7 +152,7 @@ public class ChessAI
         zobristTable = new ZTableEntry[zTableSize];
 
         zobristHashes = new ulong[64][];
-        zobristSupplemental = new ulong[23];
+        zobristSupplemental = new ulong[24];
 
         //32 bit depth?
         for (int i = 0; i < zobristHashes.Length; i++)
@@ -182,12 +182,12 @@ public class ChessAI
     }
     public void SetZTableEntry(ulong hash, ZTableEntry newEntry)
     {
-        zobristTable[(uint)hash % zobristTable.Length] = newEntry;
+        zobristTable[(uint)hash & (zobristTable.Length - 1)] = newEntry;
     }
     public ZTableEntry GetZTableEntry(ulong hash)
     {
         //return default;
-        return zobristTable[(uint)hash % zobristTable.Length];
+        return zobristTable[(uint)hash & (zobristTable.Length - 1)];
     }
 
 
@@ -248,12 +248,12 @@ public class ChessAI
         return 1 - output;
     }
 
-    public float EvaluateBoard(ref Board b, ulong boardHash)
+    public float EvaluateBoard(ref Board b, ulong boardHash, List<uint> moves)
     {
-        return EvaluateBoardFunction(ref b, boardHash);
+        return EvaluateBoardFunction(ref b, boardHash, moves);
     }
 
-    public float EvaluateBoardFunction(ref Board b, ulong boardHash)
+    public float EvaluateBoardFunction(ref Board b, ulong boardHash, List<uint> moves)
     {
         Piece.PieceAlignment winner = b.GetVictoryCondition();
         if (winner != PieceAlignment.Null)
@@ -261,7 +261,7 @@ public class ChessAI
             //Has precedence
             //because moving into check for a win condition feels very contrary to normal chess logic
             //It seems fine for multi king because you can intuitively understand why you can ignore check in that case
-            if (Board.IsKingCapturePossible(ref b))
+            if (!b.CheckForKings() || Board.IsKingCapturePossible(ref b, moves))
             {
                 return KING_CAPTURE;
             }
@@ -330,7 +330,8 @@ public class ChessAI
         value += ((boardHash & 15) / 16f) * randomDeviation;
         if ((boardHash & 511) < 6)   //6/512 (since this shows up in the search tree this will be worse than it looks?)
         {
-            value += blunderDeviation * (((boardHash & 31) - 16) / 16f);
+            //this gives a triangle distribution?
+            value += blunderDeviation * (((((boardHash >> 8) & 15)) / 16f) - ((((boardHash >> 16) & 15)) / 16f));
         }
 
         //Debug.Log("End eval");
@@ -369,6 +370,11 @@ public class ChessAI
 
     //Modifiers are pretty good
     //But they are only so good?
+    //Status effects are bad
+    //But they vary in how bad they are
+    //And the badness varies on duration a bit
+    //      Poison and the like are worse if they are low turn count
+    //      The non poison ones are better at low turn count
     public float EvaluateModifierMaterial(ref Board b)
     {
         ulong bitboard_white = b.globalData.bitboard_piecesWhite;
@@ -379,15 +385,65 @@ public class ChessAI
         {
             int index = MainManager.PopBitboardLSB1(bitboard_white, out bitboard_white);
 
+            PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(b.pieces[index]);
+
+            if (pte == null)
+            {
+                continue;
+            }
+
             if (Piece.GetPieceModifier(b.pieces[index]) != PieceModifier.None)
             {
                 output += 2.5f;
             }
 
-            PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(b.pieces[index]);
-            if (pte != null && (pte.pieceProperty & PieceProperty.ConsumeAllies) != 0)
+            Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(b.pieces[index]);
+            byte pd = Piece.GetPieceStatusDuration(b.pieces[index]);
+            //effects must be halved because it gives PieceValue value normally
+            switch (pse)
+            {
+                case PieceStatusEffect.Frozen:
+                    output -= (pte.pieceValueX2 * (0.15f + 0.03125f * (pd)));
+                    break;
+                case PieceStatusEffect.Heavy:
+                case PieceStatusEffect.Fragile:
+                case PieceStatusEffect.Soaked:
+                    output -= (pte.pieceValueX2 * (0.1f + 0.03125f * (pd)));
+                    break;
+                case PieceStatusEffect.Light:
+                case PieceStatusEffect.Ghostly:
+                    output -= (pte.pieceValueX2 * (0.05f + 0.03125f * (pd)));
+                    break;
+                case PieceStatusEffect.Poisoned:    //not normally curable so it is worse
+                    output -= (pte.pieceValueX2 * 0.175f * (1 + 1 / pd));
+                    break;
+                case PieceStatusEffect.Sparked:
+                case PieceStatusEffect.Bloodlust:
+                    output -= (pte.pieceValueX2 * 0.25f * (1 / pd));
+                    break;
+            }
+
+            if (pte.type == PieceType.Revenant)
+            {
+                if (Piece.GetPieceSpecialData(b.pieces[index]) != 0)
+                {
+                    output -= pte.pieceValueX2 * 0.25f;
+                }
+            }
+
+            if ((pte.pieceProperty & PieceProperty.ConsumeAllies) != 0)
             {
                 float value = pte.pieceValueX2 * 0.25f;
+                if (value > 1.5f)
+                {
+                    value = 1.5f;
+                }
+                value *= Piece.GetPieceSpecialData(b.pieces[index]);
+                output += value;
+            }
+            if ((pte.piecePropertyB & PiecePropertyB.ChargeByMoving) != 0)
+            {
+                float value = pte.pieceValueX2 * 0.05f;
                 if (value > 1.5f)
                 {
                     value = 1.5f;
@@ -400,15 +456,64 @@ public class ChessAI
         {
             int index = MainManager.PopBitboardLSB1(bitboard_black, out bitboard_black);
 
+            PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(b.pieces[index]);
+
+            if (pte == null)
+            {
+                continue;
+            }
+
             if (Piece.GetPieceModifier(b.pieces[index]) != PieceModifier.None)
             {
                 output -= 2.5f;
             }
 
-            PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(b.pieces[index]);
+            Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(b.pieces[index]);
+            byte pd = Piece.GetPieceStatusDuration(b.pieces[index]);
+            switch (pse)
+            {
+                case PieceStatusEffect.Frozen:
+                    output += (pte.pieceValueX2 * (0.15f + 0.03125f * (pd)));
+                    break;
+                case PieceStatusEffect.Heavy:
+                case PieceStatusEffect.Fragile:
+                case PieceStatusEffect.Soaked:
+                    output += (pte.pieceValueX2 * (0.1f + 0.03125f * (pd)));
+                    break;
+                case PieceStatusEffect.Light:
+                case PieceStatusEffect.Ghostly:
+                    output += (pte.pieceValueX2 * (0.05f + 0.03125f * (pd)));
+                    break;
+                case PieceStatusEffect.Poisoned:    //not normally curable so it is worse
+                    output += (pte.pieceValueX2 * 0.175f * (1 + 1 / pd));
+                    break;
+                case PieceStatusEffect.Sparked:
+                case PieceStatusEffect.Bloodlust:
+                    output += (pte.pieceValueX2 * 0.25f * (1 / pd));
+                    break;
+            }
+
+            if (pte.type == PieceType.Revenant)
+            {
+                if (Piece.GetPieceSpecialData(b.pieces[index]) != 0)
+                {
+                    output += pte.pieceValueX2 * 0.25f;
+                }
+            }
+
             if ((pte.pieceProperty & PieceProperty.ConsumeAllies) != 0)
             {
                 float value = pte.pieceValueX2 * 0.25f;
+                if (value > 1.5f)
+                {
+                    value = 1.5f;
+                }
+                value *= Piece.GetPieceSpecialData(b.pieces[index]);
+                output -= value;
+            }
+            if ((pte.piecePropertyB & PiecePropertyB.ChargeByMoving) != 0)
+            {
+                float value = pte.pieceValueX2 * 0.05f;
                 if (value > 1.5f)
                 {
                     value = 1.5f;
@@ -889,6 +994,27 @@ public class ChessAI
         return boardCache[turn];
     }
 
+    public void TryPrintBestLine()
+    {
+        int ply = board.ply;
+
+        string output = "Turn " + board.turn + ": ";
+
+        while (true)
+        {
+            ply++;
+            if (boardCache.ContainsKey(ply))
+            {
+                output += " " + Move.ConvertToStringMinimal(boardCache[ply].GetLastMove());
+            } else
+            {
+                break;
+            }
+        }
+
+        Debug.Log(output);
+    }
+
     //Very quick depth 1 search
     //Just choose whatever makes number go up (while still being legal
     public void NaiveAI()
@@ -908,7 +1034,7 @@ public class ChessAI
             copy.ApplyMove(moves[i]);
             if (!Board.IsKingCapturePossible(ref copy))
             {
-                float evaluation = EvaluateBoard(ref copy, HashFromScratch(ref copy));
+                float evaluation = EvaluateBoard(ref copy, HashFromScratch(ref copy), null);
 
                 if (evaluation < bestEvaluation)
                 {
@@ -969,7 +1095,7 @@ public class ChessAI
             }
             */
 
-            if (!float.IsNaN(bestEvaluation))
+            if (!float.IsNaN(bestEvaluation) && bestMove != 0)
             {
                 realBestEvaluation = bestEvaluation;
                 //Debug.Log("Found move " + bestMove);
@@ -979,6 +1105,9 @@ public class ChessAI
             //The game is already over so there is no point to searching any moves?
             if (bestEvaluation == KING_CAPTURE || bestEvaluation == WHITE_VICTORY || bestEvaluation == BLACK_VICTORY)
             {
+                realBestEvaluation = bestEvaluation;
+                //this.bestMove = 0;
+                this.bestMove = bestMove;   //? need to fix it breaking when its about to win as white?
                 break;
             }
 
@@ -989,6 +1118,8 @@ public class ChessAI
         }
 
         Debug.Log((b.blackToMove ? "Black" : "White") + " Bestmove = " + (Move.ConvertToString(this.bestMove)) + " Eval = " + TranslateEval(realBestEvaluation) + " Search took " + (dt / 1000d) + " seconds for " + (nodesSearched + nodesTransposed + quiNodeSearched) + " positions with " + prunes + " prunes, " + nodesTransposed + " transposes, " + quiNodeSearched + " qui nodes at depth + " + maxDepthReached + " = " + "(" + ((nodesSearched + nodesTransposed + quiNodeSearched) / (dt / 1000d)) + " nodes/sec)");
+
+        //TryPrintBestLine();
 
         moveFound = true;
         //this.bestMove = bestMove;
@@ -1089,6 +1220,12 @@ public class ChessAI
         ulong newHash = copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, oldHash);
         ZTableEntry zte = GetZTableEntry(newHash);
 
+        //Somehow this is causing bugs I don't know why
+        if (!copy.CheckForKings())
+        {
+            return KING_CAPTURE;
+        }
+
         //Consult transposition table
         //If it is M1 or something just use that immediately because you can't really do better than that with any other kind of move
         if (zte.hash == newHash)
@@ -1112,6 +1249,12 @@ public class ChessAI
         else
         {
             lostMaterial = b.blackPerPlayerInfo.pieceValueSumX2 - copy.blackPerPlayerInfo.pieceValueSumX2;
+        }
+
+        //legit captures get some boost
+        if (copy.GetLastMoveCapture())
+        {
+            score += 1000;
         }
 
         score += lostMaterial * 1f;
@@ -1216,19 +1359,21 @@ public class ChessAI
             //Has precedence
             //because moving into check for a win condition feels very contrary to normal chess logic
             //It seems fine for multi king because you can intuitively understand why you can ignore check in that case
-            if (Board.IsKingCapturePossible(ref b))
+            uint kingcapture = Board.FindKingCaptureMove(ref b, moves);
+            if (kingcapture != 0)
             {
-                return (0, KING_CAPTURE);
+                //return (0, KING_CAPTURE);
+                return (kingcapture, KING_CAPTURE);
             }
 
             if (winner == PieceAlignment.White)
             {
-                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, (byte)depth, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
+                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
                 return (0, WHITE_VICTORY);
             }
             if (winner == PieceAlignment.Black)
             {
-                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, (byte)depth, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
+                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
                 return (0, BLACK_VICTORY);
             }
         }
@@ -1324,6 +1469,13 @@ public class ChessAI
             //King capture is always sorted to the front
             scoreDict[moves[i]] = MoveScore(ref b, ref copy, boardOldHash, moves[i], nonpassiveDict);
 
+            if (scoreDict[moves[i]] == KING_CAPTURE)
+            {
+                //Bad
+                //return (0, KING_CAPTURE);
+                return (moves[i], KING_CAPTURE);
+            }
+
             //Don't touch hash move scores with this?
             //Maybe touching MVVLVA scores is fine
             if (killerMoves != null && scoreDict[moves[i]] < 900 && killerMoves.Contains(Move.RemoveNonLocation(moves[i])))
@@ -1382,11 +1534,15 @@ public class ChessAI
 
             copy.CopyOverwrite(b);
             copy.ApplyMove(moves[i]);
+
+            //scorer finds this early
+            /*
             if (!copy.CheckForKings())
             {
                 //King capture move is possible in this position therefore this position is illegal
                 return (moves[i], KING_CAPTURE);
             }
+            */
             /*
             if (copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash) != copy.MakeZobristHashFromScratch(zobristHashes, zobristSupplemental))
             {
@@ -1395,9 +1551,15 @@ public class ChessAI
             */
 
             int newRed = red;
-            if (newRed < 0 + (depth * 0.5f))
+            /*
+            if (newRed < 0 + (depth * 0.333f))
             {
-                newRed = (int)(0 + (depth * 0.5f));
+                newRed = (int)(0 + (depth * 0.333f));
+            }
+            */
+            if (newRed < 1 + (depth * 0.15f))
+            {
+                newRed = (int)(1 + (depth * 0.15f));
             }
             if (!nonpassiveDict.ContainsKey(moves[i]))
             {
@@ -1410,14 +1572,26 @@ public class ChessAI
 
             uint candidateMove;
             float candidateEval;
+
+            ulong chash = copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash);
             if (doReduction)
             {
-                (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash), (depth - 1 - (newRed - red) + (newExt - ext)), newExt, newRed, alpha, beta, currentKillerMoves);
+                (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, chash, (depth - 1 - (newRed - red) + (newExt - ext)), newExt, newRed, alpha, beta, currentKillerMoves);
             }
             else
             {
-                (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash), (depth - 1 + (newExt - ext)), newExt, red, alpha, beta, currentKillerMoves);
+                (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, chash, (depth - 1 + (newExt - ext)), newExt, red, alpha, beta, currentKillerMoves);
             }
+
+            if (alpha == float.MaxValue && beta == float.MinValue)
+            {
+                if ((chash & 127) < 10)   //10/128 chance of a blunder I guess?
+                {
+                    //shift right so the check bits and the bits that determine value are not the same
+                    candidateEval += blunderDeviation * (((((chash >> 8) & 15)) / 16f) - ((((chash >> 16) & 15)) / 16f));
+                }
+            }
+
 
             if (!keepSearching)
             {
@@ -1539,18 +1713,18 @@ public class ChessAI
                 //Checkmate :(
                 if (b.blackToMove)
                 {
-                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, (byte)depth, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
+                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
                     return (0, WHITE_VICTORY);
                 } else
                 {
-                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, (byte)depth, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
+                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
                     return (0, BLACK_VICTORY);
                 }
             } else
             {
                 //Stalemate :|
                 //Populate the Z table still
-                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, (byte)depth, ZTableEntry.BOUND_EXACT, 0, 0));
+                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, 0));
                 return (0, 0);
             }
         }
@@ -1566,7 +1740,7 @@ public class ChessAI
         }
 
         //Populate the Z table
-        SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, (byte)depth, ZTableEntry.BOUND_EXACT, bestMove, bestEvaluation));
+        SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, bestMove, bestEvaluation));
         return (bestMove, bestEvaluation);
     }
 
@@ -1659,7 +1833,21 @@ public class ChessAI
 
         //Null move might actually better?
         //You are not forced to do all these captures, so not doing them might be better
-        float nullEvaluation = EvaluateBoard(ref b, boardOldHash);       
+        float nullEvaluation = EvaluateBoard(ref b, boardOldHash, moves);
+
+        if (nullEvaluation == KING_CAPTURE)
+        {
+            return (0, KING_CAPTURE);
+        }
+        if (nullEvaluation == WHITE_VICTORY)
+        {
+            return (0, WHITE_VICTORY);
+        }
+        if (nullEvaluation == BLACK_VICTORY)
+        {
+            return (0, BLACK_VICTORY);
+        }
+
 
         //?
         //If you have a good capture available you should do better than the null evaluation
@@ -1679,19 +1867,54 @@ public class ChessAI
             {
                 alpha = nullEvaluation;
             }
+        }       
+
+        //this seems like an impossible scenario
+        /*
+        if (alpha > beta)
+        {
+            return (0, float.NaN);
+        }
+        */
+
+
+        //I want to sort the moves still because there can still be good pruning
+        //score moves
+        //in alpha beta search this is below the win condition check
+        //but this is the king capture check also so it has to be before
+        Dictionary<uint, float> scoreDict = new Dictionary<uint, float>();
+
+        for (int i = 0; i < moves.Count; i++)
+        {
+            scoreDict[moves[i]] = QMoveScore(ref b, ref copy, boardOldHash, moves[i]);
+
+            //If you see a KING CAPTURE you can just stop immediately
+            if (scoreDict[moves[i]] == KING_CAPTURE)
+            {
+                //Debug.Log(Move.ConvertToString(moves[i]) + " is kingcapture");
+                //Is this the cause of the bugs?
+                //SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, bestMove, KING_CAPTURE));
+                return (moves[i], KING_CAPTURE);
+            }
         }
 
         //inefficient but important to have?
         //Do I need this
         //I can just make future Q searches include king captures
         //No? Maybe it finds a move that blunders a queen and prunes early but doesn't even see that king capture is possible
+        //no: move score setup now forces king captures to the front
+        /*
         if (Board.IsKingCapturePossible(ref b, moves))
         {
             //Populate the Z table
             SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, 0, ZTableEntry.BOUND_EXACT, bestMove, KING_CAPTURE));
             return (0, KING_CAPTURE);
         }
+        */
         //If you already won then just return that immediately
+        //redundant: null evaluation finds these values first
+
+        /*
         PieceAlignment winner = b.GetVictoryCondition();
         if (winner != PieceAlignment.Null)
         {
@@ -1699,33 +1922,23 @@ public class ChessAI
             //Has precedence
             //because moving into check for a win condition feels very contrary to normal chess logic
             //It seems fine for multi king because you can intuitively understand why you can ignore check in that case
-            /*
             if (Board.IsKingCapturePossible(ref b))
             {
                 return (0, KING_CAPTURE);
             }
-            */
 
             if (winner == PieceAlignment.White)
             {
-                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, 0, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
+                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
                 return (0, WHITE_VICTORY);
             }
             if (winner == PieceAlignment.Black)
             {
-                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, 0, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
+                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
                 return (0, BLACK_VICTORY);
             }
         }
-
-        //I want to sort the moves still because there can still be good pruning
-        //score moves
-        Dictionary<uint, float> scoreDict = new Dictionary<uint, float>();
-
-        for (int i = 0; i < moves.Count; i++)
-        {
-            scoreDict[moves[i]] = QMoveScore(ref b, ref copy, boardOldHash, moves[i]);
-        }
+        */
 
         int FloatCompare(float a, float b)
         {
@@ -1755,9 +1968,21 @@ public class ChessAI
             //removed the toX and toY check because it would end up in the score dict if it was capture
             //int txy = Move.GetToX(moves[i]) + Move.GetToY(moves[i]) * 8;
             //int fxy = Move.GetFromX(moves[i]) + Move.GetFromY(moves[i]) * 8;
-            if (scoreDict[moves[i]] > 0)    // || ((txy & 7) == x && (txy >> 3) == y) && b.pieces[txy] != 0 && Piece.GetPieceAlignment(b.pieces[txy]) != Piece.GetPieceAlignment(b.pieces[fxy]))
+
+            if (qdepth > 5)
             {
-                moveSubset.Add(moves[i]);
+                //only legit captures get in
+                if (scoreDict[moves[i]] > 1000)    // || ((txy & 7) == x && (txy >> 3) == y) && b.pieces[txy] != 0 && Piece.GetPieceAlignment(b.pieces[txy]) != Piece.GetPieceAlignment(b.pieces[fxy]))
+                {
+                    moveSubset.Add(moves[i]);
+                }
+            }
+            else
+            {
+                if (scoreDict[moves[i]] > 0)    // || ((txy & 7) == x && (txy >> 3) == y) && b.pieces[txy] != 0 && Piece.GetPieceAlignment(b.pieces[txy]) != Piece.GetPieceAlignment(b.pieces[fxy]))
+                {
+                    moveSubset.Add(moves[i]);
+                }
             }
         }
 
@@ -1898,7 +2123,7 @@ public class ChessAI
                 {
                     prunes++;
                     //Populate the Z table
-                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, 0, ZTableEntry.BOUND_ALPHA, bestMove, evaluation));
+                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_ALPHA, bestMove, evaluation));
                     return (bestMove, PenalizeMove(evaluation, repetitionPenalty));
                 }
             }
@@ -1920,7 +2145,7 @@ public class ChessAI
                 {
                     prunes++;
                     //Populate the Z table
-                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, 0, ZTableEntry.BOUND_BETA, bestMove, evaluation));
+                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_BETA, bestMove, evaluation));
                     return (bestMove, PenalizeMove(evaluation, repetitionPenalty));
                 }
             }
@@ -1940,7 +2165,7 @@ public class ChessAI
 
         //Above case is no longer necessary as the board was evaluated once before
         //Populate the Z table
-        SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, 0, ZTableEntry.BOUND_EXACT, bestMove, evaluation));
+        SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, bestMove, evaluation));
         return (bestMove, PenalizeMove(evaluation, repetitionPenalty));
     }
 }

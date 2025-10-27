@@ -20,7 +20,7 @@ public static class Piece
 
     //Actually more like 10 bits
     //I don't think my piece numbers are going to reach 1024
-    public enum PieceType : short
+    public enum PieceType : ushort
     {
         Null = 0,
         Rock = 1,   //rock = neutral aligned Null   (I decided not to make it 0 because I don't want to deal with that headache)
@@ -58,9 +58,19 @@ public static class Piece
         SuperPawn,
         DivineProgenitor,
         DivineProtector,
+        DivineAvenger,
         DivineBeacon,
+        DivineApothecary,
         DivineCourier,
-        DivineServant,
+        DivineArtisan,
+        DivineSquire,
+        DivinePage,
+        DivineMusician,
+        DivineMaid,
+        DivineUsurper,
+        DivineGardener,
+        DivineApprentice,
+        DivineHerald,
         SnailQueen,
         Crab,
         Lobster,
@@ -85,6 +95,7 @@ public static class Piece
         Raft,
         Warship,
         Canoe,
+        Submarine,
         Pusher,
         PushBishop,
         PushRook,
@@ -104,7 +115,7 @@ public static class Piece
         Attractor,
         Repulser,
         Immobilizer,
-        Jester,
+        Entrancer,
         Charmer,
         Wrath,
         Greed,
@@ -168,6 +179,10 @@ public static class Piece
         Moon,
         Asteroid,
         Comet,
+        Io,
+        Europa,
+        Ganymede,
+        Callisto,
         Aries,
         Taurus,
         Gemini,
@@ -224,6 +239,8 @@ public static class Piece
         Hag,
         Frog,
         Toad,
+        Sludge,
+        SludgeTrail,
         Plaguebearer,
         Werewolf,
         Werebear,
@@ -231,9 +248,10 @@ public static class Piece
         Werefox,
         ElephantCalf,
         Elephant,
-        ElephantScholar,
+        ElephantCrusher,
         ElephantCharger,
         ElephantQueen,
+        ElephantBulwark,
         Blackguard,
         Spy,
         Infiltrator,
@@ -342,11 +360,70 @@ public static class Piece
         SoulDevourer,
         QueenLeech,
         Leech,
+        ChargeBeast,
+        ChargeCannon,
+        ChargeWarper,
+        ChargeKnight,
+        ChargePawn,
+        Ghoul,
+        GhoulMarshall,
+        GhoulAmazon,
+        GhoulPawn,
+        PufferfishQueen,
+        PufferfishPawn,
+        Robber,
+        Enforcer,
+        Smuggler,
+        Mercenary,
+        Outlaw,
+        WarpMage,
+        Mirrorer,
+        Recaller,
+        Harlequin,
+        Jester,
+        Dancer,
+        Penguin,
+        IceElemental,
+        EmperorPenguin,
+        SnowBomb,
+        SnowQueen,
+        Snowman,
+        PythonQueen,
+        PoisonElemental,
+        PoisonBomb,
+        PoisonFrog,
+        Snake,
+        Phantom,
+        HealerMage,
+        PoisonMage,
+        FreezeMage,
+        SparkMage,
+        SplashMage,
+        FloatMage,
+        GravityMage,
+        SkipQueen,
+        SkipRook,
+        SkipBishop,
+        SkipGuard,
+        SkipPawn,
+        SummerQueen,
+        WinterQueen,
+        SummerRook,
+        WinterBishop,
+        SpringKnight,
+        FallKnight,
+        SummerPawn,
+        WinterPawn,
+        SpringPawn,
+        FallPawn,
+        Bunker,
+        Tunnel,
+        Train,
+        Imitator,
 
         Peasant,
 
         Prince,
-        Outlaw,
         Yeoman,
 
         EndOfTable
@@ -406,6 +483,15 @@ public static class Piece
         Quick,
         Slow,
         SoulMages,
+        ChargeMovers,
+        ForcedMovers,
+        Criminals,
+        Teleporters,
+        Icy,
+        Poison,
+        StatusMages,
+        Skip,
+        Seasonal,
     }
 
     //2 bits = 4 possible
@@ -418,7 +504,7 @@ public static class Piece
         Crystal         //Crystal pieces have this problem a lot less as keeping them around you can use them for defense (you get positive value from them so just sacrificing them immediately isn't the best play)
     }
 
-    //4 bits = 15 possible
+    //3 bits = 7 possible (Currently 6)
     //Modifiers are infinite duration things
     public enum PieceModifier : byte
     {
@@ -428,13 +514,13 @@ public static class Piece
         Immune,         //Immune to enemy negative effects (unimplemented)
         Shielded,       //If user ends turn when it is attacked: Shielded becomes Half Shielded
         HalfShielded,   //Half shielded is removed on enemy turn end (So a shielded king works properly, if it was removed on own turn end it would lead to stalemates where the shielded king is not capturable by the enemy but any move would remove the shield)
-        Depleted,       //Pieces with single use abilities that can't use them anymore (note: things that imbue the other modifiers will restore their single use!)
-
         NoSpecial,      //Special thing for move copying pieces (Blocks all special moves)
+
+        //Reserved 7
     }
 
     //4 bits = 15 possible
-    //Status effects have a temporary counter (4 bits) (decremented on user turn end?) (So poison for 1 turn is basically a weaker ranged capture)
+    //Status effects have a temporary counter (3 bits) (decremented on enemy turn end?) (So poison for 1 turn is basically a weaker ranged capture)
     public enum PieceStatusEffect : byte
     {
         None,
@@ -442,9 +528,18 @@ public static class Piece
         Poisoned,   //die after X turns
         Soaked,   //No capturing and no enemy targetting abilities (and generates no auras)
         Bloodlust,  //Die in X turns, removed on capture, can only capture
-        Burned, //Die in X turns, removed on move
+        Sparked, //Die in X turns, removed on move
         Ghostly, //Enemy version of Spectral (enemy pieces can pass through)
         Fragile,    //Acts as "destroy on capture"
+        Heavy,  //Falls down by 1 every turn
+        Light,  //Floats forward by 1 every turn
+
+        //Reserved 10
+        //Reserved 11
+        //Reserved 12
+        //Reserved 13
+        //Reserved 14
+        //Reserved 15
     }
 
     //Special properties (may generate teleports)
@@ -588,8 +683,42 @@ public static class Piece
         ChargeEnhanceStack = 1uL,   //ChargeEnhance but the range of the enhanced moves are increased (additively, so 2 base gets +1 per charge so I can put in 2 range stuff when you get 1 charge, then 3 with 2 charge...) by the charges
         ChargeEnhanceStackReset = 1uL << 1,   //ChargeEnhanceStack but the charges reset to 0 on charge move
         PartialForcedMoves = 1uL << 2,  //Check bittable for piece: if empty only then get secondary moves (So the first later moves get priority)
+        InverseForcedMoves = 1uL << 3,  //Inverse of partial forced moves: only get secondary moves when the primary moves exist
+        PartialForcedCapture = 1uL << 21,  //Check bittable for piece: if empty only then get secondary moves (So the first later moves get priority)
 
-        PromoteWarp = 1uL << 3,     //Warp on promotion (except capturing)
+        PromoteWarp = 1uL << 4,     //Warp on promotion (except capturing)
+
+        NonBlockingAlly = 1uL << 5, //like Spectral
+        NonBlockingEnemy = 1uL << 6,    //like Ghostly
+
+        ChargeByMoving = 1uL << 7,
+        EnemyOnCapture = 1uL << 8,
+        NeutralOnCapture = 1uL << 9,
+
+        FreezeCapturer = 1uL << 10,
+        PoisonCapturer = 1uL << 11,
+        StatusImmune = 1uL << 12,
+
+        PieceCarry = 1uL << 13,
+        SpreadCure = 1uL << 14,
+
+        PoisonExplode = 1uL << 15,
+        IceExplode = 1uL << 16,
+
+        InflictFreeze = 1uL << 17,
+        Inflict = 1uL << 18,
+
+        NotCarriable = 1uL << 19,
+
+        InvincibleNoEnemyAdjacent = 1uL << 20,
+
+        //22
+        SeasonalSwapper = 1uL << 22,
+        SeasonalSwapperB = 1uL << 23,
+
+        ClockworkSwapperB = 1uL << 24,
+
+        Fading = 1uL << 25,
     }
 
     public static uint PackPieceData(PieceType pt, byte pspd, PieceModifier pm, PieceStatusEffect pse, byte psed, PieceAlignment pa)
@@ -630,11 +759,11 @@ public static class Piece
 
     public static PieceType GetPieceType(uint pieceInfo)
     {
-        return (PieceType)(MainManager.BitFilter(pieceInfo, 0, 9));
+        return (PieceType)(MainManager.BitFilter(pieceInfo, 0, 8));
     }
     public static uint SetPieceType(PieceType pt, uint pieceInfo)
     {
-        return MainManager.BitFilterSet(pieceInfo, (uint)pt, 0, 9);
+        return MainManager.BitFilterSet(pieceInfo, (uint)pt, 0, 8);
     }
 
     public static bool GetPieceProperty(PieceType pt, PieceProperty pp)
@@ -642,17 +771,17 @@ public static class Piece
         return (GlobalPieceManager.Instance.GetPieceTableEntry(pt).pieceProperty & pp) != 0;
     }
 
-    //A full byte of special data
+    //9 bits of special data
     //This is quite a lot
-    //Big enough to fit a starting square value
+    //I enlarged it from 8 to 9 so I can fit a whole entire piece type into it :)
     //Currently uses 2 bits for giants
-    public static byte GetPieceSpecialData(uint pieceInfo)
+    public static ushort GetPieceSpecialData(uint pieceInfo)
     {
-        return (byte)(MainManager.BitFilter(pieceInfo, 10, 17));
+        return (ushort)(MainManager.BitFilter(pieceInfo, 9, 17));
     }
-    public static uint SetPieceSpecialData(byte psd, uint pieceInfo)
+    public static uint SetPieceSpecialData(ushort psd, uint pieceInfo)
     {
-        return MainManager.BitFilterSet(pieceInfo, psd, 10, 17);
+        return MainManager.BitFilterSet(pieceInfo, psd, 9, 17);
     }
 
     public static PieceModifier GetPieceModifier(uint pieceInfo)
@@ -709,7 +838,7 @@ public static class Piece
     }
 
 
-    public static bool IsPieceInvincible(Board b, uint piece, int x, int y, uint attackerPiece, int attackerX, int attackerY, Move.SpecialType specialType)
+    public static bool IsPieceInvincible(Board b, uint piece, int x, int y, uint attackerPiece, int attackerX, int attackerY, Move.SpecialType specialType, PieceTableEntry pteA, PieceTableEntry pteV)
     {
         Piece.PieceType ptA = Piece.GetPieceType(attackerPiece);
         Piece.PieceType ptV = Piece.GetPieceType(piece);
@@ -717,8 +846,8 @@ public static class Piece
         Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
         Piece.PieceAlignment paA = Piece.GetPieceAlignment(attackerPiece);
 
-        PieceTableEntry pteA = GlobalPieceManager.Instance.GetPieceTableEntry(ptA);
-        PieceTableEntry pteV = GlobalPieceManager.Instance.GetPieceTableEntry(ptV);
+        //PieceTableEntry pteA = GlobalPieceManager.Instance.GetPieceTableEntry(ptA);
+        //PieceTableEntry pteV = GlobalPieceManager.Instance.GetPieceTableEntry(ptV);
 
         //Voided can't capture
         if (Piece.GetPieceStatusEffect(attackerPiece) == PieceStatusEffect.Soaked)
@@ -738,9 +867,25 @@ public static class Piece
         }
 
         //Fire immune
-        if ((specialType == Move.SpecialType.FireCapture || specialType == Move.SpecialType.FireCapturePush) && ((pteV.pieceProperty & PieceProperty.FireImmune) != 0))
+        if ((specialType == Move.SpecialType.FireCapture || specialType == Move.SpecialType.FireCaptureOnly || specialType == Move.SpecialType.FireCapturePush) && ((pteV.pieceProperty & PieceProperty.FireImmune) != 0))
         {
             return true;
+        }
+
+        //Water/Ice immune
+        if ((specialType == Move.SpecialType.InflictFreeze || specialType == Move.SpecialType.InflictFreezeCaptureOnly) && (((pteV.pieceProperty & PieceProperty.WaterImmune) != 0) || ((pteV.piecePropertyB & PiecePropertyB.StatusImmune) != 0)))
+        {
+            return true;
+        }
+        //Other status immune
+        if (((pteV.piecePropertyB & PiecePropertyB.StatusImmune) != 0))
+        {
+            switch (specialType)
+            {
+                case Move.SpecialType.Inflict:
+                case Move.SpecialType.InflictCaptureOnly:
+                    return true;
+            }
         }
 
         //blanket ban stuff with immune
@@ -837,6 +982,29 @@ public static class Piece
         {
             return true;
         }
+
+        if ((pteV.piecePropertyB & PiecePropertyB.InvincibleNoEnemyAdjacent) != 0)
+        {
+            ulong enemy = 0;
+            ulong adjacentBitboard = MainManager.SmearBitboard(1uL << (x + (y << 3)));
+            switch (paA)
+            {
+                case PieceAlignment.White:
+                    enemy = b.globalData.bitboard_piecesWhite;
+                    break;
+                case PieceAlignment.Black:
+                    enemy = b.globalData.bitboard_piecesBlack;
+                    break;
+            }
+            enemy &= ~(1uL << (attackerX + (attackerY << 3)));
+            enemy &= adjacentBitboard;
+
+            if (enemy == 0)
+            {
+                return true;
+            }
+        }
+
 
         //invincible from range 1
         if ((pteV.pieceProperty & PieceProperty.InvincibleClose) != 0)

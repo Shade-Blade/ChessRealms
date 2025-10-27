@@ -1836,6 +1836,7 @@ MonoBehaviour:
     whitePerPlayerInfo:
       canCastle: 0
       lastMove: 0
+      lastPieceMoved: 0
       lastPieceMovedType: 0
       lastPieceMovedLocation: 0
       pieceValueSumX2: 0
@@ -1844,6 +1845,7 @@ MonoBehaviour:
     blackPerPlayerInfo:
       canCastle: 0
       lastMove: 0
+      lastPieceMoved: 0
       lastPieceMovedType: 0
       lastPieceMovedLocation: 0
       pieceValueSumX2: 0
@@ -9797,7 +9799,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   bs: {fileID: 411647727}
-  army: 0200c6000a010d01c300bf009f008b002a0120012501310134013501700007000700
+  army: 020080018101820183018501840186018701880189019d009e00a0009f0075017601
   em: 0
 --- !u!65 &1838308303
 BoxCollider:

@@ -23,6 +23,11 @@ public class MoveTrailScript : MonoBehaviour
         lr.startColor = new Color(0f, 0.6f, 0.6f, 0.5f);
         lr.endColor = new Color(0, 1, 1, 0.8f);
     }
+    public void SetColorMoveStationary()
+    {
+        lr.startColor = new Color(0.45f, 0f, 0.6f, 0.5f);
+        lr.endColor = new Color(0.75f, 0, 1, 0.8f);
+    }
 
     public const float Z_COORD = -0.7f;
 
@@ -47,23 +52,27 @@ public class MoveTrailScript : MonoBehaviour
             switch (trail[i].path)
             {
                 case MoveMetadata.PathType.Slider:
+                case MoveMetadata.PathType.SliderGiant:
                     if (pastX - trail[i].x < -4 || pastX - trail[i].x > 4)
                     {
                         CylinderWrapAroundSegment(pointList, pastPos, futurePos);
                     }
-                    if (pastY - trail[i].y < -4 || pastY - trail[i].y > 4)
+                    else if (pastY - trail[i].y < -4 || pastY - trail[i].y > 4)
                     {
                         TubularWrapAroundSegment(pointList, pastPos, futurePos);
                     }
                     break;
                 case MoveMetadata.PathType.Teleport:
+                case MoveMetadata.PathType.TeleportGiant:
                     AddTeleportSegment(pointList, pastPos, futurePos);
                     break;
                 case MoveMetadata.PathType.Leaper:
+                case MoveMetadata.PathType.LeaperGiant:
                     if (pastX - trail[i].x < -4 || pastX - trail[i].x > 4)
                     {
                         AddLeaperSegmentCylinder(pointList, pastPos, futurePos);
-                    } else if (pastY - trail[i].y < -4 || pastY - trail[i].y > 4)
+                    }
+                    else if (pastY - trail[i].y < -4 || pastY - trail[i].y > 4)
                     {
                         AddLeaperSegmentTubular(pointList, pastPos, futurePos);
                     } else
@@ -76,6 +85,15 @@ public class MoveTrailScript : MonoBehaviour
             pastPos = futurePos;
             pastX = trail[i].x;
             pastY = trail[i].y;
+        }
+
+        switch (trail[0].path)
+        {
+            case MoveMetadata.PathType.SliderGiant:
+            case MoveMetadata.PathType.LeaperGiant:
+            case MoveMetadata.PathType.TeleportGiant:
+                MakePathGiant(pointList);
+                break;
         }
 
         lr.positionCount = pointList.Count;
@@ -328,6 +346,18 @@ public class MoveTrailScript : MonoBehaviour
                 pastPoint = subPoint;
                 pointList.Add(subPoint);
             }
+        }
+    }
+
+    public void MakePathGiant(List<Vector3> pointList)
+    {
+        float offset = BoardScript.SQUARE_SIZE / 2f;
+
+        lr.widthMultiplier = 1f;
+
+        for (int i = 0; i < pointList.Count; i++)
+        {
+            pointList[i] += new Vector3(offset, offset, 0);
         }
     }
 }

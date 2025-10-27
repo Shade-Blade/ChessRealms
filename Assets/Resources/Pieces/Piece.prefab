@@ -313,6 +313,8 @@ MonoBehaviour:
   y: 0
   piece: 0
   isSelected: 0
+  isGiant: 0
+  bc: {fileID: 6342896625213762319}
 --- !u!65 &6342896625213762319
 BoxCollider:
   m_ObjectHideFlags: 0

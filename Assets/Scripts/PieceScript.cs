@@ -19,6 +19,9 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
     public bool isSelected;
 
+    public bool isGiant;
+    public BoxCollider bc;
+
     public void Start()
     {
         dob = GetComponent<DraggableObject>();
@@ -28,11 +31,46 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     public void ForceDeselect()
     {
         seb.ForceDeselect();
+        dob.isDragged = false;
+        transform.position = BoardScript.GetSpritePositionFromCoordinates(x, y, -0.5f);
     }
 
     public void Setup(uint piece, int x, int y)
     {
         this.piece = piece;
+
+        isGiant = (GlobalPieceManager.GetPieceTableEntry(piece).pieceProperty & Piece.PieceProperty.Giant) != 0;
+
+        text.enabled = true;
+        backSprite.enabled = true;
+        bc.enabled = true;
+        if (isGiant)
+        {
+            if (Piece.GetPieceSpecialData(piece) != 0)
+            {
+                text.enabled = false;
+                backSprite.enabled = false;
+                bc.enabled = false;
+                return;
+            }
+
+            Vector3 offset = (Vector3.up + Vector3.right) * 0.5f;
+            text.transform.localPosition = offset;
+            backSprite.transform.localPosition = offset;
+            text.transform.localScale = Vector3.one * 2;
+            backSprite.transform.localScale = Vector3.one * 1.6f;
+            bc.center = offset;
+            bc.size = new Vector3(2,2,0.1f);
+        } else
+        {
+            text.transform.localPosition = Vector3.zero;
+            backSprite.transform.localPosition = Vector3.zero;
+            text.transform.localScale = Vector3.one;
+            backSprite.transform.localScale = Vector3.one * 0.8f;
+            bc.center = Vector3.zero;
+            bc.size = new Vector3(1, 1, 0.1f);
+        }
+
 
         text.text = Piece.GetPieceType(piece).ToString();
 

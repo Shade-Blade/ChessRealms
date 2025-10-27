@@ -20,12 +20,18 @@ public class MoveMetadata
     public Move.SpecialType moveSpecial;
     public List<MoveMetadata> predecessors;
     public List<MoveMetadata> successors;
+    public bool terminalNode;
+    public List<uint> pathTags;
 
     public enum PathType
     {
         Slider,
         Leaper,
         Teleport,
+
+        SliderGiant,
+        LeaperGiant,
+        TeleportGiant,
 
         //can calculate these by seeing that the offset is too large
         //(for reflected it doesn't need anything because it is just a path turning in a different direction which just draws a normal line turn)
@@ -41,7 +47,7 @@ public class MoveMetadata
         //No teleport cylinder or teleport tubular etc because that doesn't really do anything
     }
 
-    public MoveMetadata(uint piece, int tx, int ty, PathType path, Move.SpecialType moveSpecial = Move.SpecialType.Normal)
+    public MoveMetadata(uint piece, int tx, int ty, PathType path, Move.SpecialType moveSpecial, uint pathTag)
     {
         this.piece = piece;
         //this.fx = fx;
@@ -52,6 +58,40 @@ public class MoveMetadata
         this.moveSpecial = moveSpecial;
         predecessors = new List<MoveMetadata>();
         successors = new List<MoveMetadata>();
+        pathTags = new List<uint>();
+
+        if (pathTag != 0)
+        {
+            pathTags.Add(pathTag);
+        }
+    }
+    public MoveMetadata(uint piece, int tx, int ty, PathType path, Move.SpecialType moveSpecial, List<uint> pathTags)
+    {
+        this.piece = piece;
+        //this.fx = fx;
+        //this.fy = fy;
+        this.x = tx;
+        this.y = ty;
+        this.path = path;
+        this.moveSpecial = moveSpecial;
+        predecessors = new List<MoveMetadata>();
+        successors = new List<MoveMetadata>();
+        this.pathTags = new List<uint>();
+
+        //copy the list
+        for (int i = 0; i < pathTags.Count; i++)
+        {
+            this.pathTags.Add(pathTags[i]);
+        }
+    }
+
+    public static uint MakePathTag(MoveGeneratorInfoEntry.MoveGeneratorAtom mga, int index)
+    {
+        return (uint)(((int)mga << 16) + index);
+    }
+    public static uint MakePathTag(MoveGeneratorInfoEntry.MoveGeneratorAtom mga, int index, int indexB)
+    {
+        return (uint)(((int)mga << 16) + (index << 8) + indexB);
     }
 
     public void AddSuccessor(MoveMetadata successor)
@@ -87,6 +127,99 @@ public class MoveMetadata
         MoveMetadata node = this;
         List<MoveMetadata> output = new List<MoveMetadata>();
 
+        //Better version
+        MoveMetadata subNode = node;
+
+        output.Insert(0, subNode);
+        int lastDeltaX = 0;
+        int lastDeltaY = 0;
+        //try to use Dir
+        switch (startDir)
+        {
+            case Move.Dir.DownLeft:
+                lastDeltaX = -1;
+                lastDeltaY = -1;
+                break;
+            case Move.Dir.Down:
+                lastDeltaX = 0;
+                lastDeltaY = -1;
+                break;
+            case Move.Dir.DownRight:
+                lastDeltaX = 1;
+                lastDeltaY = -1;
+                break;
+            case Move.Dir.Left:
+                lastDeltaX = -1;
+                lastDeltaY = 0;
+                break;
+            case Move.Dir.Null:
+                break;
+            case Move.Dir.Right:
+                lastDeltaX = 1;
+                lastDeltaY = 0;
+                break;
+            case Move.Dir.UpLeft:
+                lastDeltaX = -1;
+                lastDeltaY = 1;
+                break;
+            case Move.Dir.Up:
+                lastDeltaX = 0;
+                lastDeltaY = 1;
+                break;
+            case Move.Dir.UpRight:
+                lastDeltaX = 1;
+                lastDeltaY = 1;
+                break;
+        }
+
+        if (node.pathTags.Count == 0)
+        {
+            Debug.LogError("Path with no tag");
+            return output;
+        }
+
+        uint pathTag = node.pathTags[0];
+
+        while (subNode != null)
+        {
+            MoveMetadata childToAdd = null;
+
+            for (int i = 0; i < subNode.predecessors.Count; i++)
+            {
+                if (subNode.predecessors[i].pathTags.Contains(pathTag))
+                {
+                    //no backwards
+                    if (output.Count > 1 && output[1].x == subNode.predecessors[i].x && output[1].y == subNode.predecessors[i].y)
+                    {
+                        continue;
+                    }
+                    childToAdd = subNode.predecessors[i];
+                    break;
+                }
+            }
+
+            if (childToAdd == null)
+            {
+                break;
+            }
+
+            subNode = childToAdd;
+
+            //Infinite loop (some paths go in a circle)
+            if (subNode.x == startX && subNode.y == startY)
+            {
+                break;
+            }
+            output.Insert(0, subNode);
+
+            if (output.Count > 50)
+            {
+                Debug.LogError("Very long path");
+                break;
+            }
+        }
+
+        /*
         output.Insert(0, node);
 
         int lastDeltaX = 0;
@@ -136,7 +269,7 @@ public class MoveMetadata
                             break;
                         case Move.Dir.Up:
                             lastDeltaX = 0;
-                            lastDeltaY =-1;
+                            lastDeltaY = 1;
                             break;
                         case Move.Dir.UpRight:
                             lastDeltaX = 1;
@@ -144,12 +277,29 @@ public class MoveMetadata
                             break;
                     }
                 }
-                if (subNode.x - subNode.predecessors[i].x == lastDeltaX && subNode.y - subNode.predecessors[i].y == lastDeltaY)
+                if (subNode.predecessors[i].x - subNode.x == lastDeltaX && subNode.predecessors[i].y - subNode.y == lastDeltaY)
                 {
                     childToAdd = subNode.predecessors[i];
                 }
             }
 
+            //Try not to go backwards
+            if (output.Count > 1 && output[1].x == childToAdd.x && output[1].y == childToAdd.y)
+            {
+                for (int i = 0; i < subNode.predecessors.Count; i++)
+                {
+                    if (subNode.predecessors[i].x != childToAdd.x || subNode.predecessors[i].y != childToAdd.y)
+                    {
+                        childToAdd = subNode.predecessors[i];
+                        break;
+                    }
+                }
+            }
+            */
+
+        //Debug.Log((childToAdd.x - subNode.x) + " " + (childToAdd.y - subNode.y) + " " + lastDeltaX + " " + lastDeltaY);
+
+        /*
             lastDeltaX = childToAdd.x - subNode.x;
             lastDeltaY = childToAdd.y - subNode.y;
             subNode = childToAdd;
@@ -161,9 +311,23 @@ public class MoveMetadata
             }
 
             output.Insert(0, subNode);
+
+            //escape?
+            if (subNode.terminalNode)
+            {
+                //Debug.Log("Terminal node hit " + subNode.x + " " + subNode.y);
+                break;
+            }
+
+            if (output.Count > 50)
+            {
+                Debug.LogError("Very long path");
+                break;
+            }
         }
 
         output = TryFixPath(startX, startY, output);
+        */
 
         return output;
     }
@@ -395,6 +559,7 @@ public class BoardUpdateMetadata
     public int ty;
     public Piece.PieceType pieceType;  //for type change stuff (promotion or other things)
     public BoardUpdateType type;
+    public bool wasLastMovedPiece;  //to distinguish last moved from thing that was on the square before
 
     public enum BoardUpdateType
     {
@@ -405,8 +570,20 @@ public class BoardUpdateMetadata
         Shift,
         TypeChange,  //promotion / lycanthrope conversion
         AlignmentChange,
+        StatusCure,
+        StatusApply,
     }
 
+    public BoardUpdateMetadata(int fx, int fy, int tx, int ty, Piece.PieceType pieceType, BoardUpdateType type, bool wasLastMoved)
+    {
+        this.fx = fx;
+        this.fy = fy;
+        this.tx = tx;
+        this.ty = ty;
+        this.pieceType = pieceType;
+        this.type = type;
+        this.wasLastMovedPiece = wasLastMoved;
+    }
     public BoardUpdateMetadata(int fx, int fy, int tx, int ty, Piece.PieceType pieceType, BoardUpdateType type)
     {
         this.fx = fx;
@@ -425,5 +602,15 @@ public class BoardUpdateMetadata
         this.ty = -1;
         this.pieceType = pieceType;
         this.type = type;
+    }
+    public BoardUpdateMetadata(int fx, int fy, Piece.PieceType pieceType, BoardUpdateType type, bool wasLastMoved)
+    {
+        this.fx = fx;
+        this.fy = fy;
+        this.tx = -1;
+        this.ty = -1;
+        this.pieceType = pieceType;
+        this.type = type;
+        this.wasLastMovedPiece = wasLastMoved;
     }
 }

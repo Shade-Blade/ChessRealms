@@ -14,6 +14,7 @@ public class SquareScript : MonoBehaviour
     public SpriteRenderer image;
     public SpriteRenderer lastMovedHighlight;
     public SpriteRenderer moveHighlight;
+    public SpriteRenderer giantMoveHighlight;
     public GameObject windDelta;
     public SpriteRenderer windArrow;
 
@@ -161,14 +162,16 @@ public class SquareScript : MonoBehaviour
         }
     }
 
-    public void HighlightLegal(bool specialType)
+    public void HighlightLegal(bool specialType, bool giant)
     {
         specialMoveType = specialType;
+
+        SpriteRenderer moveHighlight = giant ? giantMoveHighlight : this.moveHighlight;
         if (showEnemyMove)
         {
             if (specialMoveType)
             {
-                moveHighlight.color = new Color(0.6f, 0.5f, 0.4f, 0.8f);
+                moveHighlight.color = new Color(0.6f, 0.55f, 0.4f, 0.8f);
             }
             else
             {
@@ -188,17 +191,33 @@ public class SquareScript : MonoBehaviour
         }
         isHighlightedLegal = true;
     }
-    public void HighlightIllegal(bool specialType)
+    public void HighlightIllegal(bool specialType, bool giant)
     {
         specialMoveType = specialType;
         //"illegal" enemy moves = things that put you in check
+
+        SpriteRenderer moveHighlight = giant ? giantMoveHighlight : this.moveHighlight;
         if (showEnemyMove)
         {
-            moveHighlight.color = new Color(0.6f, 0.4f, 0.4f, 0.8f);
+            if (specialMoveType)
+            {
+                moveHighlight.color = new Color(0.6f, 0.45f, 0.4f, 0.8f);
+            }
+            else
+            {
+                moveHighlight.color = new Color(0.6f, 0.4f, 0.4f, 0.8f);
+            }
         }
         else
         {
-            moveHighlight.color = new Color(1f, 0f, 0f, 0.8f);
+            if (specialMoveType)
+            {
+                moveHighlight.color = new Color(1f, 0.5f, 0f, 0.8f);
+            }
+            else
+            {
+                moveHighlight.color = new Color(1f, 0f, 0f, 0.8f);
+            }
         }
         isHighlightedIllegal = true;
     }
@@ -208,6 +227,7 @@ public class SquareScript : MonoBehaviour
         windArrow.color = new Color(0, 0, 0, 0);
         ResetSquareColor();
         moveHighlight.color = new Color(0, 0, 0, 0);
+        giantMoveHighlight.color = new Color(0, 0, 0, 0);
         lastMovedHighlight.color = new Color(0, 0, 0, 0);
         isHighlightedLegal = false;
         isHighlightedIllegal = false;
@@ -217,6 +237,7 @@ public class SquareScript : MonoBehaviour
     public void ResetDotColor()
     {
         moveHighlight.color = new Color(0f, 0f, 0f, 0f);
+        giantMoveHighlight.color = new Color(0, 0, 0, 0);
         if (czhHighlight)
         {
             if (czhWhite)

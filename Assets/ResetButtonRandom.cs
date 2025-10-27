@@ -52,11 +52,11 @@ public class ResetButtonRandom : MonoBehaviour
             {
                 continue;
             }
-            if (piecePool[i].pieceValueX2 < (tryValue / 64f))    //Too much value concentration
+            if (piecePool[i].pieceValueX2 < (tryValue / 64f))    //Not enough value density
             {
                 continue;
             }
-            if ((piecePool[i].type == PieceType.MoonIllusion) || (piecePool[i].type == PieceType.King))
+            if ((piecePool[i].type == PieceType.MoonIllusion) || (piecePool[i].type == PieceType.King) || (piecePool[i].pieceValueX2 == 0))
             {
                 continue;
             }
