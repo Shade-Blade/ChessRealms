@@ -719,6 +719,7 @@ public static class Piece
         ClockworkSwapperB = 1uL << 24,
 
         Fading = 1uL << 25,
+        ShiftImmune = 1uL << 26,
     }
 
     public static uint PackPieceData(PieceType pt, byte pspd, PieceModifier pm, PieceStatusEffect pse, byte psed, PieceAlignment pa)
@@ -757,6 +758,30 @@ public static class Piece
         return output;
     }
 
+    public static string ConvertToString(uint pieceInfo)
+    {
+        string output = GetPieceType(pieceInfo).ToString();
+
+        ushort pieceData = GetPieceSpecialData(pieceInfo);
+        if (pieceData != 0)
+        {
+            output += " (" + pieceData + ")";
+        }
+
+        PieceModifier modifier = GetPieceModifier(pieceInfo);
+        if (modifier != PieceModifier.None)
+        {
+            output += " (" + modifier + ")";
+        }
+
+        PieceStatusEffect pse = GetPieceStatusEffect(pieceInfo);
+        if (pse != PieceStatusEffect.None)
+        {
+            output += " (" + pse + " " + GetPieceStatusDuration(pieceInfo) + ")";
+        }
+
+        return output;
+    }
     public static PieceType GetPieceType(uint pieceInfo)
     {
         return (PieceType)(MainManager.BitFilter(pieceInfo, 0, 8));
@@ -960,6 +985,55 @@ public static class Piece
             }
 
             if (giantIncompatible)
+            {
+                return true;
+            }
+        }
+
+        //Shift immune
+        if (((pteV.piecePropertyB & PiecePropertyB.ShiftImmune) != 0))
+        {
+            bool sIncompatible = false;
+            switch (specialType)
+            {
+                //things that are fine
+                /*
+                case Move.SpecialType.Normal:
+                case Move.SpecialType.MoveOnly:
+                case Move.SpecialType.CaptureOnly:
+                case Move.SpecialType.FlyingMoveOnly:
+                case Move.SpecialType.SelfMove:
+                case Move.SpecialType.FireCapture:
+                case Move.SpecialType.FireCaptureOnly:
+                case Move.SpecialType.LongLeaper:
+                case Move.SpecialType.FireCapturePush:
+                case Move.SpecialType.PullMove:
+                case Move.SpecialType.PushMove:
+                case Move.SpecialType.Advancer:
+                case Move.SpecialType.Withdrawer:
+                case Move.SpecialType.AdvancerWithdrawer:
+                case Move.SpecialType.TandemMovementPawns:
+                case Move.SpecialType.TandemMovementNonPawns:
+                case Move.SpecialType.SlipMove:
+                case Move.SpecialType.PlantMove:
+                case Move.SpecialType.AllyAbility:
+                case Move.SpecialType.EnemyAbility:
+                case Move.SpecialType.EmptyAbility:
+                case Move.SpecialType.PassiveAbility:
+                    break;
+                */
+                case Move.SpecialType.Castling:
+                case Move.SpecialType.RangedPull:
+                case Move.SpecialType.RangedPullAllyOnly:
+                case Move.SpecialType.RangedPush:
+                case Move.SpecialType.RangedPushAllyOnly:
+                case Move.SpecialType.AllySwap:
+                case Move.SpecialType.AnyoneSwap:
+                    sIncompatible = true;
+                    break;
+            }
+
+            if (sIncompatible)
             {
                 return true;
             }

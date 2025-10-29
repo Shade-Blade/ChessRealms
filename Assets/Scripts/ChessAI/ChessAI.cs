@@ -62,10 +62,13 @@ public class ChessAI
     public bool keepSearching = false;
     public float searchDuration;        //How long to search maximum (making it more like other engines where it's fixed time instead of fixed depth)
     public float searchTime;
+    public bool errorState = false;
 
     public int maxDepth;
     public bool moveFound = false;
     public uint bestMove;
+    public float bestEvaluation;
+    public int currentDepth;
     public Board board;
 
     public int difficulty;
@@ -90,6 +93,9 @@ public class ChessAI
         this.difficulty = difficulty;
         switch (difficulty)
         {
+            case -1:
+                valueMult = 0;
+                break;
             case 0:
                 valueMult = 0.5f;
                 openingDeviation = 0.1f;   //Opening value roughly shifts by +- this (bigger on turn 1)
@@ -901,7 +907,7 @@ public class ChessAI
     */
 
     //coroutine
-    public IEnumerator BestMoveCoroutine()
+    public IEnumerator BestMoveCoroutine(bool errorState)
     {
         int localVersion = version;
 
@@ -909,6 +915,14 @@ public class ChessAI
         keepSearching = true;
         searchTime = 0;
         moveFound = false;
+        //this.errorState = errorState;
+
+        //ehh
+        if (errorState || valueMult == 0)
+        {
+            NaiveAI();
+            yield break;
+        }
 
         Thread searchThread = new Thread(new ParameterizedThreadStart(AlphaBetaAI));
         searchThread.Start();
@@ -1016,7 +1030,7 @@ public class ChessAI
     }
 
     //Very quick depth 1 search
-    //Just choose whatever makes number go up (while still being legal
+    //Just choose whatever makes number go up (while still being legal)
     public void NaiveAI()
     {
         Board b = board;
@@ -1049,16 +1063,52 @@ public class ChessAI
         //return bestMove;
     }
 
+    //Random choice of moves
+    public void RandomAI()
+    {
+        Board b = board;
+
+        List<uint> moves = new List<uint>();
+        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+
+        uint bestMove = 0;
+
+        List<uint> shuffledMoves = new List<uint>();
+        while (moves.Count > 0)
+        {
+            uint newMove = moves[UnityEngine.Random.Range(0, moves.Count)];
+            moves.Remove(newMove);
+            shuffledMoves.Add(newMove);
+        }
+
+        Board copy = GetBoardFromCache(b.ply); //new Board();
+        for (int i = 0; i < shuffledMoves.Count; i++)
+        {
+            copy.CopyOverwrite(b);
+            copy.ApplyMove(moves[i]);
+            if (!Board.IsKingCapturePossible(ref copy))
+            {
+                moveFound = true;
+                this.bestMove = shuffledMoves[i];
+            }
+        }
+
+        moveFound = true;
+        this.bestMove = bestMove;
+    }
+
     public void AlphaBetaAI(object o)
     {
         //I can make this as big as I want now :)
         int maxDepth = this.maxDepth;
+        currentDepth = 0;
 
         //there might be some thread unsafe data manipulation causing weird blunders?
         Board b = new Board(board);
         b.SplitGlobalData();
 
         uint bestMove = 0;
+        this.bestEvaluation = 0;
         float bestEvaluation = 0;
         //Debug.Log("Start alpha beta as " + (b.blackToMove ? "Black" : "White"));
         long dt = 0;
@@ -1075,6 +1125,7 @@ public class ChessAI
             quiNodeSearched = 0;
             prunes = 0;
             (bestMove, bestEvaluation) = AlphaBetaSearch(ref b, HashFromScratch(ref b), i, 0, 0, float.MinValue, float.MaxValue);
+            currentDepth = i;
 
             //(i == maxDepth || !keepSearching)
             /*
@@ -1100,6 +1151,7 @@ public class ChessAI
                 realBestEvaluation = bestEvaluation;
                 //Debug.Log("Found move " + bestMove);
                 this.bestMove = bestMove;
+                this.bestEvaluation = bestEvaluation;
             }
 
             //The game is already over so there is no point to searching any moves?
@@ -1108,6 +1160,7 @@ public class ChessAI
                 realBestEvaluation = bestEvaluation;
                 //this.bestMove = 0;
                 this.bestMove = bestMove;   //? need to fix it breaking when its about to win as white?
+                this.bestEvaluation = bestEvaluation;
                 break;
             }
 
@@ -1118,6 +1171,14 @@ public class ChessAI
         }
 
         Debug.Log((b.blackToMove ? "Black" : "White") + " Bestmove = " + (Move.ConvertToString(this.bestMove)) + " Eval = " + TranslateEval(realBestEvaluation) + " Search took " + (dt / 1000d) + " seconds for " + (nodesSearched + nodesTransposed + quiNodeSearched) + " positions with " + prunes + " prunes, " + nodesTransposed + " transposes, " + quiNodeSearched + " qui nodes at depth + " + maxDepthReached + " = " + "(" + ((nodesSearched + nodesTransposed + quiNodeSearched) / (dt / 1000d)) + " nodes/sec)");
+
+        if (this.bestMove == 0)
+        {
+            //error: need to failsafe I guess?
+            Debug.LogError("Null move failsafe");
+            NaiveAI();
+        }
+
 
         //TryPrintBestLine();
 
@@ -1293,39 +1354,46 @@ public class ChessAI
         //Usable?
         //Triggers instant cutoff?
 
+        uint bestMove = 0;
+        float bestEvaluation = float.NaN;
+
         //Root node does not check transpose table to avoid repetition
         if (alpha != float.MinValue)
         {
-            if (zte.hash == boardOldHash && zte.depth >= depth && !history.Contains(boardOldHash))
+            if (zte.hash == boardOldHash)
             {
-                //Exact number: can use immediately
-                if (zte.flags == ZTableEntry.BOUND_EXACT)
+                bestMove = zte.move;
+                if (zte.depth >= depth && !history.Contains(boardOldHash))
                 {
-                    nodesTransposed++;
-                    return (zte.move, zte.score);
-                }
-
-                if (b.blackToMove)
-                {
-                    //Reduce the score (check for < alpha)
-                    if (zte.flags == ZTableEntry.BOUND_ALPHA)
+                    //Exact number: can use immediately
+                    if (zte.flags == ZTableEntry.BOUND_EXACT)
                     {
-                        if (zte.score < alpha)
+                        nodesTransposed++;
+                        return (zte.move, zte.score);
+                    }
+
+                    if (b.blackToMove)
+                    {
+                        //Reduce the score (check for < alpha)
+                        if (zte.flags == ZTableEntry.BOUND_ALPHA)
                         {
-                            nodesTransposed++;
-                            return (zte.move, zte.score);
+                            if (zte.score <= alpha)
+                            {
+                                nodesTransposed++;
+                                return (zte.move, zte.score);
+                            }
                         }
                     }
-                }
-                else
-                {
-                    //Increase the score (check for > beta)
-                    if (zte.flags == ZTableEntry.BOUND_BETA)
+                    else
                     {
-                        if (zte.score > beta)
+                        //Increase the score (check for > beta)
+                        if (zte.flags == ZTableEntry.BOUND_BETA)
                         {
-                            nodesTransposed++;
-                            return (zte.move, zte.score);
+                            if (zte.score >= beta)
+                            {
+                                nodesTransposed++;
+                                return (zte.move, zte.score);
+                            }
                         }
                     }
                 }
@@ -1342,8 +1410,6 @@ public class ChessAI
         }
 
         //Do a search
-        uint bestMove = 0;
-        float bestEvaluation = float.NaN;
 
 
         Board copy = GetBoardFromCache(b.ply); //new Board();
@@ -1765,9 +1831,9 @@ public class ChessAI
         //Something has gone catastrophically wrong
         //need to limit it so it doesn't stack overflow
         //Unfortunately for me a stack overflow in the AI thread is invisible and doesn't show me any error messages >:(
-        if (qdepth >= 15)
+        if (qdepth >= 10)
         {
-            Debug.LogError("Too much quiescence, last move = " + Move.ConvertToString(b.GetLastMove()));
+            //Debug.LogError("Too much quiescence, last move = " + Move.ConvertToString(b.GetLastMove()));
             return (0, float.NaN);
         }
 
@@ -1780,10 +1846,15 @@ public class ChessAI
             repetitionPenalty = 1;
         }
 
+        uint bestMove = 0;
+        float evaluation = float.NaN;
+
         //Usable?
         //Triggers instant cutoff?
         if (zte.hash == boardOldHash)
         {
+            bestMove = zte.move;
+
             //Don't use the 0 depth entries because you might be considering a different square Q search?
             if (zte.depth > 0)
             {
@@ -1820,9 +1891,6 @@ public class ChessAI
                 }
             }
         }
-
-        uint bestMove = 0;
-        float evaluation = float.NaN;
 
         Board copy = GetBoardFromCache(b.ply);
         copy.CopyOverwrite(b);

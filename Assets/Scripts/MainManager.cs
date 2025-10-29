@@ -72,7 +72,7 @@ public class MainManager : MonoBehaviour
         //It is now 250k :((
         //Well at least I got depth 6 AI working?
         //But if it isn't possible to make that good enough then I guess I'll have to scrap this game
-
+        
         /*
         for (int i = 0; i <= 4; i++)
         {
@@ -80,7 +80,7 @@ public class MainManager : MonoBehaviour
             long unixTime = ((DateTimeOffset)currentTime).ToUnixTimeMilliseconds();
 
             Board board = new Board();
-            board.Setup(Board.BoardPreset.Normal);
+            board.Setup(Board.BoardPreset.TerrainTest);
 
             ulong perftResult = Board.PerftTest(ref board, i);
 

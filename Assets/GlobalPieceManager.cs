@@ -1065,6 +1065,12 @@ public class MoveGeneratorInfoEntry
 
             PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(b.pieces[i]);
 
+            if (pte == null)
+            {
+                Debug.LogError("Type 0 piece detected: " + Piece.ConvertToString(b.pieces[i]));
+                continue;
+            }
+
             if (!(pte.promotionType == Piece.PieceType.Null))
             {
                 switch (ppa)
@@ -1238,6 +1244,11 @@ public class MoveGeneratorInfoEntry
         b.globalData.bitboard_piecesBlackAdjacent = MainManager.SmearBitboard(b.globalData.bitboard_piecesBlack);
 
         b.globalData.bitboard_pieces = b.globalData.bitboard_piecesWhite | b.globalData.bitboard_piecesBlack | b.globalData.bitboard_piecesNeutral | b.globalData.bitboard_piecesCrystal;
+    }
+
+    public static void ResetArcanaMoon(ref Board b)
+    {
+
     }
 
     //Most areas of effect are for enemies of (PA)
@@ -1644,6 +1655,374 @@ public class MoveGeneratorInfoEntry
         int blackKingIndex = MainManager.PopBitboardLSB1(b.globalData.bitboard_kingBlack, out _);
         ulong blackKingAdjacent = MainManager.SmearBitboard(b.globalData.bitboard_kingBlack);
 
+        ulong pieceBitboard = (pa == Piece.PieceAlignment.White ? b.globalData.bitboard_piecesWhite : b.globalData.bitboard_piecesBlack) | b.globalData.bitboard_piecesNeutral | b.globalData.bitboard_piecesCrystal;
+
+        while (pieceBitboard != 0)
+        {
+            int i = MainManager.PopBitboardLSB1(pieceBitboard, out pieceBitboard);
+
+            ulong bitIndex = 1uL << i;
+            (int subX, int subY) = Board.CoordinateConvertInverse(i);
+
+            if (b.pieces[i] == 0)
+            {
+                continue;
+            }
+
+            uint piece = b.pieces[i];
+
+            //Friendly piece special movement
+            if (Piece.GetPieceAlignment(b.pieces[i]) == pa)
+            {
+                Piece.PieceType pt = Piece.GetPieceType(b.pieces[i]);
+
+                PieceTableEntry pte = GlobalPieceManager.Instance.GetPieceTableEntry(pt);
+
+                if ((pte.pieceProperty & Piece.PieceProperty.Relay) != 0)
+                {
+                    ulong relayBitboard = b.globalData.mbtactive.Get(subX, subY);
+                    if (pa == Piece.PieceAlignment.White)
+                    {
+                        relayBitboard &= b.globalData.bitboard_piecesWhite;
+                    }
+                    else if (pa == Piece.PieceAlignment.Black)
+                    {
+                        relayBitboard &= b.globalData.bitboard_piecesBlack;
+                    }
+
+                    while (relayBitboard != 0)
+                    {
+                        int index = MainManager.PopBitboardLSB1(relayBitboard, out relayBitboard);
+
+                        PieceTableEntry pteT = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
+
+                        if (pteT.type != Piece.PieceType.King && ((pteT.pieceProperty & Piece.PieceProperty.Giant) == 0) && pteT.promotionType == Piece.PieceType.Null && (pteT.piecePropertyB & Piece.PiecePropertyB.ShiftImmune) == 0)
+                        {
+                            //generate stuff
+                            //no MBT as that might lead to incorrect relaying
+                            GenerateMovesForPiece(moves, ref b, piece, index & 7, (index & 56) >> 3, null, moveMetadata);
+                        }
+                    }
+                }
+
+                if ((pte.pieceProperty & Piece.PieceProperty.RelayBishop) != 0)
+                {
+                    ulong relayBitboard = b.globalData.mbtactive.Get(subX, subY);
+                    if (pa == Piece.PieceAlignment.White)
+                    {
+                        relayBitboard &= b.globalData.bitboard_piecesWhite;
+                    }
+                    else if (pa == Piece.PieceAlignment.Black)
+                    {
+                        relayBitboard &= b.globalData.bitboard_piecesBlack;
+                    }
+
+                    while (relayBitboard != 0)
+                    {
+                        int index = MainManager.PopBitboardLSB1(relayBitboard, out relayBitboard);
+
+                        //forbid relays except in bishop lines
+                        int ix = index & 7;
+                        int iy = index << 3;
+                        if (subX - ix != subY - iy && subX - ix != iy - subY)
+                        {
+                            continue;
+                        }
+
+                        PieceTableEntry pteT = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
+
+                        if (pteT.type != Piece.PieceType.King && ((pteT.pieceProperty & Piece.PieceProperty.Giant) == 0) && pteT.promotionType == Piece.PieceType.Null && (pteT.piecePropertyB & Piece.PiecePropertyB.ShiftImmune) == 0)
+                        {
+                            //generate stuff
+                            //no MBT as that might lead to incorrect relaying
+                            GenerateMovesForPiece(moves, ref b, Piece.SetPieceType(Piece.PieceType.Bishop, piece), index & 7, (index & 56) >> 3, null, moveMetadata);
+                        }
+                    }
+                }
+
+                switch (pte.type)
+                {
+                    case Piece.PieceType.Hypnotist:
+                        //Hypnotizer special movement
+                        //moves as an enemy piece
+                        //as a hacky fix I will move them as if they had Shielded which prevents own king capture
+                        ulong hypnoBitboard = b.globalData.mbtactive.Get(subX, subY);
+                        //int pastIndex = -1;
+                        if (pa == Piece.PieceAlignment.White)
+                        {
+                            hypnoBitboard &= b.globalData.bitboard_piecesBlack;
+                            //pastIndex = b.whitePerPlayerInfo.lastPieceMovedLocation;
+                        }
+                        else if (pa == Piece.PieceAlignment.Black)
+                        {
+                            hypnoBitboard &= b.globalData.bitboard_piecesWhite;
+                            //pastIndex = b.blackPerPlayerInfo.lastPieceMovedLocation;
+                        }
+
+                        while (hypnoBitboard != 0)
+                        {
+                            int index = MainManager.PopBitboardLSB1(hypnoBitboard, out hypnoBitboard);
+
+                            //Forbid you from hypnotizing the last moved piece?
+                            //This should stop you from undoing your opponents last move
+                            //Ehh this isn't a big problem
+
+                            if (Piece.GetPieceType(b.pieces[index]) != Piece.PieceType.King)
+                            {
+                                PieceTableEntry pteH = GlobalPieceManager.GetPieceTableEntry(b.pieces[index]);
+
+                                //Sidenote: Arcana Moon is made Enchant Immune to fix arcana moon + hypnotizer bugs?
+                                if ((pteH.pieceProperty & Piece.PieceProperty.EnchantImmune) != 0)
+                                {
+                                    continue;
+                                }
+
+                                if ((pteH.pieceProperty & Piece.PieceProperty.Giant) == 0)
+                                {
+                                    //generate stuff at the target's location
+                                    GenerateMovesForPiece(moves, ref b, Piece.SetPieceModifier(Piece.PieceModifier.Shielded, b.pieces[index]), index & 7, index >> 3, null, moveMetadata);
+                                }
+                                else
+                                {
+                                    int newIndex = index;
+                                    //(int dx, int dy)
+                                    (int dx, int dy) = Board.GetGiantDelta(b.pieces[index]);
+
+                                    newIndex += dx;
+                                    newIndex += dy * 8;
+
+                                    //generate stuff at the target's location
+                                    GenerateMovesForPiece(moves, ref b, Piece.SetPieceModifier(Piece.PieceModifier.Shielded, b.pieces[index]), newIndex & 7, newIndex >> 3, null, moveMetadata);
+                                }
+                            }
+                        }
+                        break;
+                    case Piece.PieceType.Kindness:
+                        //Use the anti bitboard
+                        ulong kindnessBitboard = antiTable.Get(subX, subY);
+                        if (pa == Piece.PieceAlignment.White)
+                        {
+                            kindnessBitboard &= b.globalData.bitboard_piecesWhite;
+                        }
+                        else if (pa == Piece.PieceAlignment.Black)
+                        {
+                            kindnessBitboard &= b.globalData.bitboard_piecesBlack;
+                        }
+                        while (kindnessBitboard != 0)
+                        {
+                            int index = MainManager.PopBitboardLSB1(kindnessBitboard, out kindnessBitboard);
+
+                            //Relay moves to kindness
+                            GenerateMovesForPiece(moves, ref b, b.pieces[index], subX, subY, null, moveMetadata);
+                        }
+
+                        for (int ei = 0; ei < pte.enhancedMoveInfo.Count; ei++)
+                        {
+                            GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, subX, subY, pte.enhancedMoveInfo[ei], null, moveMetadata);
+                        }
+                        break;
+                    case Piece.PieceType.Envy:
+                        //Similar setup to Hypnotist but the extra moves get applied to the Envy
+                        //No king exception so the Envy can copy King moves too
+                        ulong envyBitboard = b.globalData.mbtactive.Get(subX, subY);
+                        if (pa == Piece.PieceAlignment.White)
+                        {
+                            envyBitboard &= b.globalData.bitboard_piecesBlack;
+                        }
+                        else if (pa == Piece.PieceAlignment.Black)
+                        {
+                            envyBitboard &= b.globalData.bitboard_piecesWhite;
+                        }
+
+                        while (envyBitboard != 0)
+                        {
+                            int index = MainManager.PopBitboardLSB1(envyBitboard, out envyBitboard);
+
+                            GenerateMovesForPiece(moves, ref b, Piece.SetPieceAlignment(pa, b.pieces[index]), subX, subY, null, moveMetadata);
+                        }
+
+                        //envy bonus moves
+                        for (int ei = 0; ei < pte.enhancedMoveInfo.Count; ei++)
+                        {
+                            GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, i & 7, (i & 56) >> 3, pte.enhancedMoveInfo[ei], null, moveMetadata);
+                        }
+                        break;
+                    case Piece.PieceType.ArcanaEmpress:
+                        ulong smearBitboard = (MainManager.SmearBitboard(MainManager.SmearBitboard(bitIndex)));
+                        if (pa == Piece.PieceAlignment.White)
+                        {
+                            smearBitboard &= b.globalData.bitboard_piecesWhite;
+                        }
+                        else if (pa == Piece.PieceAlignment.Black)
+                        {
+                            smearBitboard &= b.globalData.bitboard_piecesBlack;
+                        }
+
+                        //relays the F move only
+                        //no MBT as that might lead to incorrect relaying
+                        while (smearBitboard != 0)
+                        {
+                            int index = MainManager.PopBitboardLSB1(smearBitboard, out smearBitboard);
+
+                            if (Piece.GetPieceType(b.pieces[index]) != Piece.PieceType.King)
+                            {
+                                //generate stuff
+                                //no MBT as that might lead to incorrect relaying
+                                GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, index & 7, (index & 56) >> 3, pte.moveInfo[0], null, moveMetadata);
+                            }
+                        }
+                        break;
+                }
+
+                if (pa == Piece.PieceAlignment.Black)
+                {
+                    if ((b.globalData.enemyModifier & Board.EnemyModifier.Defensive) != 0)
+                    {
+                        GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, subX, subY, GlobalPieceManager.Instance.defensiveModifierMove, null, moveMetadata);
+                    }
+
+                    if ((b.globalData.enemyModifier & Board.EnemyModifier.Fusion) != 0 && (bitIndex & blackKingAdjacent) != 0)
+                    {
+                        GenerateMovesForPiece(moves, ref b, piece, blackKingIndex & 7, (blackKingIndex >> 3), null, moveMetadata);
+                    }
+
+                    if (pt == Piece.PieceType.King)
+                    {
+                        if ((b.globalData.enemyModifier & Board.EnemyModifier.Envious) != 0)
+                        {
+                            //Debug.Log("Envy target = " + b.globalData.whiteHighestValuePiece + " " + b.globalData.whiteHighestValuedPieceValue);
+                            PieceTableEntry pteR = GlobalPieceManager.Instance.GetPieceTableEntry(b.globalData.whiteHighestValuePiece);
+                            for (int r = 0; r < pteR.moveInfo.Count; r++)
+                            {
+                                GenerateMovesForMoveGeneratorEntry(moves, ref b, Piece.SetPieceModifier(Piece.PieceModifier.NoSpecial, piece), subX, subY, pteR.moveInfo[r], null, moveMetadata);
+                            }
+                        }
+
+                        if ((b.globalData.enemyModifier & Board.EnemyModifier.Lustful) != 0)
+                        {
+                            ulong lustfulBitboard = 0;
+                            lustfulBitboard |= BITBOARD_PATTERN_AFILE << (subX);
+                            lustfulBitboard |= BITBOARD_PATTERN_RANK1 << (subY << 3);
+                            lustfulBitboard |= (BITBOARD_PATTERN_DIAGONAL << (i)) & MainManager.GetWraparoundCutoff(subX);
+                            lustfulBitboard |= (BITBOARD_PATTERN_DIAGONAL >> (63 - i)) & MainManager.GetWraparoundCutoff(subX - 7);
+                            if (i <= 56)
+                            {
+                                lustfulBitboard |= (BITBOARD_PATTERN_ANTIDIAGONAL >> (56 - i)) & MainManager.GetWraparoundCutoff(subX);
+                            }
+                            else
+                            {
+                                lustfulBitboard |= (BITBOARD_PATTERN_ANTIDIAGONAL << (i - 56)) & MainManager.GetWraparoundCutoff(subX);
+                            }
+                            if (i <= 7)
+                            {
+                                lustfulBitboard |= (BITBOARD_PATTERN_ANTIDIAGONAL >> (7 - i)) & MainManager.GetWraparoundCutoff(subX - 7);
+                            }
+                            else
+                            {
+                                lustfulBitboard |= (BITBOARD_PATTERN_ANTIDIAGONAL << (i - 7)) & MainManager.GetWraparoundCutoff(subX - 7);
+                            }
+                            //MainManager.PrintBitboard(lustfulBitboard);
+
+                            if (pa == Piece.PieceAlignment.Black)
+                            {
+                                lustfulBitboard &= b.globalData.bitboard_piecesWhite;
+                                //pastIndex = b.blackPerPlayerInfo.lastPieceMovedLocation;
+                            }
+
+                            while (lustfulBitboard != 0)
+                            {
+                                int index = MainManager.PopBitboardLSB1(lustfulBitboard, out lustfulBitboard);
+
+                                //Forbid you from hypnotizing the last moved piece?
+                                //This should stop you from undoing your opponents last move
+                                //Ehh this isn't a big problem
+
+                                if (Piece.GetPieceType(b.pieces[index]) != Piece.PieceType.King)
+                                {
+                                    PieceTableEntry pteH = GlobalPieceManager.GetPieceTableEntry(b.pieces[index]);
+
+                                    //No enchant immunity?
+                                    if ((pteH.pieceProperty & Piece.PieceProperty.Giant) == 0)
+                                    {
+                                        //generate stuff at the target's location
+                                        GenerateMovesForPiece(moves, ref b, Piece.SetPieceModifier(Piece.PieceModifier.Shielded, b.pieces[index]), index & 7, index >> 3, null, moveMetadata);
+                                    }
+                                    else
+                                    {
+                                        int newIndex = index;
+                                        //(int dx, int dy)
+                                        (int dx, int dy) = Board.GetGiantDelta(b.pieces[index]);
+
+                                        newIndex += dx;
+                                        newIndex += dy * 8;
+
+                                        //generate stuff at the target's location
+                                        GenerateMovesForPiece(moves, ref b, Piece.SetPieceModifier(Piece.PieceModifier.Shielded, b.pieces[index]), newIndex & 7, newIndex >> 3, null, moveMetadata);
+                                    }
+                                }
+                            }
+                        }
+
+                        if ((b.globalData.enemyModifier & Board.EnemyModifier.Xyloid) != 0)
+                        {
+                            PieceTableEntry pteR = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.PieceType.Rootwalker);
+                            for (int r = 0; r < pteR.moveInfo.Count; r++)
+                            {
+                                GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, subX, subY, pteR.moveInfo[r], null, moveMetadata);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (Piece.GetPieceAlignment(b.pieces[i]) == Piece.PieceAlignment.Neutral)
+            {
+                piece = Piece.SetPieceAlignment(pa, piece);
+                GenerateMovesForPiece(moves, ref b, piece, subX, subY, null, moveMetadata);
+            }
+
+            if (Piece.GetPieceAlignment(b.pieces[i]) == Piece.PieceAlignment.Crystal)
+            {
+                //Check the inverse bitboard
+                ulong subBitboard = antiTable.Get(subX, subY);
+
+                bool canMove = false;
+                while (subBitboard != 0)
+                {
+                    int index = MainManager.PopBitboardLSB1(subBitboard, out subBitboard);
+                    if (index == -1)
+                    {
+                        break;
+                    }
+
+                    Piece.PieceAlignment cpA = Piece.GetPieceAlignment(b.pieces[index]);
+
+                    if (cpA == Piece.PieceAlignment.White)
+                    {
+                        b.globalData.bitboard_crystalWhite |= (1uL << i);
+                    }
+                    if (cpA == Piece.PieceAlignment.Black)
+                    {
+                        b.globalData.bitboard_crystalBlack |= (1uL << i);
+                    }
+
+                    //who is this
+                    if (Piece.GetPieceAlignment(b.pieces[index]) == pa)
+                    {
+                        canMove = true;
+                        break;
+                    }
+                }
+
+                if (canMove)
+                {
+                    piece = Piece.SetPieceAlignment(pa, piece);
+                    GenerateMovesForPiece(moves, ref b, piece, subX, subY, null, moveMetadata);
+                }
+            }
+        }
+
+        /*
         //Use table and anti table to generate stuff
         for (int i = 0; i < 64; i++)
         {
@@ -1681,7 +2060,7 @@ public class MoveGeneratorInfoEntry
 
                         PieceTableEntry pteT = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
 
-                        if (pteT.type != Piece.PieceType.King && ((pteT.pieceProperty & Piece.PieceProperty.Giant) == 0) && pteT.promotionType == Piece.PieceType.Null)
+                        if (pteT.type != Piece.PieceType.King && ((pteT.pieceProperty & Piece.PieceProperty.Giant) == 0) && pteT.promotionType == Piece.PieceType.Null && (pteT.piecePropertyB & Piece.PiecePropertyB.ShiftImmune) == 0)
                         {
                             //generate stuff
                             //no MBT as that might lead to incorrect relaying
@@ -1716,7 +2095,7 @@ public class MoveGeneratorInfoEntry
 
                         PieceTableEntry pteT = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
 
-                        if (pteT.type != Piece.PieceType.King && ((pteT.pieceProperty & Piece.PieceProperty.Giant) == 0) && pteT.promotionType == Piece.PieceType.Null)
+                        if (pteT.type != Piece.PieceType.King && ((pteT.pieceProperty & Piece.PieceProperty.Giant) == 0) && pteT.promotionType == Piece.PieceType.Null && (pteT.piecePropertyB & Piece.PiecePropertyB.ShiftImmune) == 0)
                         {
                             //generate stuff
                             //no MBT as that might lead to incorrect relaying
@@ -1751,17 +2130,12 @@ public class MoveGeneratorInfoEntry
                             //Forbid you from hypnotizing the last moved piece?
                             //This should stop you from undoing your opponents last move
                             //Ehh this isn't a big problem
-                            /*
-                            if (index == pastIndex)
-                            {
-                                continue;
-                            }
-                            */
 
                             if (Piece.GetPieceType(b.pieces[index]) != Piece.PieceType.King)
                             {
                                 PieceTableEntry pteH = GlobalPieceManager.GetPieceTableEntry(b.pieces[index]);
 
+                                //Sidenote: Arcana Moon is made Enchant Immune to fix arcana moon + hypnotizer bugs?
                                 if ((pteH.pieceProperty & Piece.PieceProperty.EnchantImmune) != 0)
                                 {
                                     continue;
@@ -1923,12 +2297,6 @@ public class MoveGeneratorInfoEntry
                                 //Forbid you from hypnotizing the last moved piece?
                                 //This should stop you from undoing your opponents last move
                                 //Ehh this isn't a big problem
-                                /*
-                                if (index == pastIndex)
-                                {
-                                    continue;
-                                }
-                                */
 
                                 if (Piece.GetPieceType(b.pieces[index]) != Piece.PieceType.King)
                                 {
@@ -2003,6 +2371,7 @@ public class MoveGeneratorInfoEntry
                     if (Piece.GetPieceAlignment(b.pieces[index]) == pa)
                     {
                         canMove = true;
+                        break;
                     }
                 }
 
@@ -2013,12 +2382,28 @@ public class MoveGeneratorInfoEntry
                 }
             }
         }
+        */
     }
 
     //Add moves for the entire target alignment
     //(need to add neutrals and crystals later as well as special movers that gain moves based on defenders)
     public static void GenerateMovesForAlignment(List<uint> moves, ref Board b, Piece.PieceAlignment pa, MoveBitTable mbt, Dictionary<uint, MoveMetadata> moveMetadata)
     {
+        //idea to optimize?
+        //This assumes that the pop step is not like 4x slower than the normal loop (which is hopefully true)
+        ulong pieceBitboard = pa == Piece.PieceAlignment.White ? b.globalData.bitboard_piecesWhite : b.globalData.bitboard_piecesBlack;
+
+        while (pieceBitboard != 0)
+        {
+            int index = MainManager.PopBitboardLSB1(pieceBitboard, out pieceBitboard);
+
+            if (b.pieces[index] != 0)
+            {
+                GenerateMovesForPiece(moves, ref b, b.pieces[index], index & 7, index >> 3, mbt, moveMetadata);
+            }
+        }
+
+        /*
         for (int i = 0; i < 8; i++)
         {
             for (int j = 0; j < 8; j++)
@@ -2029,17 +2414,11 @@ public class MoveGeneratorInfoEntry
                     if (Piece.GetPieceAlignment(targetPiece) == pa)
                     {
                         GenerateMovesForPiece(moves, ref b, targetPiece, i, j, mbt, moveMetadata);
-                        /*
-                        moveStartIndex = GenerateMoves(moves, moveStartIndex, ref b, targetPiece, i, j, mbt);
-                        if (moveStartIndex >= moves.Length)
-                        {
-                            return moveStartIndex;
-                        }
-                        */
                     }
                 }
             }
         }
+        */
 
         return;
         //return moveStartIndex;
@@ -4921,23 +5300,24 @@ public class MoveGeneratorInfoEntry
                 }
                 MoveMetadata md;
                 uint mdKey = Move.PackMove((byte)x, (byte)y, (byte)(tempX), (byte)(tempY));
+                uint nkey = Move.PackMove((byte)x, (byte)y, (byte)(lastTempX), (byte)(lastTempY));
                 if (!moveMetadata.ContainsKey(mdKey))
                 {
                     if (isRider)
                     {
                         md = new MoveMetadata(piece, tempX, tempY, MoveMetadata.PathType.Leaper, specialType, pathTag);
-                        if (lastTempX != x || lastTempY != y)
+                        if ((lastTempX != x || lastTempY != y) && moveMetadata.ContainsKey(nkey))
                         {
-                            md.AddPredecessor(moveMetadata[Move.PackMove((byte)x, (byte)y, (byte)(lastTempX), (byte)(lastTempY))]);
+                            md.AddPredecessor(moveMetadata[nkey]);
                         }
                         moveMetadata.Add(mdKey, md);
                     }
                     else
                     {
                         md = new MoveMetadata(piece, tempX, tempY, MoveMetadata.PathType.Slider, specialType, pathTag);
-                        if (lastTempX != x || lastTempY != y)
+                        if ((lastTempX != x || lastTempY != y) && moveMetadata.ContainsKey(nkey))
                         {
-                            md.AddPredecessor(moveMetadata[Move.PackMove((byte)x, (byte)y, (byte)(lastTempX), (byte)(lastTempY))]);
+                            md.AddPredecessor(moveMetadata[nkey]);
                         }
                         moveMetadata.Add(mdKey, md);
                     }
@@ -4946,9 +5326,9 @@ public class MoveGeneratorInfoEntry
                 {
                     md = moveMetadata[mdKey];
                     md.pathTags.Add(pathTag);
-                    if (lastTempX != x || lastTempY != y)
+                    if ((lastTempX != x || lastTempY != y) && moveMetadata.ContainsKey(nkey))
                     {
-                        md.AddPredecessor(moveMetadata[Move.PackMove((byte)x, (byte)y, (byte)(lastTempX), (byte)(lastTempY))]);
+                        md.AddPredecessor(moveMetadata[nkey]);
                     }
                 }
             }
@@ -6927,7 +7307,7 @@ public class MoveGeneratorInfoEntry
         }
 
         //Giants are too big to castle with
-        if (targetPiece == 0 || ((pawnBitboard & (1uL << tempX + tempY * 8)) != 0) || ((pte.pieceProperty & Piece.PieceProperty.Giant) != 0))
+        if (targetPiece == 0 || ((pawnBitboard & (1uL << tempX + tempY * 8)) != 0) || ((pte.pieceProperty & Piece.PieceProperty.Giant) != 0) || (pte.piecePropertyB & Piece.PiecePropertyB.ShiftImmune) != 0)
         {
             return;
             //return moveStartIndex;
@@ -7124,7 +7504,7 @@ public class MoveGeneratorInfoEntry
                 keepGoing = false;
                 break;
             }
-            if (checkBack && (tempY + deltaXA + deltaXB < 0 || tempY + deltaYA + deltaYB > 7))
+            if (checkBack && (tempX + deltaXA + deltaXB < 0 || tempX + deltaXA + deltaXB > 7 || tempY + deltaYA + deltaYB < 0 || tempY + deltaYA + deltaYB > 7))
             {
                 keepGoing = false;
                 break;

@@ -47,8 +47,10 @@ public class BoardScript : MonoBehaviour
     public bool drawError;
     public Piece.PieceAlignment winnerPA;
 
+    public TMPro.TextMeshPro thinkingText;
     public TMPro.TextMeshPro turnText;
     public TMPro.TextMeshPro scoreText;
+    public TMPro.TextMeshPro pieceInfoText;
 
     public float moveThinkTime = 1f;
     public float moveDelayValue = 0.05f;
@@ -60,6 +62,7 @@ public class BoardScript : MonoBehaviour
     public int difficulty = 2;
 
     public bool awaitingMove = false;
+    public bool errorMove = false;
 
     //offset by SQUARE_SIZE
     //so this is the center of each square
@@ -557,6 +560,9 @@ public class BoardScript : MonoBehaviour
             }
         } else
         {
+            //Illegal move failsafe?
+            awaitingMove = false;
+
             (uint refMove, List<MoveMetadata> illegalPath) = Board.MoveIllegalByCheckFindRefutationPath(ref board, move);
             //Debug.Log("Move is illegal because of " + Move.ConvertToString(move));
 
@@ -595,6 +601,7 @@ public class BoardScript : MonoBehaviour
 
         //aiMove = chessAI.GetBestMove(ref board);
         aiMove = chessAI.bestMove;
+        errorMove = false;
 
         if (aiMove == 0)
         {
@@ -620,6 +627,17 @@ public class BoardScript : MonoBehaviour
                 gameOver = true;
                 drawError = true;
             }
+            return;
+        }
+
+        uint checkMove = FindMoveInMoveList(Move.GetFromX(aiMove), Move.GetFromY(aiMove), Move.GetToX(aiMove), Move.GetToY(aiMove));
+        if (checkMove == 0 || !Board.IsMoveLegal(ref board, checkMove, true))
+        {
+            //Error
+            Debug.LogError("Black AI attempted an illegal move, retrying");
+            awaitingMove = false;
+            chessAI.moveFound = false;
+            errorMove = true;
             return;
         }
 
@@ -953,10 +971,150 @@ public class BoardScript : MonoBehaviour
     {
         chessAI.searchDuration = moveThinkTime;
 
+        if (awaitingMove)
+        {
+            thinkingText.text = "Depth " + chessAI.currentDepth + ": (" + chessAI.TranslateEval(chessAI.bestEvaluation) + ") " + Piece.GetPieceType(board.pieces[Move.GetFromX(chessAI.bestMove) + (Move.GetFromY(chessAI.bestMove) << 3)]) + " " + Move.ConvertToStringMinimal(chessAI.bestMove);
+        } else
+        {
+            thinkingText.text = "";
+        }
+
         turnText.text = "Turn " + (board.turn + (board.blackToMove ? 0.5f : 0)) + " <size=50%>" + (board.blackToMove ? "Black" : "White") + " to move</size>";
         if (board.bonusPly > 0)
         {
             turnText.text += "<size=50%> " + board.bonusPly + " bonus</size>";
+        }
+
+        pieceInfoText.text = "";
+        string propertyText = "";
+        string moveText = "";
+        if (selectedPiece != null)
+        {
+            PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(selectedPiece.piece);
+
+            pieceInfoText.text += pte.type + "\n";
+            pieceInfoText.text += "Value: " + (pte.pieceValueX2 / 2f) + "\n";
+            pieceInfoText.text += "Move: ";
+            for (int i = 0; i < pte.moveInfo.Count; i++)
+            {
+                MoveGeneratorInfoEntry mgie = pte.moveInfo[i];
+                if (mgie.atom > MoveGeneratorInfoEntry.MoveGeneratorAtom.SpecialMoveDivider)
+                {
+                    propertyText += mgie.atom + "\n";
+                    continue;
+                }
+                for (int j = 0; j < 15; j++)
+                {
+                    if (((int)mgie.modifier & (1 << j)) != 0)
+                    {
+                        moveText += (MoveGeneratorInfoEntry.MoveGeneratorPreModifier)(1 << j);
+                    }
+                }
+
+                if (mgie.atom == MoveGeneratorInfoEntry.MoveGeneratorAtom.Leaper)
+                {
+                    moveText += "(" + mgie.x + ", " + mgie.y + ")";
+                }
+                else
+                {
+                    moveText += mgie.atom;
+                }
+
+                if (mgie.range > 1)
+                {
+                    moveText += mgie.range;
+                }
+
+                switch (mgie.rangeType)
+                {
+                    case MoveGeneratorInfoEntry.RangeType.Exact:
+                        moveText += "=";
+                        break;
+                    case MoveGeneratorInfoEntry.RangeType.AntiRange:
+                        moveText += "-";
+                        break;
+                    case MoveGeneratorInfoEntry.RangeType.Minimum:
+                        moveText += "+";
+                        break;
+                }
+
+                moveText += " ";
+            }
+            pieceInfoText.text += moveText + "\n";
+            moveText = "";
+            if (pte.enhancedMoveInfo.Count > 0)
+            {
+                pieceInfoText.text += "Bonus Move: ";
+                for (int i = 0; i < pte.enhancedMoveInfo.Count; i++)
+                {
+                    MoveGeneratorInfoEntry mgie = pte.enhancedMoveInfo[i];
+                    if (mgie.atom > MoveGeneratorInfoEntry.MoveGeneratorAtom.SpecialMoveDivider)
+                    {
+                        propertyText += mgie.atom + "\n";
+                        continue;
+                    }
+                    for (int j = 0; j < 15; j++)
+                    {
+                        if (((int)mgie.modifier & (1 << j)) != 0)
+                        {
+                            moveText += (MoveGeneratorInfoEntry.MoveGeneratorPreModifier)(1 << j);
+                        }
+                    }
+
+                    if (mgie.atom == MoveGeneratorInfoEntry.MoveGeneratorAtom.Leaper)
+                    {
+                        moveText += "(" + mgie.x + ", " + mgie.y + ")";
+                    }
+                    else
+                    {
+                        moveText += mgie.atom;
+                    }
+
+                    if (mgie.range > 1)
+                    {
+                        moveText += mgie.range;
+                    }
+
+                    switch (mgie.rangeType)
+                    {
+                        case MoveGeneratorInfoEntry.RangeType.Exact:
+                            moveText += "=";
+                            break;
+                        case MoveGeneratorInfoEntry.RangeType.AntiRange:
+                            moveText += "-";
+                            break;
+                        case MoveGeneratorInfoEntry.RangeType.Minimum:
+                            moveText += "+";
+                            break;
+                    }
+
+                    moveText += " ";
+                }
+                pieceInfoText.text += moveText + "\n";
+            }
+
+            if (pte.promotionType != 0)
+            {
+                pieceInfoText.text += "Promotes to " + pte.promotionType + "\n";
+            }
+
+            if (pte.pieceProperty != 0 || pte.piecePropertyB != 0 || propertyText.Length > 0)
+            {
+                pieceInfoText.text += "Properties:\n" + propertyText;
+                ulong propertiesA = (ulong)pte.pieceProperty;
+
+                while (propertiesA != 0)
+                {
+                    int index = MainManager.PopBitboardLSB1(propertiesA, out propertiesA);
+                    pieceInfoText.text += (Piece.PieceProperty)(1uL << index) + "\n";
+                }
+                propertiesA = (ulong)pte.piecePropertyB;
+                while (propertiesA != 0)
+                {
+                    int index = MainManager.PopBitboardLSB1(propertiesA, out propertiesA);
+                    pieceInfoText.text += (Piece.PiecePropertyB)(1uL << index) + "\n";
+                }
+            }
         }
 
         float kingValue = (GlobalPieceManager.Instance.GetPieceTableEntry(PieceType.King).pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE);
@@ -981,7 +1139,7 @@ public class BoardScript : MonoBehaviour
                 chessAI.board = board;
                 chessAI.moveFound = false;
                 chessAI.searchTime = 0;
-                StartCoroutine(chessAI.BestMoveCoroutine());
+                StartCoroutine(chessAI.BestMoveCoroutine(errorMove));
             }
 
             if (whiteIsAI && !board.blackToMove && chessAI.moveFound)
@@ -1032,19 +1190,36 @@ public class BoardScript : MonoBehaviour
                         return;
                     }
 
+                    //Failsafe behavior: try again?
+                    /*
                     whiteIsAI = false;
                     chessAI.moveFound = false;
                     Debug.Log("Self play ended");
                     drawError = true;
                     gameOver = true;
                     return;
+                    */
                 }
 
-                whiteIsAI = false;
-                TryMove(pieces[bestX + bestY * 8], PieceAlignment.White, bestX, bestY, bestToX, bestToY);
-                FixBoardBasedOnPosition();
-                moveDelay = moveDelayValue;
-                whiteIsAI = true;
+                int lastPly = board.ply;
+                int lastBonusPly = board.bonusPly;
+                errorMove = false;
+                if (bestMove != 0)
+                {
+                    whiteIsAI = false;
+                    TryMove(pieces[bestX + bestY * 8], PieceAlignment.White, bestX, bestY, bestToX, bestToY);
+                    FixBoardBasedOnPosition();
+                    moveDelay = moveDelayValue;
+                    whiteIsAI = true;
+                }
+
+                if (lastPly == board.ply && lastBonusPly == board.bonusPly)
+                {
+                    Debug.LogError("White AI attempted an illegal move, retrying");
+                    chessAI.moveFound = false;
+                    awaitingMove = false;
+                    errorMove = true;
+                }
                 return;
             }
 
@@ -1054,7 +1229,7 @@ public class BoardScript : MonoBehaviour
                 chessAI.board = board;
                 chessAI.moveFound = false;
                 chessAI.searchTime = 0;
-                StartCoroutine(chessAI.BestMoveCoroutine());
+                StartCoroutine(chessAI.BestMoveCoroutine(errorMove));
             }
 
             if (board.blackToMove && blackIsAI && chessAI.moveFound)
