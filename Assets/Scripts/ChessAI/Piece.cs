@@ -501,22 +501,55 @@ public static class Piece
         White = 0,
         Black,
         Neutral,        //Neutral pieces have a lot of balance problems (What material value do they give? Zero? If it's zero then the AI will just sacrifice them willy nilly which might just be the best use case for them)
+            //This hypothesis is kind of wrong at least for the current AI: in practice the AI just ignores the neutral pieces most of the time
+            //This is because moving your own pieces increases piece table values which gives a more immediate benefit from the AI's perspective
         Crystal         //Crystal pieces have this problem a lot less as keeping them around you can use them for defense (you get positive value from them so just sacrificing them immediately isn't the best play)
     }
 
-    //3 bits = 7 possible (Currently 6)
+    //4 bits = 15 possible
     //Modifiers are infinite duration things
     public enum PieceModifier : byte
     {
         None,
-        Spectral,       //Does not block ally pieces from moving through them
-        Winged,         //Gets move only hop over anything in its ranged moves
-        Immune,         //Immune to enemy negative effects (unimplemented)
-        Shielded,       //If user ends turn when it is attacked: Shielded becomes Half Shielded
+        Vengeful,      //DestroyCapturer   (Red)
+        Phoenix,       //Revenant power    (Orange)
+
+        Golden,         //Spawn pawns like Revenant on capture (Yellow)
+                            //Problem: needs limits so you can't clog the board with infinite pawns
+
+        Winged,         //Gets move only hop over anything in its ranged moves  (Green)
+        Spectral,       //Does not block ally pieces from moving through them   (Cyan)
+        Immune,         //Immune to enemy negative effects (= NoTerrain, StatusImmune, EnchantImmune)   (Blue)
+            //The balance problem and why I didn't implement this before is that there are a lot of cases where none of those three exist and then the modifier becomes useless)
+            //It needs extra stuff to do?
+            //  Now it is rook range 1 water (i.e. enemy can't capture)
+        Warped,         //You can swap move onto them (unlike spectral you can't pass through) (Purple)
+
+        Shielded,       //If user ends turn when it is attacked: Shielded becomes Half Shielded (Gray)
         HalfShielded,   //Half shielded is removed on enemy turn end (So a shielded king works properly, if it was removed on own turn end it would lead to stalemates where the shielded king is not capturable by the enemy but any move would remove the shield)
+
         NoSpecial,      //Special thing for move copying pieces (Blocks all special moves)
 
-        //Reserved 7
+        //?: on capture: spawn pawn like Revenant (Problem: why normal pawns? Pawn spawn may clog up your formation? If it is just the attacker's class pawnlike it would be somewhat unpredictable and unbalanced, if it was the victim's pawnlike that balance problem is removed but it causes weird stuff)
+            //One point in favor is that this gives space for more piece spawners
+            //It also gives something that can be more "economy"
+            //It might not be that bad it spawns normal pawns only?
+            //Need some way of making the spawned pawns not annoying
+        //?: on capture: give your King special data stacking (Problem: What if you have no king or many kings)
+        //
+        //Warped: Allies can Swap Move onto them (the idea is that it forces CanMoveOntoAlly to true for most moves) (This is basically an alternate Spectral)
+            //Problem: Overlaps spectral a lot? Very weird move generation wise?
+            //It probably looks like a good idea?
+            //Has some different possibility space than Spectral
+
+
+        //Reserved 9
+        //Reserved 10
+        //Reserved 11
+        //Reserved 12
+        //Reserved 13
+        //Reserved 14
+        //Reserved 15
     }
 
     //4 bits = 15 possible
@@ -782,6 +815,15 @@ public static class Piece
 
         return output;
     }
+
+    //Bit layout
+    //0-8 = piece Type (9 bits)
+    //9-17 = special data (9 bits)
+    //18-21 = modifier (4 bits)
+    //22-25 = status effect (4 bits)
+    //26-29 = status duration (4 bits)
+    //30-31 = alignment (2 bits)
+
     public static PieceType GetPieceType(uint pieceInfo)
     {
         return (PieceType)(MainManager.BitFilter(pieceInfo, 0, 8));
@@ -937,8 +979,11 @@ public static class Piece
             }
         }
 
+        bool victimGiant = ((pteV.pieceProperty & PieceProperty.Giant) != 0);
+        bool attackerGiant = ((pteA.pieceProperty & PieceProperty.Giant) != 0);
+
         //Giants are not compatible with most stuff
-        if (((pteV.pieceProperty & PieceProperty.Giant) != 0))
+        if (victimGiant)
         {
             bool giantIncompatible = false;
             switch (specialType)
@@ -1041,7 +1086,7 @@ public static class Piece
 
         PieceModifier pm = GetPieceModifier(piece);        
 
-        //Deadly overrides all of this
+        //Deadly overrides all of this (Except for stuff above, so it doesn't let you break the game or ignore other immunities)
         if ((pteA.pieceProperty & PieceProperty.Deadly) != 0)
         {
             return false;
@@ -1061,6 +1106,17 @@ public static class Piece
         {
             ulong enemy = 0;
             ulong adjacentBitboard = MainManager.SmearBitboard(1uL << (x + (y << 3)));
+
+            if (victimGiant)
+            {
+                (int dx, int dy) = Board.GetGiantDelta(piece);
+                adjacentBitboard = 1uL << ((x) + ((y) << 3));
+                adjacentBitboard |= 1uL << ((x) + ((y + dy) << 3));
+                adjacentBitboard |= 1uL << ((x + dx) + ((y) << 3));
+                adjacentBitboard |= 1uL << ((x + dx) + ((y + dy) << 3));
+                adjacentBitboard = MainManager.SmearBitboard(1uL << (x + (y << 3)));
+            }
+
             switch (paA)
             {
                 case PieceAlignment.White:
@@ -1086,13 +1142,23 @@ public static class Piece
             int dx = attackerX - x;
             int dy = attackerY - y;
 
-            //-1 -> 1
-            //faster than Math.Abs?
-            dx *= dx;
-            dy *= dy;
-            if (dx <= 1 && dy <= 1)
+            if (attackerGiant)
             {
-                return true;
+                //dx can be -2
+                if (dx >= -2 && dx <= 1 && dy >= -2 && dy <= 1)
+                {
+                    return true;
+                }
+            } else
+            {
+                //-1 -> 1
+                //faster than Math.Abs?
+                dx *= dx;
+                dy *= dy;
+                if (dx <= 1 && dy <= 1)
+                {
+                    return true;
+                }
             }
         }
 
@@ -1102,21 +1168,44 @@ public static class Piece
             int dx = attackerX - x;
             int dy = attackerY - y;
 
-            //-1 -> 1
-            //faster than Math.Abs?
-            dx *= dx;
-            dy *= dy;
-            if (dx <= 4 && dy <= 4)
+            if (attackerGiant)
             {
-                return true;
+                //dx can be -3
+                if (dx >= -3 && dx <= 2 && dy >= -3 && dy <= 2)
+                {
+                    return true;
+                }
+            } else
+            {
+                //-1 -> 1
+                //faster than Math.Abs?
+                dx *= dx;
+                dy *= dy;
+                if (dx <= 4 && dy <= 4)
+                {
+                    return true;
+                }
             }
         }
 
         //invincible from front
-        //If attacker is white, can't capture if attacker Y is less
-        if ((pteV.pieceProperty & PieceProperty.InvincibleFront) != 0 && ((Piece.GetPieceAlignment(attackerPiece) == PieceAlignment.White ? (attackerY - y) : -(attackerY - y)) < 0))
+        if ((pteV.pieceProperty & PieceProperty.InvincibleFront) != 0)
         {
-            return true;
+            if (Piece.GetPieceAlignment(piece) == PieceAlignment.Black)
+            {
+                if (attackerY - y < 0)
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                if (attackerY - y > 0)
+                {
+                    return true;
+                }
+            }
+
         }
 
         //invincible from non pawns
@@ -1154,7 +1243,7 @@ public static class Piece
             }
         }
 
-        if ((pteV.pieceProperty & PieceProperty.InvincibleWrongColor) != 0 && (x + y + attackerX + attackerY % 2 != 0))
+        if ((pteV.pieceProperty & PieceProperty.InvincibleWrongColor) != 0 && (((x + y + attackerX + attackerY) & 1) != 0))
         {
             return true;
         }

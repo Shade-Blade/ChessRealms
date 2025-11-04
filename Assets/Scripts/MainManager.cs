@@ -5,6 +5,13 @@ using UnityEngine;
 using static Unity.Burst.Intrinsics.X86.Bmi1;
 using static Unity.Burst.Intrinsics.X86.Popcnt;
 
+public class PlayerData
+{
+    public Piece.PieceType[] army;
+
+    public Move.ConsumableMoveType[] consumables;
+} 
+
 public class MainManager : MonoBehaviour
 {
     private static MainManager intInstance;
@@ -572,14 +579,14 @@ public class MainManager : MonoBehaviour
         return output;
     }
 
-    public static uint BitFilter(uint target, int startBit, int endBit)
+    public static uint BitFilter(uint target, int startBit, int endBit) //Inclusive
     {
         //Intrinsics
         if (IsBmi1Supported)
         {
             //trailing zero count u32
             //might still lose some time due to uint casts but ehh
-            return bextr_u32(target, (uint)startBit, (uint)(endBit - startBit));
+            return bextr_u32(target, (uint)startBit, (uint)(1 + endBit - startBit));
         }
 
         //Make a bit filter and then cut all the wrong bits

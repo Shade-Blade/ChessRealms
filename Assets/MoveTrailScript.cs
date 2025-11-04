@@ -15,6 +15,11 @@ public class MoveTrailScript : MonoBehaviour
     }
     public void SetColorMoveIllegal()
     {
+        lr.startColor = new Color(0.6f, 0.3f, 0, 0.5f);
+        lr.endColor = new Color(1, 0.5f, 0, 0.8f);
+    }
+    public void SetColorMoveCheck()
+    {
         lr.startColor = new Color(0.6f, 0, 0, 0.5f);
         lr.endColor = new Color(1, 0, 0, 0.8f);
     }

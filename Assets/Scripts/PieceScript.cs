@@ -22,13 +22,13 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     public bool isGiant;
     public BoxCollider bc;
 
-    public void Start()
+    public virtual void Start()
     {
         dob = GetComponent<DraggableObject>();
         dob.canDrag = true;
     }
 
-    public void ForceDeselect()
+    public virtual void ForceDeselect()
     {
         seb.ForceDeselect();
         dob.isDragged = false;
@@ -138,8 +138,30 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     {
         (bs.hoverX, bs.hoverY) = bs.GetCoordinatesFromPosition(transform.position);            
     }
-    public void OnDragStop()
+    public virtual void OnDragStop()
     {
+        //Setup mode
+        if (bs.setupMoves)
+        {
+            //don't treat adjustments as moves
+            if (!(x == bs.hoverX && y == bs.hoverY))
+            {
+                if (bs.hoverX < 0 || bs.hoverX > 7 || bs.hoverY < 0 || bs.hoverY > 7)
+                {
+                    bs.TrySetupMove(this, Move.PackMove((byte)x, (byte)y, 15, 15));
+                }
+                else
+                {
+                    bs.TrySetupMove(this, x, y, bs.hoverX, bs.hoverY);
+                }
+            } else
+            {
+                transform.position = BoardScript.GetSpritePositionFromCoordinates(x, y, -0.5f);
+            }
+            return;
+        }
+
+
         //debug: lets you play as black
         //bs.TryMove(this, Piece.GetPieceAlignment(piece), x, y, bs.hoverX, bs.hoverY);
         if (!bs.blackIsAI)

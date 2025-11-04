@@ -1014,7 +1014,13 @@ public class MoveGeneratorInfoEntry
 
         //This is the function (generatemovesforplayer) a board uses to determine who is attacked
         //So this should not cause me problems
-        b.RunTurnStart(pa == Piece.PieceAlignment.Black);
+
+        //Note: needs special handling because BoardScript calls this to generate enemy moves to show you what the enemy can do
+
+        if (!(pa == Piece.PieceAlignment.White ^ !b.blackToMove))
+        {
+            b.RunTurnStart(pa == Piece.PieceAlignment.Black);
+        }
     }
 
     public static void GeneratePieceBitboards(Board b)
@@ -1308,6 +1314,19 @@ public class MoveGeneratorInfoEntry
             }
 
             ulong pattern = 0;
+            if (Piece.GetPieceModifier(b.pieces[index]) == Piece.PieceModifier.Immune)
+            {
+                pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ROOK1, index, -2, -2);
+                if (ipa == Piece.PieceAlignment.White)
+                {
+                    b.globalData.bitboard_roughWhite |= pattern;
+                }
+                if (ipa == Piece.PieceAlignment.Black)
+                {
+                    b.globalData.bitboard_roughBlack |= pattern;
+                }
+            }
+
             switch (pt)
             {
                 case Piece.PieceType.Attractor:
@@ -6045,12 +6064,23 @@ public class MoveGeneratorInfoEntry
             if (Piece.GetPieceAlignment(obstaclePiece) == pa)
             {
                 //Ally piece
-                if ((canMove || mgie.rangeType == RangeType.AntiRange) && Move.SpecialMoveCanMoveOntoAlly(specialType, ref b, x, y, tX, tY, dir) && pse != Piece.PieceStatusEffect.Bloodlust && !bansheeTarget)
+                if ((canMove || mgie.rangeType == RangeType.AntiRange) && pse != Piece.PieceStatusEffect.Bloodlust && !bansheeTarget && specialType != SpecialType.PassiveAbility)
                 {
-                    if (moves != null && specialType != SpecialType.PassiveAbility && (mbt == null || !mbt.Get(x, y, tX, tY)))
+                    if (Move.SpecialMoveCanMoveOntoAlly(specialType, ref b, x, y, tX, tY, dir))
                     {
-                        moves.Add(Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType));
-                        wasGenerated = true;
+                        if (moves != null && (mbt == null || !mbt.Get(x, y, tX, tY)))
+                        {
+                            moves.Add(Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType));
+                            wasGenerated = true;
+                        }
+                    }
+                    else if (Piece.GetPieceModifier(b.pieces[tX + (tY << 3)]) == Piece.PieceModifier.Warped && Move.SpecialMoveCanMoveOntoAlly(SpecialType.AllySwap, ref b, x, y, tX, tY, dir))
+                    {
+                        if (moves != null && (mbt == null || !mbt.Get(x, y, tX, tY)))
+                        {
+                            moves.Add(Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, SpecialType.AllySwap));
+                            wasGenerated = true;
+                        }
                     }
                 }
 
@@ -6274,13 +6304,26 @@ public class MoveGeneratorInfoEntry
             if (Piece.GetPieceAlignment(obstaclePiece) == pa)
             {
                 //Ally piece
-                if ((canMove) && Move.SpecialMoveCanMoveOntoAlly(specialType, ref b, x, y, tX, tY, dir) && pse != Piece.PieceStatusEffect.Bloodlust && !bansheeTarget)
+                if ((canMove) && pse != Piece.PieceStatusEffect.Bloodlust && !bansheeTarget)
                 {
-                    if (moves != null && (mbt == null || !mbt.Get(x, y, tX, tY)))
+                    if (Move.SpecialMoveCanMoveOntoAlly(specialType, ref b, x, y, tX, tY, dir))
                     {
-                        moves.Add(Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType));
-                        wasGenerated = true;
+                        if (moves != null && (mbt == null || !mbt.Get(x, y, tX, tY)))
+                        {
+                            moves.Add(Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType));
+                            wasGenerated = true;
+                        }
                     }
+                    else if (Piece.GetPieceModifier(b.pieces[tX + (tY << 3)]) == Piece.PieceModifier.Warped && Move.SpecialMoveCanMoveOntoAlly(SpecialType.AllySwap, ref b, x, y, tX, tY, dir))
+                    {
+                        if (moves != null && (mbt == null || !mbt.Get(x, y, tX, tY)))
+                        {
+                            moves.Add(Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, SpecialType.AllySwap));
+                            wasGenerated = true;
+                        }
+                    }
+
+                    
                     /*
                     moves[moveStartIndex] = Move.PackMove((byte)x, (byte)y, (byte)tX, (byte)tY, dir, specialType);
                     moveStartIndex++;
@@ -7527,13 +7570,13 @@ public class MoveGeneratorInfoEntry
 
             moCheckO = b.pieces[tempX + (tempY) * 8] == 0;
             moCheckA = b.pieces[tempX + deltaXA + (tempY + deltaYA) * 8] == 0;
-            moCheckB = checkB || b.pieces[tempX + deltaXB + (tempY + deltaYB) * 8] == 0;
-            moCheckAB = checkAB || b.pieces[tempX + deltaXA + deltaXB + (tempY + deltaYA + deltaYB) * 8] == 0;
+            moCheckB = !checkB || b.pieces[tempX + deltaXB + (tempY + deltaYB) * 8] == 0;
+            moCheckAB = !checkAB || b.pieces[tempX + deltaXA + deltaXB + (tempY + deltaYA + deltaYB) * 8] == 0;
 
             coCheckO = !moCheckO && Piece.GetPieceAlignment(b.pieces[tempX + (tempY) * 8]) != pa;
             coCheckA = !moCheckA && Piece.GetPieceAlignment(b.pieces[tempX + deltaXA + (tempY + deltaYA) * 8]) != pa;
-            coCheckB = checkB || (!moCheckB && Piece.GetPieceAlignment(b.pieces[tempX + deltaXB + (tempY + deltaYB) * 8]) != pa);
-            coCheckAB = checkAB || (!moCheckAB && Piece.GetPieceAlignment(b.pieces[tempX + deltaXA + deltaXB + (tempY + deltaYA + deltaYB) * 8]) != pa);
+            coCheckB = !checkB && (b.pieces[tempX + deltaXB + (tempY + deltaYB) * 8] != 0 && Piece.GetPieceAlignment(b.pieces[tempX + deltaXB + (tempY + deltaYB) * 8]) != pa);
+            coCheckAB = !checkAB && (b.pieces[tempX + deltaXA + deltaXB + (tempY + deltaYA + deltaYB) * 8] != 0 && Piece.GetPieceAlignment(b.pieces[tempX + deltaXA + deltaXB + (tempY + deltaYA + deltaYB) * 8]) != pa);
 
             if (specialType == SpecialType.MoveOnly && !(moCheckO && moCheckA && moCheckB && moCheckAB))
             {
@@ -7541,6 +7584,8 @@ public class MoveGeneratorInfoEntry
             }
             if (specialType == SpecialType.CaptureOnly && !(coCheckO || coCheckA || coCheckB || coCheckAB))
             {
+                //Debug.Log(tempX + " " + tempY + " / " + (tempX + deltaXA) + " " + (tempY + deltaYA) + " / " + !checkB + " " + (tempX + deltaXB) + " " + (tempY + deltaYB) + " / " + !checkAB + " " + (tempX + deltaXA + deltaXB) + " " + (tempY + deltaYA + deltaYB));                    
+
                 break;
             }
 

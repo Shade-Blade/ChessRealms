@@ -89,6 +89,18 @@ public class RandomTable<T>
         return Output(new GlobalRandomGenerator());
     }
 
+    public List<T> GetAllOutput()
+    {
+        List<T> output = new List<T>();
+
+        for (int i = 0; i < table.Count; i++)
+        {
+            output.Add(table[i].Output(new GlobalRandomGenerator()));
+        }
+
+        return output;
+    }
+
     public static T ChooseRandom(T[] array)
     {
         return array[RandomGenerator.GetIntRange(0, array.Length)];

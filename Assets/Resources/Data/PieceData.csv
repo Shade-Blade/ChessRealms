@@ -1,6 +1,6 @@
 Index,PieceValue (0.5 granularity),Movement,EnhancedMovement,Properties,HasAdvancedMagic,PromotionType,Class,Complexity
 Rock,0,,,EnchantImmune|StatusImmune|NoTerrain,FALSE,,None,0
-King,5,WF,,EnchantImmune|StatusImmune|Deadly|Castling,FALSE,,Normal,0
+King,5,WF,,EnchantImmune|StatusImmune|NoTerrain|Deadly|Castling,FALSE,,Normal,0
 Queen,9.5,RB,,,FALSE,,Normal,0
 Rook,5,R,,,FALSE,,Normal,0
 Bishop,3,B,,,FALSE,,Normal,0
@@ -108,7 +108,7 @@ Diligence,5,"hWh(1,2)","hR2+Fv(1,2)",DiligenceMover,FALSE,,HeavenlyVirtues,3
 Chastity,6.5,"F(2,2)",M,NoAllyMover,FALSE,,HeavenlyVirtues,3
 Kindness,7,,mWmF,,TRUE,,HeavenlyVirtues,4
 Humility,2.5,FvR2,,PawnSwapTeleport,FALSE,,HeavenlyVirtues,3
-Monk,1.5,fF,fR2B2,,FALSE,Chastity,HeavenlyVirtues,3
+Monk,1.5,fF,fR2B2,NoAllyMover,FALSE,Chastity,HeavenlyVirtues,3
 ArcanaFool,6.5,,,,TRUE,,TarotMajor,4
 ArcanaMagician,5.5,"FfhWrf(0,2)rf(2,2)",,,FALSE,,TarotMajor,2
 ArcanaPriestess,4.5,aBaRF,,,TRUE,,TarotMajor,3
@@ -163,11 +163,11 @@ Aries,8,fhR2fB2bWbF,,Push,TRUE,,Zodiac,2
 Taurus,6.5,"(1,2)W",,,TRUE,,Zodiac,3
 Gemini,9,"vGhRnb(2,2)nbh(1,2)",,Splitter,TRUE,,Zodiac,2.5
 GeminiTwin,4,hR2vG2,,,FALSE,,Zodiac,2.5
-Cancer,4.5,"vf(1,2)hb(1,2)",,Cylindrical|InvincibleClose,FALSE,,Zodiac,3
+Cancer,4.5,"vf(1,2)hb(1,2)",,Cylindrical|InvincibleClose|ShiftImmune,FALSE,,Zodiac,3
 Leo,9.5,"FvR3fB3b(1,2)cf(1,2)",,,FALSE,,Zodiac,1
 Virgo,4.5,B,,EnchantImmune|StatusImmune,TRUE,,Zodiac,3
 Libra,7.5,BW,,,TRUE,,Zodiac,3
-Scorpio,7.5,"bFvWf(0,2)",,FireCapture|InvincibleClose2,FALSE,,Zodiac,2
+Scorpio,8.5,"bFvWcf(0,2)",,FireCapture|InvincibleClose2|ShiftImmune,FALSE,,Zodiac,2
 Sagittarius,7.5,"(1,2)",,FireCapture,FALSE,,Zodiac,2
 Capricorn,7,ZW,,NoTerrain,FALSE,,Zodiac,2
 Aquarius,5.5,WF,,,TRUE,,Zodiac,3
@@ -182,7 +182,7 @@ AirWisp,0.5,mfWmfF,,PassivePush,TRUE,AirElemental,Elemental,3
 FireWisp,2.5,fWfF,,FireCapture,FALSE,FireElemental,Elemental,2
 EarthWisp,1.5,fhW,,ShiftImmune,TRUE,EarthElemental,Elemental,3
 WaterWisp,2,fF,,Cylindrical,TRUE,WaterElemental,Elemental,3
-VoidWisp,1.5,"fhWb(0,4)",,Sneaky|PassivePull,TRUE,VoidElemental,Elemental,3
+VoidWisp,1.5,"FhWb(0,3)",,Sneaky|PassivePull,TRUE,VoidElemental,Elemental,3
 LightWisp,1.5,WmfB3,,Reflecter|EnchantImmune|RelayImmune,TRUE,LightElemental,Elemental,3
 Vulture,4.5,"(1,2)m(1,2)2+",,,FALSE,,Birds,1.5
 Falcon,3.5,"F(2,2)m(2,2)2+",,,FALSE,,Birds,1.5
@@ -222,12 +222,12 @@ Werewolf,4,"W(0,2)",,MorphCapturer,FALSE,,Lycanthropes,2.5
 Werebear,6.5,"F(1,2)",,MorphCapturer,FALSE,,Lycanthropes,2.5
 Werechimera,8,"R(2,2)m(2,2)2+(1,2)",,MorphCapturerNonPawn,FALSE,,Lycanthropes,2.5
 Werefox,2.5,"fWf(2,2)",,MorphCapturerPawn,FALSE,Werechimera,Lycanthropes,2.5
-ElephantCalf,1.5,"mfWcfFcfv(1,2)",,Giant|StatusImmune,FALSE,ElephantQueen,Giant,1.5
+ElephantCalf,2,"mfWcfFcfv(1,2)",,Giant|StatusImmune,FALSE,ElephantQueen,Giant,1.5
 Elephant,3.5,R2F,,Giant|InvinciblePawns|StatusImmune,FALSE,,Giant,1.5
 ElephantCrusher,4.5,"(1,2)",,Giant|InvinciblePawns|StatusImmune,FALSE,,Giant,1.5
 ElephantCharger,7,"R(1,2)",,Giant|InvinciblePawns|StatusImmune,FALSE,,Giant,1.5
 ElephantQueen,9,"RB(1,2)",,Giant|InvinciblePawns|StatusImmune,FALSE,,Giant,1.5
-ElephantBulwark,9,R2F,,Giant|InvinciblePawns|InvincibleClose2|StatusImmune,FALSE,,Giant,2.5
+ElephantBulwark,9,R2F,,Giant|InvinciblePawns|InvincibleClose|StatusImmune,FALSE,,Giant,2.5
 Blackguard,5,"(1,2)omRomB",,SlipMover,FALSE,,Dark,2
 Spy,5,WF,,Sneaky,FALSE,,Dark,2
 Infiltrator,7,R2,,EnemyKingTeleport,FALSE,,Dark,3
@@ -334,7 +334,7 @@ HeavyPawn,1.5,"fFf(0,2)fW",,SlowMove,FALSE,SlothQueen,Slow,1.5
 SoulCannon,8.5,WFoR4,,ConsumeAllies|ChargeEnhance,TRUE,,SoulMages,3.5
 Lich,4.5,WF,,ConsumeAllies,TRUE,,SoulMages,3.5
 SoulDevourer,5,"(1,2)o(2,3)o(1,3)",,ConsumeAllies|ChargeEnhance,FALSE,,SoulMages,3.5
-QueenLeech,2.5,fWfFobF,,ConsumeAllies|Splitter|ChargeEnhance,TRUE,,SoulMages,2.5
+QueenLeech,2.5,fWfFobF,,ConsumeAllies|Splitter|ChargeEnhance|Sneaky,TRUE,,SoulMages,2.5
 Leech,0.5,mhWcfW,,ConsumeAllies|PromoteCapture,FALSE,QueenLeech,SoulMages,1
 ChargeBeast,9,"WF(1,2)oW2oF2",,ChargeEnhanceStack|ChargeByMoving,FALSE,,ChargeMovers,2.5
 ChargeCannon,4.5,WoW2,,ChargeEnhanceStackReset|ChargeByMoving,FALSE,,ChargeMovers,2.5

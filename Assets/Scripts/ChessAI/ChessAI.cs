@@ -115,7 +115,14 @@ public class ChessAI
                 openingDeviation = 0.05f;
                 randomDeviation = 0.05f;
                 blunderDeviation = 0f;
-                maxDepth = 12;  //this is impossible to get without running this on a supercomputer probably :P
+                maxDepth = 8;  //this is impossible to get without running this on a supercomputer probably :P
+                break;
+            case 3:
+                valueMult = 1;
+                openingDeviation = 0.04f;
+                randomDeviation = 0.04f;
+                blunderDeviation = 0f;
+                maxDepth = 16;  //this is impossible to get without running this on a supercomputer probably :P
                 break;
         }
 
@@ -1127,6 +1134,18 @@ public class ChessAI
             (bestMove, bestEvaluation) = AlphaBetaSearch(ref b, HashFromScratch(ref b), i, 0, 0, float.MinValue, float.MaxValue);
             currentDepth = i;
 
+            /*
+            ulong lastHash = HashFromScratch(ref b);
+            ZTableEntry zte = GetZTableEntry(lastHash);
+            if (zte.hash == lastHash)
+            {
+                Debug.Log("Last hash says best move is " + Move.ConvertToStringMinimal(zte.move));
+            } else
+            {
+                Debug.Log("No last hash");
+            }
+            */
+
             //(i == maxDepth || !keepSearching)
             /*
             if (!float.IsNaN(bestEvaluation))
@@ -1156,6 +1175,18 @@ public class ChessAI
 
             //The game is already over so there is no point to searching any moves?
             if (bestEvaluation == KING_CAPTURE || bestEvaluation == WHITE_VICTORY || bestEvaluation == BLACK_VICTORY)
+            {
+                realBestEvaluation = bestEvaluation;
+                //this.bestMove = 0;
+                this.bestMove = bestMove;   //? need to fix it breaking when its about to win as white?
+                this.bestEvaluation = bestEvaluation;
+                break;
+            }
+
+            //Mate in X is kind of pointless to search further?
+            //Problem: there are bugs where the mate evaluations are not fully stable (i.e. it evaluates #X but a higher depth evaluates a normal number or #(> X))
+            //Hopefully these are not that bad?
+            if (bestEvaluation > WHITE_VICTORY / 2 || bestEvaluation < BLACK_VICTORY / 2)
             {
                 realBestEvaluation = bestEvaluation;
                 //this.bestMove = 0;
@@ -1357,49 +1388,45 @@ public class ChessAI
         uint bestMove = 0;
         float bestEvaluation = float.NaN;
 
-        //Root node does not check transpose table to avoid repetition
-        if (alpha != float.MinValue)
+        if (zte.hash == boardOldHash)
         {
-            if (zte.hash == boardOldHash)
+            bestMove = zte.move;
+            //Root node is given by killerMoves == null
+            if (zte.depth >= depth && !history.Contains(boardOldHash) && killerMoves != null)
             {
-                bestMove = zte.move;
-                if (zte.depth >= depth && !history.Contains(boardOldHash))
+                //Exact number: can use immediately
+                if (zte.flags == ZTableEntry.BOUND_EXACT)
                 {
-                    //Exact number: can use immediately
-                    if (zte.flags == ZTableEntry.BOUND_EXACT)
-                    {
-                        nodesTransposed++;
-                        return (zte.move, zte.score);
-                    }
+                    nodesTransposed++;
+                    return (zte.move, zte.score);
+                }
 
-                    if (b.blackToMove)
+                if (b.blackToMove)
+                {
+                    //Reduce the score (check for < alpha)
+                    if (zte.flags == ZTableEntry.BOUND_ALPHA)
                     {
-                        //Reduce the score (check for < alpha)
-                        if (zte.flags == ZTableEntry.BOUND_ALPHA)
+                        if (zte.score <= alpha)
                         {
-                            if (zte.score <= alpha)
-                            {
-                                nodesTransposed++;
-                                return (zte.move, zte.score);
-                            }
+                            nodesTransposed++;
+                            return (zte.move, zte.score);
                         }
                     }
-                    else
+                }
+                else
+                {
+                    //Increase the score (check for > beta)
+                    if (zte.flags == ZTableEntry.BOUND_BETA)
                     {
-                        //Increase the score (check for > beta)
-                        if (zte.flags == ZTableEntry.BOUND_BETA)
+                        if (zte.score >= beta)
                         {
-                            if (zte.score >= beta)
-                            {
-                                nodesTransposed++;
-                                return (zte.move, zte.score);
-                            }
+                            nodesTransposed++;
+                            return (zte.move, zte.score);
                         }
                     }
                 }
             }
         }
-
 
         //Max depth: use Q search
         if (depth <= 0)
@@ -1551,6 +1578,12 @@ public class ChessAI
             }
         }
 
+        //force the best move to be searched first
+        if (bestMove != 0 && scoreDict.ContainsKey(bestMove))
+        {
+            scoreDict[bestMove] = 50000;
+        }
+
         int FloatCompare(float a, float b)
         {
             if (a == b)
@@ -1581,8 +1614,21 @@ public class ChessAI
         }
         bool doReduction = false;
 
+        /*
+        if (alpha == float.MinValue && beta == float.MaxValue)
+        {
+            Debug.Log("Last best: " + Move.ConvertToStringMinimal(bestMove) + " " + (scoreDict.ContainsKey(bestMove) ? scoreDict[bestMove] : "X"));
+        }
+        */
         for (int i = 0; i < moves.Count; i++)
         {
+            /*
+            if (alpha == float.MinValue && beta == float.MaxValue)
+            {
+                Debug.Log(Move.ConvertToStringMinimal(moves[i]) + " " + scoreDict[moves[i]] + " " + depth);
+            }
+            */
+
             /*
             if (depth == 3)
             {
@@ -1609,6 +1655,7 @@ public class ChessAI
                 return (moves[i], KING_CAPTURE);
             }
             */
+
             /*
             if (copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash) != copy.MakeZobristHashFromScratch(zobristHashes, zobristSupplemental))
             {
@@ -1649,7 +1696,12 @@ public class ChessAI
                 (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, chash, (depth - 1 + (newExt - ext)), newExt, red, alpha, beta, currentKillerMoves);
             }
 
-            if (alpha == float.MaxValue && beta == float.MinValue)
+            if (history.Contains(chash))
+            {
+                PenalizeMove(candidateEval, 0.25f);
+            }
+
+            if (killerMoves == null)
             {
                 if ((chash & 127) < 10)   //10/128 chance of a blunder I guess?
                 {

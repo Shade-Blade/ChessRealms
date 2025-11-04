@@ -33,6 +33,9 @@ public class BoardScript : MonoBehaviour
     public Dictionary<uint, MoveMetadata> enemyMoveMetadata;
     public MoveTrailScript illegalMoveTrail;
 
+    //
+    public MoveTrailScript checkMoveTrail;
+
     public List<MoveTrailScript> extraMoveTrails;
 
     public PieceScript selectedPiece;
@@ -63,6 +66,8 @@ public class BoardScript : MonoBehaviour
 
     public bool awaitingMove = false;
     public bool errorMove = false;
+
+    public bool setupMoves = false;
 
     //offset by SQUARE_SIZE
     //so this is the center of each square
@@ -125,6 +130,19 @@ public class BoardScript : MonoBehaviour
         awaitingMove = false;
         gameOver = false;
         drawError = false;
+
+        switch (difficulty)
+        {
+            case -1:
+            case 0:
+            case 1:
+            case 2:
+                moveThinkTime = 4;
+                break;
+            case 3:
+                moveThinkTime = 8;
+                break;
+        }
         chessAI.InitAI(difficulty);
     }
     public void ResetBoard(Piece.PieceType[] army, Board.EnemyModifier em)
@@ -148,6 +166,19 @@ public class BoardScript : MonoBehaviour
         awaitingMove = false;
         gameOver = false;
         drawError = false;
+
+        switch (difficulty)
+        {
+            case -1:
+            case 0:
+            case 1:
+            case 2:
+                moveThinkTime = 4;
+                break;
+            case 3:
+                moveThinkTime = 8;
+                break;
+        }
         chessAI.InitAI(difficulty);
     }
 
@@ -191,6 +222,19 @@ public class BoardScript : MonoBehaviour
     public void InitializeAI()
     {
         chessAI = new ChessAI();
+
+        switch (difficulty)
+        {
+            case -1:
+            case 0:
+            case 1:
+            case 2:
+                moveThinkTime = 4;
+                break;
+            case 3:
+                moveThinkTime = 8;
+                break;
+        }
         chessAI.InitAI(difficulty);
     }
 
@@ -199,6 +243,14 @@ public class BoardScript : MonoBehaviour
         ResetSelected(false);
 
         DestroyIllegalTrail();
+
+        if (piece is SetupPieceScript)
+        {
+            //It isn't a piece that has legal moves
+
+            selectedPiece = piece;
+            return;
+        }
 
         ulong bitboard = 0;
         ulong legalBitboard = 0;
@@ -309,6 +361,11 @@ public class BoardScript : MonoBehaviour
             Destroy(lastMoveTrail.gameObject);
         }
 
+        if (checkMoveTrail != null)
+        {
+            Destroy(checkMoveTrail.gameObject);
+        }
+
         if (extraMoveTrails != null)
         {
             for (int i = 0; i < extraMoveTrails.Count; i++)
@@ -382,6 +439,39 @@ public class BoardScript : MonoBehaviour
             squares[i].czhBlack = false;
             squares[i].ResetColor();
         }        
+    }
+
+    public void TrySetupMove(PieceScript ps, int x, int y, int newX, int newY)
+    {
+        if (x < 0 || x > 7 || newX < 0 || newX > 7)
+        {
+            return;
+        }
+
+        if (y < 0 || y > 7 || newY < 0 || newY > 7)
+        {
+            return;
+        }
+
+        if (x == newX && y == newY)
+        {
+            return;
+        }
+
+        uint move = Move.PackMove((byte)x, (byte)y, (byte)newX, (byte)newY);
+        TrySetupMove(ps, move);
+    }
+
+    public void TrySetupMove(PieceScript ps, uint move)
+    {
+        if (Board.IsSetupMoveLegal(ref board, move))
+        {
+            board.MakeSetupMove(move);
+            RegenerateMoveList();
+        }
+
+        ResetSelected();
+        FixBoardBasedOnPosition();
     }
 
     public void TryMove(PieceScript ps, Piece.PieceAlignment pa, int x, int y, int newX, int newY)
@@ -469,6 +559,7 @@ public class BoardScript : MonoBehaviour
             }
             historyList.Add(new Board(board));
             historyIndex++;
+            RegenerateMoveList();
             chessAI.history.Add(chessAI.HashFromScratch(ref board));
             ResetSelected();
 
@@ -496,6 +587,20 @@ public class BoardScript : MonoBehaviour
                 lastMoveTrail.Setup(Move.GetFromX(move), Move.GetFromY(move), moveTrail);
             }
 
+            if (checkMoveTrail != null)
+            {
+                Destroy(checkMoveTrail.gameObject);
+            }
+            Board checkCopy = new Board(board);
+            checkCopy.ApplyNullMove();
+            (uint checkMove, List<MoveMetadata> moveTrailCheck) = Board.FindKingCaptureMovePath(ref checkCopy);
+            if (checkMove != 0)
+            {
+                checkMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+                checkMoveTrail.Setup(Move.GetFromX(checkMove), Move.GetFromY(checkMove), moveTrailCheck);
+                checkMoveTrail.SetColorMoveCheck();
+            }
+
             if (extraMoveTrails != null)
             {
                 for (int i = 0; i < extraMoveTrails.Count; i++)
@@ -521,8 +626,6 @@ public class BoardScript : MonoBehaviour
 
             FixBoardBasedOnPosition();
 
-            RegenerateMoveList();
-
             if (board.GetVictoryCondition() != PieceAlignment.Null)
             {
                 if (board.GetVictoryCondition() == PieceAlignment.White)
@@ -538,6 +641,29 @@ public class BoardScript : MonoBehaviour
                     gameOver = true;
                 }
                 return;
+            }
+
+            if (!board.CheckForKings())
+            {
+                //Which side has no kings?
+                if (board.GetKingCaptureWinner() == PieceAlignment.White)
+                {
+                    winnerPA = PieceAlignment.White;
+                    Debug.Log("White wins with special condition");
+                    gameOver = true;
+                }
+                if (board.GetKingCaptureWinner() == PieceAlignment.Black)
+                {
+                    winnerPA = PieceAlignment.Black;
+                    Debug.Log("Black wins with special condition");
+                    gameOver = true;
+                }
+                if (board.GetKingCaptureWinner() == PieceAlignment.Neutral)
+                {
+                    winnerPA = PieceAlignment.Null;
+                    Debug.Log("Draw with special condition");
+                    gameOver = true;
+                }
             }
 
             if (!blackIsAI)
@@ -667,8 +793,8 @@ public class BoardScript : MonoBehaviour
         }
         historyList.Add(new Board(board));
         historyIndex++;
-        chessAI.history.Add(chessAI.HashFromScratch(ref board));
         RegenerateMoveList();
+        chessAI.history.Add(chessAI.HashFromScratch(ref board));
         ResetSelected();
 
         if (lastMoveTrail != null)
@@ -692,6 +818,20 @@ public class BoardScript : MonoBehaviour
         else
         {
             lastMoveTrail.Setup(Move.GetFromX(aiMove), Move.GetFromY(aiMove), moveTrail);
+        }
+
+        if (checkMoveTrail != null)
+        {
+            Destroy(checkMoveTrail.gameObject);
+        }
+        Board checkCopy = new Board(board);
+        checkCopy.ApplyNullMove();
+        (uint checkMoveB, List<MoveMetadata> moveTrailCheck) = Board.FindKingCaptureMovePath(ref checkCopy);
+        if (checkMoveB != 0)
+        {
+            checkMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+            checkMoveTrail.Setup(Move.GetFromX(checkMoveB), Move.GetFromY(checkMoveB), moveTrailCheck);
+            checkMoveTrail.SetColorMoveCheck();
         }
 
         if (extraMoveTrails != null)
@@ -737,6 +877,32 @@ public class BoardScript : MonoBehaviour
                 gameOver = true;
             }
             return;
+        }
+
+        if (!board.CheckForKings())
+        {
+            //Which side has no kings?
+            if (board.GetKingCaptureWinner() == PieceAlignment.White)
+            {
+                winnerPA = PieceAlignment.White;
+                Debug.Log("White wins with special condition");
+                gameOver = true;
+                return;
+            }
+            if (board.GetKingCaptureWinner() == PieceAlignment.Black)
+            {
+                winnerPA = PieceAlignment.Black;
+                Debug.Log("Black wins with special condition");
+                gameOver = true;
+                return;
+            }
+            if (board.GetKingCaptureWinner() == PieceAlignment.Neutral)
+            {
+                winnerPA = PieceAlignment.Null;
+                Debug.Log("Draw with special condition");
+                gameOver = true;
+                return;
+            }
         }
 
         if (check && stalemate)
@@ -1124,10 +1290,16 @@ public class BoardScript : MonoBehaviour
         {
             if (winnerPA == PieceAlignment.Null)
             {
-                turnText.text = "Draw";
+                turnText.text += "\nDraw";
             } else
             {
                 turnText.text += "\n" + winnerPA + " Wins";
+            }
+        } else
+        {
+            if (checkMoveTrail != null)
+            {
+                turnText.text += "\nCheck";
             }
         }
 
