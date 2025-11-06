@@ -4,9 +4,7 @@ Very rough prototype of a big chess variant game with a lot of pieces.
 Progress is mostly on hold because I don't know how to make the engine actually good (depth 6+)
 
 # Chess Engine Information
-It is probably very inefficient by chess engine standards though I don't know enough to optimize it much more than it already is. The perft test runs at ~200k nodes per second and the engine itself usually runs to depth 3-4 in the 4 seconds per move I give it. It's at a point where it isn't making obviously stupid moves but it also probably doesn't play very well. I can usually beat it and I'm not that good at chess (~1000 chess.com elo), though I can't tell how much of that is that the engine is low depth vs the engine is flawed.
-
-I'm not experienced enough in engine programming to make any significant gains (I feel like if I wanted to get 1 more depth it would require massive optimizations)
+It is probably very inefficient by chess engine standards though I don't know enough to optimize it much more than it already is. The perft test runs at ~250k nodes per second and the engine itself usually runs to depth 5-6 in the 4 seconds per move I give it. It's at a point where it isn't making obviously stupid moves but it also probably doesn't play very well. I can usually beat it and I'm not that good at chess (~1000 chess.com elo), though I can't tell how much of that is that the engine is low depth vs the engine is flawed.
 
 ## Search features
 - Transposition table with zobrist hashes (though this is less efficient as the last move is part of the board state)
@@ -44,4 +42,4 @@ I'm not experienced enough in engine programming to make any significant gains (
 - Neutral pieces: Can be moved by either side.
 
 ## Piece classes / armies
-There are about 324 pieces, with many having unique magical abilities or movements (different kinds of teleports and such). Look at the piece data table or the piece code file to see the list of them.
+There are about 400 pieces, with many having unique magical abilities or movements (different kinds of teleports and such). Look at the piece data table or the piece code file to see the list of them.
