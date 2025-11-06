@@ -514,7 +514,7 @@ public static class Piece
         Vengeful,      //DestroyCapturer   (Red)
         Phoenix,       //Revenant power    (Orange)
 
-        Golden,         //Spawn pawns like Revenant on capture (Yellow)
+        Radiant,         //Spawn pawns like Revenant on capture (Yellow)
                             //Problem: needs limits so you can't clog the board with infinite pawns
 
         Winged,         //Gets move only hop over anything in its ranged moves  (Green)
@@ -613,9 +613,10 @@ public static class Piece
         //Range modifiers under conditions
         RangeIncrease_MissingPieces = 1uL << 6,
         RangeIncrease_FurtherRows = 1uL << 7,
+        RangeIncrease_NearRows = 1uL << 23,
         RangeDecrease_FurtherRows = 1uL << 8,
 
-        RangeChange = RangeIncrease_MissingPieces | RangeIncrease_FurtherRows | RangeDecrease_FurtherRows,
+        RangeChange = RangeIncrease_MissingPieces | RangeIncrease_FurtherRows | RangeIncrease_NearRows | RangeDecrease_FurtherRows,
 
         //Special capture types
         ConvertCapture = 1uL << 9,
@@ -636,7 +637,6 @@ public static class Piece
         Reflecter = 1uL << 21,        
 
         Unique = 1uL << 22,             //this is mostly a out of battle restriction, make into a boolean in the PTE?
-        Giant = 1uL << 23,
 
         //Invincibility of various forms
         Invincible = 1uL << 24,
@@ -673,13 +673,14 @@ public static class Piece
 
         FireCapture = 1uL << 42,
 
-        SwitchMover = 1uL << 43,    //use enhanced only if on black
-        WarMover = 1uL << 44,       //enhanced if enemy near
-        NoAllyMover = 1uL << 45,    //enhanced if no ally near
-        AllyMover = 1uL << 0,    //enhanced if ally near
-        JusticeMover = 1uL << 46,   //enhanced if enemy captured last turn
-        DiligenceMover = 1uL << 47, //enhanced if moved last turn
-        VampireMover = 1uL << 48, //enhanced if you or enemy captured last turn
+        //SwitchMover = 1uL << 43,    //use enhanced only if on black
+        //WarMover = 1uL << 44,       //enhanced if enemy near
+        //NoAllyMover = 1uL << 45,    //enhanced if no ally near
+        //AllyMover = 1uL << 0,    //enhanced if ally near
+        //JusticeMover = 1uL << 46,   //enhanced if enemy captured last turn
+        //DiligenceMover = 1uL << 47, //enhanced if moved last turn
+        //VampireMover = 1uL << 48, //enhanced if you or enemy captured last turn
+
         SlipMover = 1uL << 49, //enhanced target squares can move next to enemies
         PlantMover = 1uL << 50, //enhanced target squares can move next to allies
 
@@ -715,11 +716,11 @@ public static class Piece
 
         ChargeEnhanceStack = 1uL,   //ChargeEnhance but the range of the enhanced moves are increased (additively, so 2 base gets +1 per charge so I can put in 2 range stuff when you get 1 charge, then 3 with 2 charge...) by the charges
         ChargeEnhanceStackReset = 1uL << 1,   //ChargeEnhanceStack but the charges reset to 0 on charge move
-        PartialForcedMoves = 1uL << 2,  //Check bittable for piece: if empty only then get secondary moves (So the first later moves get priority)
-        InverseForcedMoves = 1uL << 3,  //Inverse of partial forced moves: only get secondary moves when the primary moves exist
-        PartialForcedCapture = 1uL << 21,  //Check bittable for piece: if empty only then get secondary moves (So the first later moves get priority)
+        //PartialForcedMoves = 1uL << 2,  //Check bittable for piece: if empty only then get secondary moves (So the first later moves get priority)
+        //InverseForcedMoves = 1uL << 3,  //Inverse of partial forced moves: only get secondary moves when the primary moves exist
+        //PartialForcedCapture = 1uL << 21,  //Check bittable for piece: if empty only then get secondary moves (So the first later moves get priority)
 
-        PromoteWarp = 1uL << 4,     //Warp on promotion (except capturing)
+        //PromoteWarp = 1uL << 4,     //Warp on promotion (except capturing)
 
         NonBlockingAlly = 1uL << 5, //like Spectral
         NonBlockingEnemy = 1uL << 6,    //like Ghostly
@@ -745,7 +746,6 @@ public static class Piece
 
         InvincibleNoEnemyAdjacent = 1uL << 20,
 
-        //22
         SeasonalSwapper = 1uL << 22,
         SeasonalSwapperB = 1uL << 23,
 
@@ -753,6 +753,41 @@ public static class Piece
 
         Fading = 1uL << 25,
         ShiftImmune = 1uL << 26,
+
+        //NoCount = 1uL << 27,        //not counted in piece count    (Note that for implementation reasons ArcanaMoon and MoonIllusion do not do this)
+        Giant = 1uL << 27,
+
+        DaySwapper = 1uL << 28,
+        DaySwapperB = 1uL << 29,
+
+        InvincibleFar = 1uL << 30,  //inverse of close (i.e. invincible from range 2+)
+        InvincibleFar2 = 1uL << 31, //invincible from range 3+ (So knights can attack it)
+
+        //FarHalfMover = 1uL << 4,
+        //CloseHalfMover = 1uL << 32,
+
+        TrueShiftImmune = ShiftImmune | Giant,
+
+    }
+
+    //how worth it is it to implement this?
+    public enum EnchancedMoveType
+    {
+        None,
+        PartialForcedMoves,
+        InverseForcedMoves,
+        PartialForcedCapture,
+        SwitchMover,    //use enhanced only if on black
+        WarMover,       //enhanced if enemy near
+        ShyMover,     //enhanced if enemy not near
+        NoAllyMover,    //enhanced if no ally near
+        AllyMover,    //enhanced if ally near
+        JusticeMover,   //enhanced if enemy captured last turn
+        DiligenceMover, //enhanced if moved last turn
+        VampireMover, //enhanced if you or enemy captured last turn
+        FearfulMover, //enhanced if you or enemy didn't capture last turn
+        FarHalfMover,   //enhanced on enemy half of the board
+        CloseHalfMover, //enhanced on ally half of the board
     }
 
     public static uint PackPieceData(PieceType pt, byte pspd, PieceModifier pm, PieceStatusEffect pse, byte psed, PieceAlignment pa)
@@ -940,12 +975,12 @@ public static class Piece
         }
 
         //Water/Ice immune
-        if ((specialType == Move.SpecialType.InflictFreeze || specialType == Move.SpecialType.InflictFreezeCaptureOnly) && (((pteV.pieceProperty & PieceProperty.WaterImmune) != 0) || ((pteV.piecePropertyB & PiecePropertyB.StatusImmune) != 0)))
+        if ((specialType == Move.SpecialType.InflictFreeze || specialType == Move.SpecialType.InflictFreezeCaptureOnly) && (((pteV.pieceProperty & PieceProperty.WaterImmune) != 0) || ((pteV.piecePropertyB & PiecePropertyB.StatusImmune) != 0) || Piece.GetPieceModifier(piece) == PieceModifier.Immune))
         {
             return true;
         }
         //Other status immune
-        if (((pteV.piecePropertyB & PiecePropertyB.StatusImmune) != 0))
+        if (((pteV.piecePropertyB & PiecePropertyB.StatusImmune) != 0) || Piece.GetPieceModifier(piece) == PieceModifier.Immune)
         {
             switch (specialType)
             {
@@ -966,7 +1001,7 @@ public static class Piece
             immunityBitboard = b.globalData.bitboard_immuneBlack;
         }
 
-        if ((pteV.pieceProperty & PieceProperty.EnchantImmune) != 0 || (1uL << x + y * 8 & immunityBitboard) != 0)
+        if ((pteV.pieceProperty & PieceProperty.EnchantImmune) != 0 || (1uL << x + y * 8 & immunityBitboard) != 0 || Piece.GetPieceModifier(piece) == PieceModifier.Immune)
         {
             switch (specialType)
             {
@@ -979,8 +1014,8 @@ public static class Piece
             }
         }
 
-        bool victimGiant = ((pteV.pieceProperty & PieceProperty.Giant) != 0);
-        bool attackerGiant = ((pteA.pieceProperty & PieceProperty.Giant) != 0);
+        bool victimGiant = ((pteV.piecePropertyB & PiecePropertyB.Giant) != 0);
+        bool attackerGiant = ((pteA.piecePropertyB & PiecePropertyB.Giant) != 0);
 
         //Giants are not compatible with most stuff
         if (victimGiant)
@@ -1182,6 +1217,62 @@ public static class Piece
                 dx *= dx;
                 dy *= dy;
                 if (dx <= 4 && dy <= 4)
+                {
+                    return true;
+                }
+            }
+        }
+
+        //invincible from range 2+
+        //Inverse of InvincibleClose
+        if ((pteV.piecePropertyB & PiecePropertyB.InvincibleFar) != 0)
+        {
+            int dx = attackerX - x;
+            int dy = attackerY - y;
+
+            if (attackerGiant)
+            {
+                //dx can be -2
+                if (!(dx >= -2 && dx <= 1 && dy >= -2 && dy <= 1))
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                //-1 -> 1
+                //faster than Math.Abs?
+                dx *= dx;
+                dy *= dy;
+                if (!(dx <= 1 && dy <= 1))
+                {
+                    return true;
+                }
+            }
+        }
+
+        //range 3+ invincible
+        //Inverse of InvincibleClose2
+        if ((pteV.piecePropertyB & PiecePropertyB.InvincibleFar2) != 0)
+        {
+            int dx = attackerX - x;
+            int dy = attackerY - y;
+
+            if (attackerGiant)
+            {
+                //dx can be -3
+                if (!(dx >= -3 && dx <= 2 && dy >= -3 && dy <= 2))
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                //-1 -> 1
+                //faster than Math.Abs?
+                dx *= dx;
+                dy *= dy;
+                if (!(dx <= 4 && dy <= 4))
                 {
                     return true;
                 }

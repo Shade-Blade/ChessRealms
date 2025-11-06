@@ -238,6 +238,60 @@ public class BoardScript : MonoBehaviour
         chessAI.InitAI(difficulty);
     }
 
+    public void SelectConsumable(ConsumableScript cs)
+    {
+        ResetSelected(false);
+        DestroyIllegalTrail();
+
+        if (board.blackToMove)
+        {
+            return;
+        }
+
+        bool specialColor = true;
+        if (cs.cmt == Move.ConsumableMoveType.Bag)
+        {
+            specialColor = false;
+        }
+
+        ulong bitboard = 0;
+        ulong legalBitboard = 0;
+        for (int i = 0; i < 64; i++)
+        {
+            ulong bitIndex = 1uL << i;
+
+            if (Board.IsConsumableMoveValid(ref board, Move.EncodeConsumableMove(cs.cmt, i & 7, i >> 3)))
+            {
+                bitboard |= bitIndex;
+
+                if (Board.IsMoveLegal(ref board, Move.EncodeConsumableMove(cs.cmt, i & 7, i >> 3), false))
+                {
+                    legalBitboard |= bitIndex;
+                }
+            }
+        }
+
+        for (int i = 0; i < 64; i++)
+        {
+            //squares[i].showEnemyMove = isEnemy;
+
+            ulong bitIndex = 1uL << i;
+            if ((bitIndex & legalBitboard) != 0)
+            {
+                squares[i].showEnemyMove = false;
+                squares[i].HighlightLegal(specialColor, false);
+                continue;
+            }
+            if ((bitIndex & (bitboard)) != 0)
+            {
+                squares[i].showEnemyMove = false;
+                squares[i].HighlightIllegal(specialColor, false);
+                continue;
+            }
+        }
+
+        selectedPiece = null;
+    }
     public void SelectPiece(PieceScript piece)
     {
         ResetSelected(false);
@@ -395,7 +449,7 @@ public class BoardScript : MonoBehaviour
 
         if (board.GetLastMove() != 0)
         {
-            bool isGiant = (GlobalPieceManager.GetPieceTableEntry(board.GetLastMovedPiece()).pieceProperty & PieceProperty.Giant) != 0;
+            bool isGiant = (GlobalPieceManager.GetPieceTableEntry(board.GetLastMovedPiece()).piecePropertyB & PiecePropertyB.Giant) != 0;
 
             int fromX = Move.GetFromX(board.GetLastMove());
             int fromY = Move.GetFromY(board.GetLastMove());
@@ -416,10 +470,12 @@ public class BoardScript : MonoBehaviour
             }
         }
 
+        /*
         if (selectedPiece == null || forceDeselect)
         {
             DestroyIllegalTrail();
         }
+        */
         if (selectedPiece != null && forceDeselect)
         {
             selectedPiece.ForceDeselect();
@@ -441,6 +497,176 @@ public class BoardScript : MonoBehaviour
         }        
     }
 
+    public void TryConsumableMove(ConsumableScript cs, int x, int y)
+    {
+        uint move = Move.EncodeConsumableMove(cs.cmt, x, y);
+
+        Debug.Log(Move.ConvertToString(move));
+
+        if (Board.IsConsumableMoveLegal(ref board, move))
+        {
+            Debug.Log("Apply " + Move.ConvertToString(move));
+
+            List<BoardUpdateMetadata> boardUpdateMetadata = new List<BoardUpdateMetadata>();
+
+            board.ApplyMove(move, boardUpdateMetadata);
+
+            awaitingMove = false;
+            chessAI.moveFound = false;
+            while (historyList.Count > historyIndex + 1)
+            {
+                historyList.RemoveAt(historyIndex + 1);
+            }
+            historyList.Add(new Board(board));
+            historyIndex++;
+            RegenerateMoveList();
+            chessAI.history.Add(chessAI.HashFromScratch(ref board));
+            ResetSelected();
+
+            if (lastMoveTrail != null)
+            {
+                Destroy(lastMoveTrail.gameObject);
+            }
+
+            if (checkMoveTrail != null)
+            {
+                Destroy(checkMoveTrail.gameObject);
+            }
+            Board checkCopy = new Board(board);
+            checkCopy.ApplyNullMove();
+            (uint checkMove, List<MoveMetadata> moveTrailCheck) = Board.FindKingCaptureMovePath(ref checkCopy);
+            if (checkMove != 0)
+            {
+                checkMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+                checkMoveTrail.Setup(Move.GetFromX(checkMove), Move.GetFromY(checkMove), moveTrailCheck);
+                checkMoveTrail.SetColorMoveCheck();
+            }
+
+            if (extraMoveTrails != null)
+            {
+                for (int i = 0; i < extraMoveTrails.Count; i++)
+                {
+                    if (extraMoveTrails[i] != null)
+                    {
+                        Destroy(extraMoveTrails[i].gameObject);
+                    }
+                }
+                extraMoveTrails = null;
+            }
+            extraMoveTrails = new List<MoveTrailScript>();
+            for (int i = 0; i < boardUpdateMetadata.Count; i++)
+            {
+                if (boardUpdateMetadata[i].tx != -1)
+                {
+                    MoveTrailScript mtsE = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+                    extraMoveTrails.Add(mtsE);
+                    mtsE.SetColorMoveSecondary();
+                    mtsE.Setup(boardUpdateMetadata[i].fx, boardUpdateMetadata[i].fy, boardUpdateMetadata[i].tx, boardUpdateMetadata[i].ty);
+                }
+            }
+
+            FixBoardBasedOnPosition();
+
+            if (board.GetVictoryCondition() != PieceAlignment.Null)
+            {
+                if (board.GetVictoryCondition() == PieceAlignment.White)
+                {
+                    winnerPA = PieceAlignment.White;
+                    Debug.Log("White wins with special condition");
+                    gameOver = true;
+                }
+                if (board.GetVictoryCondition() == PieceAlignment.Black)
+                {
+                    winnerPA = PieceAlignment.Black;
+                    Debug.Log("Black wins with special condition");
+                    gameOver = true;
+                }
+                return;
+            }
+
+            if (!board.CheckForKings())
+            {
+                //Which side has no kings?
+                if (board.GetKingCaptureWinner() == PieceAlignment.White)
+                {
+                    winnerPA = PieceAlignment.White;
+                    Debug.Log("White wins with special condition");
+                    gameOver = true;
+                }
+                if (board.GetKingCaptureWinner() == PieceAlignment.Black)
+                {
+                    winnerPA = PieceAlignment.Black;
+                    Debug.Log("Black wins with special condition");
+                    gameOver = true;
+                }
+                if (board.GetKingCaptureWinner() == PieceAlignment.Neutral)
+                {
+                    winnerPA = PieceAlignment.Null;
+                    Debug.Log("Draw with special condition");
+                    gameOver = true;
+                }
+            }
+
+            if (!blackIsAI)
+            {
+                bool checkAI = Board.PositionIsCheck(ref board);
+                bool stalemateAI = Board.PositionIsStalemate(ref board);
+
+                if (checkAI && stalemateAI)
+                {
+                    winnerPA = PieceAlignment.White;
+                    Debug.Log("White win");
+                    gameOver = true;
+                }
+                else if (stalemateAI)
+                {
+                    winnerPA = PieceAlignment.Null;
+                    Debug.Log("Draw (Black stalemated)");
+                    gameOver = true;
+                }
+            }
+        } else
+        {
+            if (Board.IsConsumableMoveValid(ref board, move))
+            {
+                //Illegal move failsafe?
+                awaitingMove = false;
+
+                (uint refMove, List<MoveMetadata> illegalPath) = Board.MoveIllegalByCheckFindRefutationPath(ref board, move);
+                Debug.Log("Move is illegal because of " + Move.ConvertToString(refMove));
+
+                if (illegalMoveTrail != null)
+                {
+                    Destroy(illegalMoveTrail.gameObject);
+                }
+                if (illegalPath != null)
+                {
+                    illegalMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+                    illegalMoveTrail.SetColorMoveIllegal();
+                    illegalMoveTrail.Setup(Move.GetFromX(refMove), Move.GetFromY(refMove), illegalPath);
+                    //Debug.Log("Make illegal path");
+                }
+
+                /*
+                string pathString = Move.PositionToString(Move.GetFromX(refMove), Move.GetFromY(refMove));
+                for (int i = 0; i < illegalPath.Count; i++)
+                {
+                    if (illegalPath[i] == null)
+                    {
+                        pathString += " X";
+                    }
+                    else
+                    {
+                        pathString += " " + Move.PositionToString(illegalPath[i].x, illegalPath[i].y);
+                    }
+                }
+                Debug.Log("Refutation " + Move.ConvertToString(move) + " move path: " + pathString);
+                */
+
+                FixBoardBasedOnPosition();
+            }
+        }
+    }
     public void TrySetupMove(PieceScript ps, int x, int y, int newX, int newY)
     {
         if (x < 0 || x > 7 || newX < 0 || newX > 7)
@@ -466,8 +692,47 @@ public class BoardScript : MonoBehaviour
     {
         if (Board.IsSetupMoveLegal(ref board, move))
         {
+            /*
+            if (!whiteIsAI)
+            {
+                Debug.Log("Apply " + Move.ConvertToString(move));
+            }
+            */
+            Debug.Log("Apply " + Move.ConvertToString(move));
+
+            List<BoardUpdateMetadata> boardUpdateMetadata = new List<BoardUpdateMetadata>();
+
             board.MakeSetupMove(move);
+
+            awaitingMove = false;
+            chessAI.moveFound = false;
             RegenerateMoveList();
+            ResetSelected();
+
+            if (lastMoveTrail != null)
+            {
+                Destroy(lastMoveTrail.gameObject);
+            }
+
+            if (checkMoveTrail != null)
+            {
+                Destroy(checkMoveTrail.gameObject);
+            }
+
+            if (extraMoveTrails != null)
+            {
+                for (int i = 0; i < extraMoveTrails.Count; i++)
+                {
+                    if (extraMoveTrails[i] != null)
+                    {
+                        Destroy(extraMoveTrails[i].gameObject);
+                    }
+                }
+                extraMoveTrails = null;
+            }
+            extraMoveTrails = new List<MoveTrailScript>();
+
+            FixBoardBasedOnPosition();
         }
 
         ResetSelected();
@@ -526,6 +791,7 @@ public class BoardScript : MonoBehaviour
                 moveTrail = moveMetadata[Move.RemoveNonLocation(move)].TracePath(Move.GetFromX(move), Move.GetFromY(move), Move.GetDir(move));
             }
 
+            /*
             string pathString = Move.PositionToString(Move.GetFromX(move), Move.GetFromY(move));
             for (int i = 0; i < moveTrail.Count; i++)
             {
@@ -539,6 +805,7 @@ public class BoardScript : MonoBehaviour
                 }
             }
             Debug.Log("Move Path " + Move.ConvertToString(move) + " move path: " + pathString);
+            */
 
             /*
             if (!whiteIsAI)
@@ -1210,6 +1477,8 @@ public class BoardScript : MonoBehaviour
             moveText = "";
             if (pte.enhancedMoveInfo.Count > 0)
             {
+                pieceInfoText.text += "Bonus Type: " + pte.enhancedMoveType + "\n";
+
                 pieceInfoText.text += "Bonus Move: ";
                 for (int i = 0; i < pte.enhancedMoveInfo.Count; i++)
                 {

@@ -241,8 +241,8 @@ RoyalRecruit,2.5,fWfF,,EnchantImmune|AllyKingTeleport|PromoteCapture,FALSE,Royal
 MirrorQueen,13,RB,,EnchantImmune|Reflecter|LensRook,TRUE,,Mirror,4
 LensRook,7,R,,LensRook,TRUE,,Mirror,2.5
 ReflectionBishop,4.5,B,,Reflecter,TRUE,,Mirror,2.5
-MirrorKnight,3.5,"(1,2)",,MirrorTeleport,TRUE,,Mirror,2.5
-MirrorPawn,1.5,mifR2=mfWcfF,,MirrorTeleport,TRUE,MirrorQueen,Mirror,2.5
+MirrorKnight,3.5,"(1,2)",,MirrorTeleportSwap,TRUE,,Mirror,2.5
+MirrorPawn,1.5,mifR2=mfWcfF,,MirrorTeleportSwap,TRUE,MirrorQueen,Mirror,2.5
 Pincer,2.5,BW,,,TRUE,,Electro,2.5
 Bolter,5.5,BR3,,,TRUE,,Electro,2.5
 Shocker,6,R2F,,,TRUE,,Electro,2.5
@@ -346,7 +346,7 @@ GhoulMarshall,6,"cRc(1,2)","R(1,2)",PartialForcedCapture,FALSE,,ForcedMovers,2
 GhoulAmazon,8,"cRcBc(1,2)","RB(1,2)",PartialForcedCapture,FALSE,,ForcedMovers,2
 GhoulPawn,1,cfFcfW,fFfW,PartialForcedCapture,FALSE,GhoulAmazon,ForcedMovers,2
 PufferfishQueen,7,W,"(1,2)F(0,2)(0,3)",PartialForcedMoves,FALSE,,ForcedMovers,2
-PufferfishPawn,2.5,mfFcfW,"cf(0,2)mf(2,2)",PartialForcedMoves,FALSE,PufferfishQueen,ForcedMovers,2
+PufferfishPawn,2.5,fF,"f(0,2)f(2,2)",PartialForcedMoves,FALSE,PufferfishQueen,ForcedMovers,2
 Robber,3,"bR2fB2fv(1,2)bh(1,2)",,ConvertCapture|EnemyOnCapture,TRUE,,Criminals,2
 Enforcer,7,R2F,,EnemyOnCapture,TRUE,,Criminals,2
 Smuggler,4,"(1,2)",,Sneaky|EnemyOnCapture,TRUE,,Criminals,2

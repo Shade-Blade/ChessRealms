@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Burst.Intrinsics;
 using UnityEngine;
 using static Unity.Burst.Intrinsics.X86.Bmi1;
 using static Unity.Burst.Intrinsics.X86.Popcnt;
@@ -80,8 +81,7 @@ public class MainManager : MonoBehaviour
         //Well at least I got depth 6 AI working?
         //But if it isn't possible to make that good enough then I guess I'll have to scrap this game
         
-        /*
-        for (int i = 0; i <= 4; i++)
+        for (int i = 0; i <= 5; i++)
         {
             DateTime currentTime = DateTime.UtcNow;
             long unixTime = ((DateTimeOffset)currentTime).ToUnixTimeMilliseconds();
@@ -95,7 +95,6 @@ public class MainManager : MonoBehaviour
             long unixTimeEnd = ((DateTimeOffset)currentTime).ToUnixTimeMilliseconds();
             Debug.Log("Perft took " + ((unixTimeEnd - unixTime)/ 1000d) + " seconds for " + perftResult + " positions at depth + " + i + " = " + "(" + (perftResult / ((unixTimeEnd - unixTime) / 1000d)) + " pos/sec) (" + (((unixTimeEnd - unixTime) / 1000d) / perftResult) + " s per pos)");
         }
-        */
     }
 
     // Update is called once per frame
@@ -289,6 +288,88 @@ public class MainManager : MonoBehaviour
             output++;
         }
         return output;
+    }
+
+    //https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating
+    public ulong MirrorBitboard(ulong x)
+    {
+        const ulong k1 = (0x5555555555555555);
+        const ulong k2 = (0x3333333333333333);
+        const ulong k4 = (0x0f0f0f0f0f0f0f0f);
+        x = ((x >> 1) & k1) | ((x & k1) << 1);
+        x = ((x >> 2) & k2) | ((x & k2) << 2);
+        x = ((x >> 4) & k4) | ((x & k4) << 4);
+        return x;
+    }
+    public ulong Majority(ulong a, ulong b, ulong c)
+    {
+        return (a & b) | (c & (a | b));
+    }
+    public ulong Odd(ulong a, ulong b, ulong c)
+    {
+        return a ^ b ^ c;
+    }
+
+    //https://www.chessprogramming.org/Population_Count#CardinalityofMultipleSets
+
+    //This is just a chain of 3 bit adders?
+    //oddMaj is one 3 bit adder (returns odd = 1s digit, maj = 2s digit)
+
+    /*
+    one1,two1  := oddMaj(x1,x2,x3)
+    one2,two2  := oddMaj(x4,x5,x6)
+    one3,two3  := oddMaj(x7,x8,x9)
+    one4,two4  := oddMaj(x10,x11,x12)
+    one5,two5  := oddMaj(x13,x14,x15)
+    one6,two6  := oddMaj(one1,one2,one3)
+    ones,two7  := oddMaj(one4,one5,one6)
+    two8,four1 := oddMaj(two1,two2,two3)
+    two9,four2 := oddMaj(two4,two5,two6)
+    twos,four3 := oddMaj(two7,two8,two9)
+    four,eight := oddMaj(four1,four2,four3)
+
+     Version for 8 bitboards
+    one1,two1  := oddMaj(x1,x2,x3)
+    one2,two2  := oddMaj(x4,x5,x6)
+    one3  := x7 ^ x8
+    two3 = x7 & x8
+
+    one6,two6  := oddMaj(one1,one2,one3)
+    ones = one6
+
+    two8,four1 := oddMaj(two1,two2,two3)
+
+    twos = two8 ^ two6
+    four = four1 ^ (two8 & two6)
+    eight = four1 & (two8 & two6)
+     */
+    public static (ulong, ulong, ulong, ulong) BitboardCardinality(ulong x1, ulong x2, ulong x3, ulong x4, ulong x5, ulong x6, ulong x7, ulong x8)
+    {
+        ulong one1 = x1 ^ x2 ^ x3;
+        ulong one2 = x4 ^ x5 ^ x6;
+        ulong one3 = x7 ^ x8;
+
+        ulong two1 = (x1 & x2) | (x3 & (x1 | x2));
+        ulong two2 = (x4 & x5) | (x6 & (x4 | x5));
+        ulong two3 = (x7 & x8);
+
+        ulong ones = one1 ^ one2 ^ one3;
+        ulong two6 = (one1 & one2) | (one3 & (one1 | one2));
+
+        ulong two8 = two1 ^ two2 ^ two3;
+        ulong four1 = (two1 & two2) | (two3 & (two1 | two2));
+
+        ulong twos = two8 ^ two6;
+        ulong four = four1 ^ (two8 & two6);
+        ulong eight = four1 & (two8 & two6);
+
+        return (ones, twos, four, eight);
+    }
+    public static (ulong, ulong, ulong, ulong) CountAdjacencyCardinality(ulong x)
+    {
+        ulong al = (x & NO_A_FILE) >> 1;
+        ulong ar = (x & NO_H_FILE) << 1;
+        return BitboardCardinality(x >> 8, x << 8, al, al >> 8, al << 8, ar, ar >> 8, ar << 8);
     }
 
     public static ulong SmearBitboard(ulong bitboard)

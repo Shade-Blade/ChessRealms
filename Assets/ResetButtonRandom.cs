@@ -153,7 +153,7 @@ public class ResetButtonRandom : MonoBehaviour
 
             int EffectiveValue(PieceTableEntry pte)
             {
-                if ((pte.pieceProperty & PieceProperty.Giant) != 0)
+                if ((pte.piecePropertyB & PiecePropertyB.Giant) != 0)
                 {
                     return pte.pieceValueX2 / 4;
                 }
@@ -175,7 +175,7 @@ public class ResetButtonRandom : MonoBehaviour
 
             cumulativeValueCount += pteTarget.pieceValueX2 / 2f;
 
-            if ((pteTarget.pieceProperty & Piece.PieceProperty.Giant) != 0)
+            if ((pteTarget.piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
             {
                 cumulativeCount += 4;
                 giantCount++;
@@ -198,7 +198,7 @@ public class ResetButtonRandom : MonoBehaviour
                         lowerBound = EffectiveValue(subArmy[0]);
                     }
 
-                    if ((subArmy[0].pieceProperty & PieceProperty.Giant) != 0)
+                    if ((subArmy[0].piecePropertyB & PiecePropertyB.Giant) != 0)
                     {
                         cumulativeCount -= 4;
                         giantCount--;
@@ -219,7 +219,7 @@ public class ResetButtonRandom : MonoBehaviour
                     }
                     cumulativeValueCount += subArmy[index].pieceValueX2 / 2f;
 
-                    if ((subArmy[index].pieceProperty & PieceProperty.Giant) != 0)
+                    if ((subArmy[index].piecePropertyB & PiecePropertyB.Giant) != 0)
                     {
                         cumulativeCount += 4;
                         giantCount++;
@@ -238,7 +238,7 @@ public class ResetButtonRandom : MonoBehaviour
         {
             int score = pte.pieceValueX2;
 
-            if ((pte.pieceProperty & PieceProperty.Giant) != 0)
+            if ((pte.piecePropertyB & PiecePropertyB.Giant) != 0)
             {
                 score += 1000;
             }
@@ -406,7 +406,7 @@ public class ResetButtonRandom : MonoBehaviour
 
             int targetPos = yLevel * 8 + pushOrder[pushIndex];
 
-            if ((pte.pieceProperty & PieceProperty.Giant) != 0)
+            if ((pte.piecePropertyB & PiecePropertyB.Giant) != 0)
             {
                 //Need to fit the giants in the given space efficiently
                 if (pushOrder[pushIndex] % 2 != 0 && giantCount >= 4)
@@ -616,7 +616,7 @@ public class ResetButtonRandom : MonoBehaviour
         subsetTable = new List<PieceTableEntry>();
         for (int i = 0; i < piecePool.Count; i++)
         {
-            if ((piecePool[i].pieceProperty & Piece.PieceProperty.Giant) != 0)
+            if ((piecePool[i].piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
             {
                 if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 4f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 1.5f) && !reducedPool.Contains(piecePool[i]))
                 {
@@ -670,7 +670,7 @@ public class ResetButtonRandom : MonoBehaviour
         subsetTable = new List<PieceTableEntry>();
         for (int i = 0; i < piecePool.Count; i++)
         {
-            if ((piecePool[i].pieceProperty & Piece.PieceProperty.Giant) != 0)
+            if ((piecePool[i].piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
             {
                 if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 8f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 4f) && !reducedPool.Contains(piecePool[i]))
                 {
@@ -823,7 +823,7 @@ public class ResetButtonRandom : MonoBehaviour
         float tableValue = Mathf.Min(1f / Mathf.Pow(pte.pieceValueX2, 1 + lowPieceBias), 1);
         tableValue *= Mathf.Min(1f / Mathf.Pow(pte.complexityLevel + 1, 1 + lowComplexityBias), 1);
 
-        if ((pte.pieceProperty & Piece.PieceProperty.Giant) != 0)
+        if ((pte.piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
         {
             tableValue *= 0.25f;
         }

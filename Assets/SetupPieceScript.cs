@@ -32,7 +32,7 @@ public class SetupPieceScript : PieceScript
             return;
         }
 
-        isGiant = (GlobalPieceManager.GetPieceTableEntry(piece).pieceProperty & Piece.PieceProperty.Giant) != 0;
+        isGiant = (GlobalPieceManager.GetPieceTableEntry(piece).piecePropertyB & Piece.PiecePropertyB.Giant) != 0;
 
         text.enabled = true;
         backSprite.enabled = true;

@@ -405,34 +405,53 @@ public class ChessAI
                 continue;
             }
 
-            if (Piece.GetPieceModifier(b.pieces[index]) != PieceModifier.None)
+            switch (Piece.GetPieceModifier(b.pieces[index]))
             {
-                output += 2.5f;
+                case PieceModifier.Phoenix:
+                    output += pte.pieceValueX2 * 0.75f;
+                    break;
+                case PieceModifier.Winged:
+                    output += pte.pieceValueX2 * 0.25f;
+                    break;
+                case PieceModifier.Vengeful:
+                case PieceModifier.Radiant:
+                case PieceModifier.Spectral:
+                case PieceModifier.Warped:
+                case PieceModifier.Shielded:
+                    output += 2.5f;
+                    break;
+                case PieceModifier.Immune:
+                case PieceModifier.HalfShielded:
+                    output += 1.5f;
+                    break;
             }
 
             Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(b.pieces[index]);
             byte pd = Piece.GetPieceStatusDuration(b.pieces[index]);
+
+            float valueMult = 0.5f;
+
             //effects must be halved because it gives PieceValue value normally
             switch (pse)
             {
                 case PieceStatusEffect.Frozen:
-                    output -= (pte.pieceValueX2 * (0.15f + 0.03125f * (pd)));
+                    valueMult *= 1 - (0.15f + 0.03125f * (pd));
                     break;
                 case PieceStatusEffect.Heavy:
                 case PieceStatusEffect.Fragile:
                 case PieceStatusEffect.Soaked:
-                    output -= (pte.pieceValueX2 * (0.1f + 0.03125f * (pd)));
+                    valueMult *= 1 - (0.1f + 0.03125f * (pd));
                     break;
                 case PieceStatusEffect.Light:
                 case PieceStatusEffect.Ghostly:
-                    output -= (pte.pieceValueX2 * (0.05f + 0.03125f * (pd)));
+                    valueMult *= 1 - (0.05f + 0.03125f * (pd));
                     break;
                 case PieceStatusEffect.Poisoned:    //not normally curable so it is worse
-                    output -= (pte.pieceValueX2 * 0.175f * (1 + 1 / pd));
+                    valueMult *= 1 - (0.175f * (1 + 1 / pd));
                     break;
                 case PieceStatusEffect.Sparked:
                 case PieceStatusEffect.Bloodlust:
-                    output -= (pte.pieceValueX2 * 0.25f * (1 / pd));
+                    valueMult *= 1 - (0.25f * (1 / pd));
                     break;
             }
 
@@ -440,9 +459,15 @@ public class ChessAI
             {
                 if (Piece.GetPieceSpecialData(b.pieces[index]) != 0)
                 {
-                    output -= pte.pieceValueX2 * 0.25f;
+                    valueMult *= 0.5f;
+                } else
+                {
+                    valueMult *= 0.5f;
+                    valueMult += 0.5f;
                 }
             }
+
+            output -= (1 - valueMult) * pte.pieceValueX2;
 
             if ((pte.pieceProperty & PieceProperty.ConsumeAllies) != 0)
             {
@@ -476,33 +501,52 @@ public class ChessAI
                 continue;
             }
 
-            if (Piece.GetPieceModifier(b.pieces[index]) != PieceModifier.None)
+            switch (Piece.GetPieceModifier(b.pieces[index]))
             {
-                output -= 2.5f;
+                case PieceModifier.Phoenix:
+                    output -= pte.pieceValueX2 * 0.75f;
+                    break;
+                case PieceModifier.Winged:
+                    output -= pte.pieceValueX2 * 0.25f;
+                    break;
+                case PieceModifier.Vengeful:
+                case PieceModifier.Radiant:
+                case PieceModifier.Spectral:
+                case PieceModifier.Warped:
+                case PieceModifier.Shielded:
+                    output -= 2.5f;
+                    break;
+                case PieceModifier.Immune:
+                case PieceModifier.HalfShielded:
+                    output -= 1.5f;
+                    break;
             }
 
             Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(b.pieces[index]);
             byte pd = Piece.GetPieceStatusDuration(b.pieces[index]);
+            float valueMult = 0.5f;
+
+            //effects must be halved because it gives PieceValue value normally
             switch (pse)
             {
                 case PieceStatusEffect.Frozen:
-                    output += (pte.pieceValueX2 * (0.15f + 0.03125f * (pd)));
+                    valueMult *= 1 - (0.15f + 0.03125f * (pd));
                     break;
                 case PieceStatusEffect.Heavy:
                 case PieceStatusEffect.Fragile:
                 case PieceStatusEffect.Soaked:
-                    output += (pte.pieceValueX2 * (0.1f + 0.03125f * (pd)));
+                    valueMult *= 1 - (0.1f + 0.03125f * (pd));
                     break;
                 case PieceStatusEffect.Light:
                 case PieceStatusEffect.Ghostly:
-                    output += (pte.pieceValueX2 * (0.05f + 0.03125f * (pd)));
+                    valueMult *= 1 - (0.05f + 0.03125f * (pd));
                     break;
                 case PieceStatusEffect.Poisoned:    //not normally curable so it is worse
-                    output += (pte.pieceValueX2 * 0.175f * (1 + 1 / pd));
+                    valueMult *= 1 - (0.175f * (1 + 1 / pd));
                     break;
                 case PieceStatusEffect.Sparked:
                 case PieceStatusEffect.Bloodlust:
-                    output += (pte.pieceValueX2 * 0.25f * (1 / pd));
+                    valueMult *= 1 - (0.25f * (1 / pd));
                     break;
             }
 
@@ -510,9 +554,16 @@ public class ChessAI
             {
                 if (Piece.GetPieceSpecialData(b.pieces[index]) != 0)
                 {
-                    output += pte.pieceValueX2 * 0.25f;
+                    valueMult *= 0.5f;
+                }
+                else
+                {
+                    valueMult *= 0.5f;
+                    valueMult += 0.5f;
                 }
             }
+
+            output += (1 - valueMult) * pte.pieceValueX2;
 
             if ((pte.pieceProperty & PieceProperty.ConsumeAllies) != 0)
             {
