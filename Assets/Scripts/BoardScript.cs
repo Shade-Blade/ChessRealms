@@ -145,13 +145,13 @@ public class BoardScript : MonoBehaviour
         }
         chessAI.InitAI(difficulty);
     }
-    public void ResetBoard(Piece.PieceType[] army, Board.EnemyModifier em)
+    public void ResetBoard(Piece.PieceType[] army, Board.PlayerModifier pm, Board.EnemyModifier em)
     {
         DestroyLastMovedTrail();
         whiteIsAI = false;  //so you can make your own move
         ResetSelected();
         board = new Board();
-        board.Setup(army, em);
+        board.Setup(army, pm, em);
         for (int i = 0; i < squares.Count; i++)
         {
             squares[i].czhWhite = false;

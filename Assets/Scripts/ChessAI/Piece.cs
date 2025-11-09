@@ -90,6 +90,7 @@ public static class Piece
         SwiftRook,
         SwiftQueen,
         FastPawn,
+        CoastGuard,
         Boat,
         Skipper,
         Raft,
@@ -256,12 +257,16 @@ public static class Piece
         Spy,
         Infiltrator,
         Disguiser,
+        Assassin,
         SlipPawn,
+        Diplomat,
         RoyalDouble,
         RoyalGuard,
         RoyalMaid,
         RoyalCastle,
         RoyalRecruit,
+        ShadowQueen,
+        EchoSoldier,
         MirrorQueen,
         LensRook,
         ReflectionBishop,
@@ -273,6 +278,11 @@ public static class Piece
         Magnet,
         LightningElemental,
         ElectroPawn,
+        HornSpirit,
+        TorchSpirit,
+        RingSpirit,
+        BottleSpirit,
+        CapSpirit,
         GlassSpirit,
         FeatherSpirit,
         SwordSpirit,
@@ -295,6 +305,7 @@ public static class Piece
         Gardener,
         Rootwalker,
         Burrower,
+        Blossom,
         FlowerPawn,
         Gargoyle,
         Pillar,
@@ -350,6 +361,8 @@ public static class Piece
         Hummingbird,
         QuickSlug,
         QuickPawn,
+        LavaGolem,
+        IceGolem,
         SlothQueen,
         VolcanoTower,
         FlameObelisk,
@@ -376,6 +389,7 @@ public static class Piece
         Smuggler,
         Mercenary,
         Outlaw,
+        WarpWeaver,
         WarpMage,
         Mirrorer,
         Recaller,
@@ -416,9 +430,61 @@ public static class Piece
         WinterPawn,
         SpringPawn,
         FallPawn,
+
+        DayQueen,
+        NightQueen,
+        DayBishop,
+        NightKnight,
+        DayPawn,
+        NightPawn,
+        HoneybeeQueen,
+        HoneybeeLieutenant,
+        Honeybee,
+        WaxQueen,
+        WaxSoldier,
+        WaxPawn,
+        HoneyBomb,
+        HoneyPuddle,
+        SteelGolem,
+        MegaCannon,
+        Cannon,
+        MetalFox,
+        SteelPuppet,
+        RollerQueen,
+        ReboundRook,
+        BounceBishop,
+        Roller,
+        Balloon,
+        GliderQueen,
+        Capybara,
+        Beaver,
+        Squirrel,
+        GliderPawn,
+        AmoebaCitadel,
+        AmoebaGryphon,
+        AmoebaRaven,
+        AmoebaArchbishop,
+        AmoebaKnight,
+        AmoebaPawn,
+        RockEgg,
+        MountainTurtle,
+        WaveEgg,
+        OceanSerpent,
+        FlameEgg,
+        Dragon,
+        Suprema,
+        Bastion,
+        Augur,
+        RoseKnight,
+        Traverser,
+
         Bunker,
         Tunnel,
+        Fan,
+        Watchtower,
         Train,
+        Carrier,
+        Airship,
         Imitator,
 
         Peasant,
@@ -438,7 +504,7 @@ public static class Piece
         Rook,
         Amazons,
         Ultimate,
-        Divine,
+        Divine,        //Realm 65 (i.e. they are not part of the normal world)
         Armored,
         Explosive,
         Relay,
@@ -451,7 +517,7 @@ public static class Piece
         DeadlySins,
         HeavenlyVirtues,
         TarotMajor,
-        TarotMinor,
+        TarotMinor,     //realm is merged with tarot major
         Planets,
         Zodiac,
         Elemental,
@@ -467,7 +533,7 @@ public static class Piece
         Royalist,
         Mirror,
         Electro,
-        ObjectSpirit,
+        ObjectSpirit,   //No realm of its own because they don't play well together (It doesn't work as an army) (They only really work as part of other armies, an army made out of them is hard to use?)
         Crooked,
         Clockwork,
         Plants,
@@ -485,13 +551,21 @@ public static class Piece
         SoulMages,
         ChargeMovers,
         ForcedMovers,
-        Criminals,
+        Criminals,          //Has no realm of their own or their realm isn't recognized (Merge with Dark I guess?) (They don't play together as a single army very well)
         Teleporters,
         Icy,
         Poison,
         StatusMages,
         Skip,
         Seasonal,
+        DayNight,
+        Honeybees,
+        Targetters,
+        Rollers,
+        Gliders,
+        Amoebas,
+        GreatBeasts,
+        Lost,
     }
 
     //2 bits = 4 possible
@@ -766,6 +840,10 @@ public static class Piece
         //FarHalfMover = 1uL << 4,
         //CloseHalfMover = 1uL << 32,
 
+        GliderMover = 1uL << 32,
+        CoastMover = 1uL << 33,
+        ShadowMover = 1uL << 34,
+
         TrueShiftImmune = ShiftImmune | Giant,
 
     }
@@ -861,16 +939,12 @@ public static class Piece
 
     public static PieceType GetPieceType(uint pieceInfo)
     {
-        return (PieceType)(MainManager.BitFilter(pieceInfo, 0, 8));
+        return (PieceType)(pieceInfo & 0x1ff);
+        //return (PieceType)(MainManager.BitFilter(pieceInfo, 0, 8));
     }
     public static uint SetPieceType(PieceType pt, uint pieceInfo)
     {
         return MainManager.BitFilterSet(pieceInfo, (uint)pt, 0, 8);
-    }
-
-    public static bool GetPieceProperty(PieceType pt, PieceProperty pp)
-    {
-        return (GlobalPieceManager.Instance.GetPieceTableEntry(pt).pieceProperty & pp) != 0;
     }
 
     //9 bits of special data
@@ -879,7 +953,8 @@ public static class Piece
     //Currently uses 2 bits for giants
     public static ushort GetPieceSpecialData(uint pieceInfo)
     {
-        return (ushort)(MainManager.BitFilter(pieceInfo, 9, 17));
+        return (ushort)((pieceInfo & 0x3fe00) >> 9);
+        //return (ushort)(MainManager.BitFilter(pieceInfo, 9, 17));
     }
     public static uint SetPieceSpecialData(ushort psd, uint pieceInfo)
     {
@@ -888,7 +963,8 @@ public static class Piece
 
     public static PieceModifier GetPieceModifier(uint pieceInfo)
     {
-        return (PieceModifier)(MainManager.BitFilter(pieceInfo, 18, 21));
+        return (PieceModifier)((pieceInfo & 0x3C0000) >> 18);
+        //return (PieceModifier)(MainManager.BitFilter(pieceInfo, 18, 21));
     }
     public static uint SetPieceModifier(PieceModifier pm, uint pieceInfo)
     {
@@ -897,7 +973,8 @@ public static class Piece
 
     public static PieceStatusEffect GetPieceStatusEffect(uint pieceInfo)
     {
-        return (PieceStatusEffect)(MainManager.BitFilter(pieceInfo, 22, 25));
+        return (PieceStatusEffect)((pieceInfo & 0x3C00000) >> 22);
+        //return (PieceStatusEffect)(MainManager.BitFilter(pieceInfo, 22, 25));
     }
     public static uint SetPieceStatusEffect(PieceStatusEffect pm, uint pieceInfo)
     {
@@ -906,7 +983,8 @@ public static class Piece
 
     public static byte GetPieceStatusDuration(uint pieceInfo)
     {
-        return (byte)(MainManager.BitFilter(pieceInfo, 26, 29));
+        return (byte)((pieceInfo & 0x3C000000) >> 26);
+        //return (byte)(MainManager.BitFilter(pieceInfo, 26, 29));
     }
     public static uint SetPieceStatusDuration(byte psd, uint pieceInfo)
     {
@@ -915,7 +993,8 @@ public static class Piece
 
     public static PieceAlignment GetPieceAlignment(uint pieceInfo)
     {
-        return (PieceAlignment)(MainManager.BitFilter(pieceInfo, 30, 31));
+        return (PieceAlignment)((pieceInfo & 0xc0000000) >> 30);
+        //return (PieceAlignment)(MainManager.BitFilter(pieceInfo, 30, 31));
     }
     public static uint SetPieceAlignment(PieceAlignment pa, uint pieceInfo)
     {
@@ -976,6 +1055,12 @@ public static class Piece
 
         //Water/Ice immune
         if ((specialType == Move.SpecialType.InflictFreeze || specialType == Move.SpecialType.InflictFreezeCaptureOnly) && (((pteV.pieceProperty & PieceProperty.WaterImmune) != 0) || ((pteV.piecePropertyB & PiecePropertyB.StatusImmune) != 0) || Piece.GetPieceModifier(piece) == PieceModifier.Immune))
+        {
+            return true;
+        }
+
+        //Shift immune status
+        if ((specialType == Move.SpecialType.InflictShift || specialType == Move.SpecialType.InflictShiftCaptureOnly) && ((((pteV.piecePropertyB & (PiecePropertyB.StatusImmune | PiecePropertyB.ShiftImmune)) != 0) || Piece.GetPieceModifier(piece) == PieceModifier.Immune)))
         {
             return true;
         }
@@ -1253,7 +1338,7 @@ public static class Piece
 
         //range 3+ invincible
         //Inverse of InvincibleClose2
-        if ((pteV.piecePropertyB & PiecePropertyB.InvincibleFar2) != 0)
+        if ((pteV.piecePropertyB & PiecePropertyB.InvincibleFar2) != 0 || ((1uL << (x + (y << 3)) & b.globalData.bitboard_square_bright) != 0) || (pa == PieceAlignment.White && ((b.globalData.playerModifier & Board.PlayerModifier.ShieldZone) != 0) && (y == 1 && (((x & 3) == 1) || ((x & 3) == 2)))))
         {
             int dx = attackerX - x;
             int dy = attackerY - y;

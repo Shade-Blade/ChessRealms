@@ -9,6 +9,7 @@ public class ResetButtonRandom : MonoBehaviour
 {
     public BoardScript bs;
     public Piece.PieceType[] army;
+    public Board.PlayerModifier pm;
     public Board.EnemyModifier em;
     public Piece.PieceClass pieceClass;
     public int pieceTypes;
@@ -57,13 +58,14 @@ public class ResetButtonRandom : MonoBehaviour
         }
         highestValue++;
 
-        RandomTable<PieceTableEntry> pieceTable = GetPieceTable(pieceClass, typeValue, targetNonKingValue, lowPieceBias, lowComplexityBias);
+        RandomTable<PieceTableEntry> pieceTable = GetPieceTable(pieceClass, typeValue, tryValue, lowPieceBias, lowComplexityBias);
 
         List<PieceTableEntry> subArmy = new List<PieceTableEntry>();
 
         float cumulativeValueCount = 0;
         int cumulativeCount = 0;
         int giantCount = 0;
+        int immobileCount = 0;
 
         //force this not to be an infinite loop if you give it an impossible task
         //(i.e. try to get above 9 * 23 value with normal chess pieces because the queen is already 9 value)
@@ -165,9 +167,14 @@ public class ResetButtonRandom : MonoBehaviour
             {
                 continue;
             }
-            if (lowerBound == 0 && (pteTarget.pieceProperty & Piece.PieceProperty.Unique) != 0)
+            if (lowerBound == 0)
             {
-                if (subArmy.FindAll((e) => (e.type == pteTarget.type)).Count > 0)
+                if ((pteTarget.pieceProperty & Piece.PieceProperty.Unique) != 0 && subArmy.FindAll((e) => (e.type == pteTarget.type)).Count > 0)
+                {
+                    continue;
+                }
+
+                if (pteTarget.immobile && immobileCount > Mathf.CeilToInt(cumulativeCount / 3f)) 
                 {
                     continue;
                 }
@@ -184,13 +191,18 @@ public class ResetButtonRandom : MonoBehaviour
                 cumulativeCount++;
             }
 
+            if (pteTarget.immobile)
+            {
+                immobileCount++;
+            }
+
             subArmy.Add(pteTarget);
 
-            while ((cumulativeCount >= 23 || giantCount > 4) && cumulativeValueCount < tryValue)
+            while ((cumulativeCount >= 23 || giantCount > 4 || immobileCount > Mathf.CeilToInt(cumulativeCount / 3f)) && cumulativeValueCount < tryValue)
             {
                 subArmy.Sort((a, b) => (EffectiveValue(a) - EffectiveValue(b)));
                 //remove the bottom 10 valued pieces
-                while (cumulativeCount >= 10 || giantCount > 4)
+                while (cumulativeCount >= 10 || giantCount > 4 || immobileCount > Mathf.CeilToInt(cumulativeCount / 3f))
                 {
                     cumulativeValueCount -= subArmy[0].pieceValueX2 / 2f;
                     if (EffectiveValue(subArmy[0]) > lowerBound)
@@ -207,10 +219,15 @@ public class ResetButtonRandom : MonoBehaviour
                         cumulativeCount--;
                     }
 
+                    if (pteTarget.immobile)
+                    {
+                        immobileCount--;
+                    }
+
                     subArmy.RemoveAt(0);
                 }
                 //add in some of the highest valued things
-                while (cumulativeCount <= 20 && giantCount < 4 && cumulativeValueCount < tryValue)
+                while (cumulativeCount <= 20 && giantCount < 4 && immobileCount < Mathf.CeilToInt(cumulativeCount / 3f) && cumulativeValueCount < tryValue)
                 {
                     int index = subArmy.Count - 1 - UnityEngine.Random.Range(0, 7);
                     if (index < 0)
@@ -227,6 +244,11 @@ public class ResetButtonRandom : MonoBehaviour
                     else
                     {
                         cumulativeCount++;
+                    }
+
+                    if (pteTarget.immobile)
+                    {
+                        immobileCount++;
                     }
 
                     subArmy.Insert(0, subArmy[index]);
@@ -483,7 +505,7 @@ public class ResetButtonRandom : MonoBehaviour
             }
         }
 
-        bs.ResetBoard(army, em);
+        bs.ResetBoard(army, pm, em);
     }
 
     public RandomTable<PieceTableEntry> GetPieceTable(Piece.PieceClass pc, int types, float targetTotal, float lowPieceBias, float lowComplexityBias)
@@ -587,7 +609,7 @@ public class ResetButtonRandom : MonoBehaviour
 
             int jA = UnityEngine.Random.Range(0, subsetTable.Count);
 
-            if (subsetTable.Count > 0)
+            if (subsetTable.Count > 1)
             {
                 int jB = UnityEngine.Random.Range(0, subsetTable.Count - 1);
                 if (jB >= jA)
@@ -595,24 +617,31 @@ public class ResetButtonRandom : MonoBehaviour
                     jB++;
                 }
 
-                if (RandomGenerator.Get() < (GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias, lowComplexityBias) / (GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias, lowComplexityBias) + GetPieceTableEntryWeight(subsetTable[jB], lowPieceBias, lowComplexityBias) + 0f)))
+                float wA = GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias, lowComplexityBias + 1);
+                float wB = GetPieceTableEntryWeight(subsetTable[jB], lowPieceBias, lowComplexityBias + 1);
+                //Debug.Log((wA / (wA + wB)));
+                if (RandomGenerator.Get() < 0.2f + 0.6f * (wA / (wA + wB)))
                 {
+                    //Debug.Log(subsetTable[jA].type);
                     reducedPool.Add(subsetTable[jA]);
                     subsetTable.RemoveAt(jA);
                 }
                 else
                 {
+                    //Debug.Log(subsetTable[jB].type);
                     reducedPool.Add(subsetTable[jB]);
                     subsetTable.RemoveAt(jB);
                 }
             }
             else
             {
+                //Debug.Log(subsetTable[jA].type);
                 reducedPool.Add(subsetTable[jA]);
                 subsetTable.RemoveAt(jA);
             }
         }
 
+        //Debug.Log("Upper limit = " + (targetTotal / 1.5f));
         subsetTable = new List<PieceTableEntry>();
         for (int i = 0; i < piecePool.Count; i++)
         {
@@ -641,7 +670,7 @@ public class ResetButtonRandom : MonoBehaviour
 
             int jA = UnityEngine.Random.Range(0, subsetTable.Count);
 
-            if (subsetTable.Count > 0)
+            if (subsetTable.Count > 1)
             {
                 int jB = UnityEngine.Random.Range(0, subsetTable.Count - 1);
                 if (jB >= jA)
@@ -649,19 +678,25 @@ public class ResetButtonRandom : MonoBehaviour
                     jB++;
                 }
 
-                if (RandomGenerator.Get() < (GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias, lowComplexityBias) / (GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias, lowComplexityBias) + GetPieceTableEntryWeight(subsetTable[jB], lowPieceBias, lowComplexityBias) + 0f)))
+                float wA = GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias - 2, lowComplexityBias - 1);
+                float wB = GetPieceTableEntryWeight(subsetTable[jB], lowPieceBias - 2, lowComplexityBias - 1);
+                //Debug.Log((wA / (wA + wB)));
+                if (RandomGenerator.Get() < 0.2f + 0.6f * (wA / (wA + wB)))
                 {
+                    //Debug.Log(subsetTable[jA].type);
                     reducedPool.Add(subsetTable[jA]);
                     subsetTable.RemoveAt(jA);
                 }
                 else
                 {
+                    //Debug.Log(subsetTable[jB].type);
                     reducedPool.Add(subsetTable[jB]);
                     subsetTable.RemoveAt(jB);
                 }
             }
             else
             {
+                //Debug.Log(subsetTable[jA].type);
                 reducedPool.Add(subsetTable[jA]);
                 subsetTable.RemoveAt(jA);
             }
@@ -707,7 +742,7 @@ public class ResetButtonRandom : MonoBehaviour
 
             int jA = UnityEngine.Random.Range(0, subsetTable.Count);
 
-            if (subsetTable.Count > 0)
+            if (subsetTable.Count > 1)
             {
                 int jB = UnityEngine.Random.Range(0, subsetTable.Count - 1);
                 if (jB >= jA)
@@ -715,19 +750,25 @@ public class ResetButtonRandom : MonoBehaviour
                     jB++;
                 }
 
-                if (RandomGenerator.Get() < (GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias, lowComplexityBias) / (GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias, lowComplexityBias) + GetPieceTableEntryWeight(subsetTable[jB], lowPieceBias, lowComplexityBias) + 0f)))
+                float wA = GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias - 2, lowComplexityBias);
+                float wB = GetPieceTableEntryWeight(subsetTable[jB], lowPieceBias - 2, lowComplexityBias);
+                //Debug.Log((wA / (wA + wB)));
+                if (RandomGenerator.Get() < 0.2f + 0.6f * (wA / (wA + wB)))
                 {
+                    //Debug.Log(subsetTable[jA].type);
                     reducedPool.Add(subsetTable[jA]);
                     subsetTable.RemoveAt(jA);
                 }
                 else
                 {
+                    //Debug.Log(subsetTable[jB].type);
                     reducedPool.Add(subsetTable[jB]);
                     subsetTable.RemoveAt(jB);
                 }
             }
             else
             {
+                //Debug.Log(subsetTable[jA].type);
                 reducedPool.Add(subsetTable[jA]);
                 subsetTable.RemoveAt(jA);
             }
@@ -770,7 +811,7 @@ public class ResetButtonRandom : MonoBehaviour
 
             int jA = UnityEngine.Random.Range(0, subsetTable.Count);
 
-            if (subsetTable.Count > 0)
+            if (subsetTable.Count > 1)
             {
                 int jB = UnityEngine.Random.Range(0, subsetTable.Count - 1);
                 if (jB >= jA)
@@ -778,19 +819,25 @@ public class ResetButtonRandom : MonoBehaviour
                     jB++;
                 }
 
-                if (RandomGenerator.Get() < (GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias, lowComplexityBias) / (GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias, lowComplexityBias) + GetPieceTableEntryWeight(subsetTable[jB], lowPieceBias, lowComplexityBias) + 0f)))
+                float wA = GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias - 2, lowComplexityBias);
+                float wB = GetPieceTableEntryWeight(subsetTable[jB], lowPieceBias - 2, lowComplexityBias);
+                //Debug.Log((wA / (wA + wB)));
+                if (RandomGenerator.Get() < 0.2f + 0.6f * (wA / (wA + wB)))
                 {
+                    //Debug.Log(subsetTable[jA].type);
                     reducedPool.Add(subsetTable[jA]);
                     subsetTable.RemoveAt(jA);
                 }
                 else
                 {
+                    //Debug.Log(subsetTable[jB].type);
                     reducedPool.Add(subsetTable[jB]);
                     subsetTable.RemoveAt(jB);
                 }
             }
             else
             {
+                //Debug.Log(subsetTable[jA].type);
                 reducedPool.Add(subsetTable[jA]);
                 subsetTable.RemoveAt(jA);
             }

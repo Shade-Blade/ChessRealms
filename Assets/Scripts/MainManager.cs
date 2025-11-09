@@ -19,10 +19,13 @@ public class MainManager : MonoBehaviour
     public static MainManager Instance
     {
         get {
+            //optimization
+            /*
             if (intInstance == null)
             {
                 intInstance = FindObjectOfType<MainManager>();
             }
+            */
             return intInstance;
         }
     }
@@ -48,7 +51,7 @@ public class MainManager : MonoBehaviour
 
     public string bitboardTest = "";
 
-    private int[] debrujin_index64 = new int[64]{
+    private static int[] debrujin_index64 = new int[64]{
         0,  1, 48,  2, 57, 49, 28,  3,
        61, 58, 50, 42, 38, 29, 17,  4,
        62, 55, 59, 36, 53, 51, 43, 22,
@@ -59,6 +62,11 @@ public class MainManager : MonoBehaviour
        25, 14, 19,  9, 13,  8,  7,  6
     };
     //multiply single bit by 0x03f79d71b4cb0a89
+
+    private void Awake()
+    {
+        intInstance = this;
+    }
 
     // Start is called before the first frame update
     void Start()
@@ -81,7 +89,9 @@ public class MainManager : MonoBehaviour
         //Well at least I got depth 6 AI working?
         //But if it isn't possible to make that good enough then I guess I'll have to scrap this game
         
-        for (int i = 0; i <= 5; i++)
+        //optimization: now it is 350k again
+
+        for (int i = 0; i <= 4; i++)
         {
             DateTime currentTime = DateTime.UtcNow;
             long unixTime = ((DateTimeOffset)currentTime).ToUnixTimeMilliseconds();
@@ -211,6 +221,7 @@ public class MainManager : MonoBehaviour
         }
 
         //Intrinsics
+        /*
         if (IsBmi1Supported)
         {
             //trailing zero count u64
@@ -221,13 +232,14 @@ public class MainManager : MonoBehaviour
 
             return (int)specialOutput;
         }
+        */
 
         ulong isolated = (bitboard) ^ (bitboard - 1);
         isolated -= isolated >> 1;
 
         //1 bit left
         output = bitboard - isolated;
-        int index = Instance.debrujin_index64[(isolated * 0x03f79d71b4cb0a89) >> 58];
+        int index = debrujin_index64[(isolated * 0x03f79d71b4cb0a89) >> 58];
 
         return index;
     }
@@ -291,7 +303,7 @@ public class MainManager : MonoBehaviour
     }
 
     //https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating
-    public ulong MirrorBitboard(ulong x)
+    public static ulong MirrorBitboard(ulong x)
     {
         const ulong k1 = (0x5555555555555555);
         const ulong k2 = (0x3333333333333333);

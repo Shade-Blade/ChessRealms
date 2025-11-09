@@ -6,10 +6,11 @@ public class ResetButtonCustom : MonoBehaviour
 {
     public BoardScript bs;
     public Piece.PieceType[] army;
+    public Board.PlayerModifier pm;
     public Board.EnemyModifier em;
 
     public void OnMouseDown()
     {
-        bs.ResetBoard(army, em);
+        bs.ResetBoard(army, pm, em);
     }
 }

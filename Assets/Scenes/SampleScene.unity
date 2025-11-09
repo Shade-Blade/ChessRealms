@@ -1776,6 +1776,41 @@ MonoBehaviour:
     y: 0
     range: 0
     rangeType: 0
+  recallModifierMove:
+    atom: 0
+    modifier: 0
+    x: 0
+    y: 0
+    range: 0
+    rangeType: 0
+  mirrorModifierMove:
+    atom: 0
+    modifier: 0
+    x: 0
+    y: 0
+    range: 0
+    rangeType: 0
+  seafaringModifierMove:
+    atom: 0
+    modifier: 0
+    x: 0
+    y: 0
+    range: 0
+    rangeType: 0
+  backdoorModifierMove:
+    atom: 0
+    modifier: 0
+    x: 0
+    y: 0
+    range: 0
+    rangeType: 0
+  forestModifierMove:
+    atom: 0
+    modifier: 0
+    x: 0
+    y: 0
+    range: 0
+    rangeType: 0
 --- !u!1 &407552978
 GameObject:
   m_ObjectHideFlags: 0
@@ -2027,8 +2062,17 @@ MonoBehaviour:
       bitboard_piecesBlack: 0
       bitboard_piecesNeutral: 0
       bitboard_piecesCrystal: 0
+      bitboard_piecesMirrored: 0
       bitboard_piecesWhiteAdjacent: 0
       bitboard_piecesBlackAdjacent: 0
+      bitboard_piecesWhiteAdjacent1: 0
+      bitboard_piecesBlackAdjacent1: 0
+      bitboard_piecesWhiteAdjacent2: 0
+      bitboard_piecesBlackAdjacent2: 0
+      bitboard_piecesWhiteAdjacent4: 0
+      bitboard_piecesBlackAdjacent4: 0
+      bitboard_piecesWhiteAdjacent8: 0
+      bitboard_piecesBlackAdjacent8: 0
       bitboard_pawnsWhite: 0
       bitboard_pawnsBlack: 0
       bitboard_kingWhite: 0
@@ -2055,6 +2099,10 @@ MonoBehaviour:
       bitboard_hagBlack: 0
       bitboard_slothWhite: 0
       bitboard_slothBlack: 0
+      bitboard_watchTowerWhite: 0
+      bitboard_watchTowerBlack: 0
+      bitboard_fanWhite: 0
+      bitboard_fanBlack: 0
       bitboard_hangedWhite: 0
       bitboard_hangedBlack: 0
       bitboard_virgoWhite: 0
@@ -2080,6 +2128,7 @@ MonoBehaviour:
       lastPieceMovedLocation: 0
       pieceValueSumX2: 0
       pieceCount: 0
+      piecesLost: 0
       capturedLastTurn: 0
     blackPerPlayerInfo:
       canCastle: 0
@@ -2089,6 +2138,7 @@ MonoBehaviour:
       lastPieceMovedLocation: 0
       pieceValueSumX2: 0
       pieceCount: 0
+      piecesLost: 0
       capturedLastTurn: 0
   moveList: 
   lastMoveTrail: {fileID: 0}
@@ -13080,7 +13130,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   bs: {fileID: 411647727}
-  army: 0200800181018201830185018401860187018801890159008100a0009f0075017601
+  army: 02005301f300f40054011b01ed00eb00c801cb01c901c8018100a0009f0075017601
+  pm: 0
   em: 0
 --- !u!65 &1838308303
 BoxCollider:
@@ -13152,6 +13203,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bs: {fileID: 411647727}
   army: 
+  pm: 0
   em: 0
   pieceClass: 0
   pieceTypes: 3

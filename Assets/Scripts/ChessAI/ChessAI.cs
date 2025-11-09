@@ -982,6 +982,15 @@ public class ChessAI
             yield break;
         }
 
+        //debug testing in profiler
+        /*
+        if (board != null)
+        {
+            maxDepth = 3;
+            AlphaBetaAI(null);
+        }
+        */
+
         Thread searchThread = new Thread(new ParameterizedThreadStart(AlphaBetaAI));
         searchThread.Start();
 
