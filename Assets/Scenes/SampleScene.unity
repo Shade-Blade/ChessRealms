@@ -1764,7 +1764,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 45767e7085b24174ea0bad8351098dbe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  pieceTable: []
   pieceSquareTableCenter: []
   pieceSquareTableCorner: []
   pieceSquareTableTopCenter: []
@@ -2107,6 +2106,7 @@ MonoBehaviour:
       bitboard_hangedBlack: 0
       bitboard_virgoWhite: 0
       bitboard_virgoBlack: 0
+      arcanaMoonOutdated: 0
       bitboard_tarotMoonWhite: 0
       bitboard_tarotMoonBlack: 0
       bitboard_tarotMoonIllusionWhite: 0
@@ -2119,6 +2119,14 @@ MonoBehaviour:
       bitboard_clockworksnapperBlack: 0
       bitboard_bladebeastWhite: 0
       bitboard_bladebeastBlack: 0
+      bitboard_warpWeaverWhite: 0
+      bitboard_warpWeaverBlack: 0
+      bitboard_metalFoxWhite: 0
+      bitboard_metalFoxBlack: 0
+      bitboard_megacannonWhite: 0
+      bitboard_megacannonBlack: 0
+      bitboard_momentumWhite: 0
+      bitboard_momentumBlack: 0
     pieces: 
     whitePerPlayerInfo:
       canCastle: 0
@@ -13130,7 +13138,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   bs: {fileID: 411647727}
-  army: 02005301f300f40054011b01ed00eb00c801cb01c901c8018100a0009f0075017601
+  army: 0200cc01c101c301c5011b01ed00c401bb01bd01bf01ac01ad01c201b501a801a701
   pm: 0
   em: 0
 --- !u!65 &1838308303

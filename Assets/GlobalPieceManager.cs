@@ -27,7 +27,8 @@ public class GlobalPieceManager : MonoBehaviour
         }
     }
 
-    public PieceTableEntry[] pieceTable;
+    //static for optimization?
+    public static PieceTableEntry[] pieceTable;
 
     public float[] pieceSquareTableCenter;  //for most pieces
     public float[] pieceSquareTableCorner;   //for king
@@ -168,26 +169,43 @@ public class GlobalPieceManager : MonoBehaviour
 
     public static PieceTableEntry GetPieceTableEntry(uint piece)
     {
-        return Instance.GetPieceTableEntry(Piece.GetPieceType(piece));
-    }
-    /*
-    public static PieceTableEntry GetPieceTableEntry(Piece.PieceType pieceType)
-    {
-        return Instance.GetPieceTableEntry(pieceType);
-    }
-    */
-    /*
-    public static PieceTableEntry GetPieceTableEntry(Piece.PieceType pieceType)
-    {
-        return Instance.GetPieceTableEntry(pieceType);
-    }
-    */
-    public PieceTableEntry GetPieceTableEntry(Piece.PieceType pieceType)
-    {
+        /*
         if (pieceTable == null || pieceTable.Length < 2)
         {
             LoadPieceTable();
         }
+        */
+
+        Piece.PieceType pt = Piece.GetPieceType(piece);
+
+        if (pt == Piece.PieceType.Null)
+        {
+            return null;
+        }
+
+        return pieceTable[((int)pt - 1)];
+        //return Instance.GetPieceTableEntry(Piece.GetPieceType(piece));
+    }
+    /*
+    public static PieceTableEntry GetPieceTableEntry(Piece.PieceType pieceType)
+    {
+        return Instance.GetPieceTableEntry(pieceType);
+    }
+    */
+    /*
+    public static PieceTableEntry GetPieceTableEntry(Piece.PieceType pieceType)
+    {
+        return Instance.GetPieceTableEntry(pieceType);
+    }
+    */
+    public static PieceTableEntry GetPieceTableEntry(Piece.PieceType pieceType)
+    {
+        /*
+        if (pieceTable == null || pieceTable.Length < 2)
+        {
+            LoadPieceTable();
+        }
+        */
 
         if (pieceType == Piece.PieceType.Null)
         {
@@ -614,6 +632,8 @@ public class MoveGeneratorInfoEntry
         BlossomTeleport,        //3+ neighbors
         DiplomatTeleport,
         EchoTeleport,
+        CoastTeleport,
+        AimMover,
 
         LensRook,
         Recall,
@@ -1045,7 +1065,8 @@ public class MoveGeneratorInfoEntry
             case MoveGeneratorAtom.AnywhereNonAdjacentTeleport:
             case MoveGeneratorAtom.AnywhereSameColorTeleport:
             case MoveGeneratorAtom.AnywhereOppositeColorTeleport:
-                //case Piece.PieceProperty.AnywhereTeleport:  //let you teleport anywhere instead of blocking out the capture only range?
+            //case Piece.PieceProperty.AnywhereTeleport:  //let you teleport anywhere instead of blocking out the capture only range?
+            case MoveGeneratorAtom.AimMover:
                 return true;
         }
 
@@ -1100,7 +1121,58 @@ public class MoveGeneratorInfoEntry
         }
     }
 
-    public static void GeneratePieceBitboards(Board b)
+    public static void FixArcanaMoon(Board b)
+    {
+
+        b.globalData.bitboard_tarotMoonWhite = 0;
+        b.globalData.bitboard_tarotMoonBlack = 0;
+        b.globalData.bitboard_tarotMoonIllusionWhite = 0;
+        b.globalData.bitboard_tarotMoonIllusionBlack = 0;
+
+        for (int i = 0; i < 64; i++)
+        {
+            if (b.pieces[i] == 0)
+            {
+                continue;
+            }
+
+            ulong bitIndex = 1uL << i;
+            Piece.PieceAlignment pa = Piece.GetPieceAlignment(b.pieces[i]);
+            Piece.PieceType pt = Piece.GetPieceType(b.pieces[i]);
+
+            switch (pa)
+            {
+                case PieceAlignment.White:
+                    switch (pt)
+                    {
+                        case PieceType.ArcanaMoon:
+                            b.globalData.bitboard_tarotMoonWhite |= bitIndex;
+                            b.globalData.bitboard_tarotMoonIllusionWhite |= bitIndex;
+                            break;
+                        case PieceType.MoonIllusion:
+                            b.globalData.bitboard_tarotMoonIllusionWhite |= bitIndex;
+                            break;
+                    }
+                    break;
+                case PieceAlignment.Black:
+                    switch (pt)
+                    {
+                        case PieceType.ArcanaMoon:
+                            b.globalData.bitboard_tarotMoonBlack |= bitIndex;
+                            b.globalData.bitboard_tarotMoonIllusionBlack |= bitIndex;
+                            break;
+                        case PieceType.MoonIllusion:
+                            b.globalData.bitboard_tarotMoonIllusionBlack |= bitIndex;
+                            break;
+                    }
+                    break;
+            }
+        }
+
+        b.globalData.arcanaMoonOutdated = false;
+    }
+
+    public static void GeneratePieceBitboards(Board b, bool reducedCheck)
     {
         b.globalData.whiteHighestValuedPieceValue = 0;
         b.globalData.blackHighestValuedPieceValue = 0;
@@ -1135,10 +1207,21 @@ public class MoveGeneratorInfoEntry
         b.globalData.bitboard_tarotMoonIllusionBlack = 0;
         b.globalData.bitboard_virgoWhite = 0;
         b.globalData.bitboard_virgoBlack = 0;
+        b.globalData.bitboard_warpWeaverWhite = 0;
+        b.globalData.bitboard_warpWeaverBlack = 0;
+        b.globalData.bitboard_metalFoxWhite = 0;
+        b.globalData.bitboard_metalFoxBlack = 0;
+        b.globalData.bitboard_megacannonWhite = 0;
+        b.globalData.bitboard_megacannonBlack = 0;
+        b.globalData.bitboard_momentumWhite = 0;
+        b.globalData.bitboard_momentumBlack = 0;
 
+        //does the compiler like b.pieces.Length better than 64?
+        //Test is negligible
         for (int i = 0; i < 64; i++)
         {
-            if (b.pieces[i] == 0)
+            uint piece = b.pieces[i];
+            if (piece == 0)
             {
                 continue;
             }
@@ -1146,7 +1229,15 @@ public class MoveGeneratorInfoEntry
             ulong bitIndex = 1uL << i;
             Piece.PieceAlignment ppa = Piece.GetPieceAlignment(b.pieces[i]);
 
+            //~66 ms
             PieceTableEntry pte = b.globalData.GetPieceTableEntryFromCache(i, b.pieces[i]); //GlobalPieceManager.GetPieceTableEntry(b.pieces[i]);
+            Piece.PieceType pt = pte.type; //Piece.GetPieceType(b.pieces[i]);
+
+            //? ms
+            //Very slightly worse
+            //Negligible difference
+            //Piece.PieceType pt = Piece.GetPieceType(b.pieces[i]);
+            //PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pt);
 
             if (pte == null)
             {
@@ -1192,8 +1283,6 @@ public class MoveGeneratorInfoEntry
                     b.globalData.bitboard_piecesCrystal |= bitIndex;
                     break;
             }
-
-            Piece.PieceType pt = pte.type; //Piece.GetPieceType(b.pieces[i]);
 
             switch (pt)
             {
@@ -1288,33 +1377,82 @@ public class MoveGeneratorInfoEntry
                             break;
                     }
                     break;
+                case PieceType.WarpWeaver:
+                    switch (ppa)
+                    {
+                        case Piece.PieceAlignment.White:
+                            b.globalData.bitboard_warpWeaverWhite |= bitIndex;
+                            break;
+                        case Piece.PieceAlignment.Black:
+                            b.globalData.bitboard_warpWeaverBlack |= bitIndex;
+                            break;
+                    }
+                    break;
+                case PieceType.MetalFox:
+                    switch (ppa)
+                    {
+                        case Piece.PieceAlignment.White:
+                            b.globalData.bitboard_metalFoxWhite |= bitIndex;
+                            break;
+                        case Piece.PieceAlignment.Black:
+                            b.globalData.bitboard_metalFoxBlack |= bitIndex;
+                            break;
+                    }
+                    break;
+                case PieceType.MegaCannon:
+                    switch (ppa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_megacannonWhite |= bitIndex;
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_megacannonBlack |= bitIndex;
+                            break;
+                    }
+                    break;
             }
 
-            //Put naturally immune pieces in the immunity bitboard
-            //PieceTableEntry pte = GlobalPieceManager.Instance.GetPieceTableEntry(pt);
-            if ((pte.pieceProperty & Piece.PieceProperty.EnchantImmune) != 0 || Piece.GetPieceModifier(b.pieces[i]) == PieceModifier.Immune)
+            if ((pte.piecePropertyB & (PiecePropertyB.Momentum | PiecePropertyB.ReverseMomentum | PiecePropertyB.BounceMomentum)) != 0)
             {
                 switch (ppa)
                 {
                     case Piece.PieceAlignment.White:
-                        b.globalData.bitboard_immuneWhite |= bitIndex;
+                        b.globalData.bitboard_momentumWhite |= bitIndex;
                         break;
                     case Piece.PieceAlignment.Black:
-                        b.globalData.bitboard_immuneBlack |= bitIndex;
+                        b.globalData.bitboard_momentumBlack |= bitIndex;
                         break;
                 }
             }
 
-            if ((pte.pieceProperty & Piece.PieceProperty.RelayImmune) != 0)
+            //Put naturally immune pieces in the immunity bitboard
+            //PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pt);
+            if (!reducedCheck)
             {
-                switch (ppa)
+                if ((pte.pieceProperty & Piece.PieceProperty.EnchantImmune) != 0 || Piece.GetPieceModifier(b.pieces[i]) == PieceModifier.Immune)
                 {
-                    case Piece.PieceAlignment.White:
-                        b.globalData.bitboard_immuneRelayerWhite |= bitIndex;
-                        break;
-                    case Piece.PieceAlignment.Black:
-                        b.globalData.bitboard_immuneRelayerBlack |= bitIndex;
-                        break;
+                    switch (ppa)
+                    {
+                        case Piece.PieceAlignment.White:
+                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            break;
+                        case Piece.PieceAlignment.Black:
+                            b.globalData.bitboard_immuneBlack |= bitIndex;
+                            break;
+                    }
+                }
+
+                if ((pte.pieceProperty & Piece.PieceProperty.RelayImmune) != 0)
+                {
+                    switch (ppa)
+                    {
+                        case Piece.PieceAlignment.White:
+                            b.globalData.bitboard_immuneRelayerWhite |= bitIndex;
+                            break;
+                        case Piece.PieceAlignment.Black:
+                            b.globalData.bitboard_immuneRelayerBlack |= bitIndex;
+                            break;
+                    }
                 }
             }
         }
@@ -1331,6 +1469,8 @@ public class MoveGeneratorInfoEntry
 
         b.globalData.bitboard_pieces = b.globalData.bitboard_piecesWhite | b.globalData.bitboard_piecesBlack | b.globalData.bitboard_piecesNeutral | b.globalData.bitboard_piecesCrystal;
         b.globalData.bitboard_piecesMirrored = MainManager.MirrorBitboard(b.globalData.bitboard_pieces);
+
+        b.globalData.arcanaMoonOutdated = false;
     }
 
     public static void ResetArcanaMoon(ref Board b)
@@ -1343,7 +1483,7 @@ public class MoveGeneratorInfoEntry
     //Since this doesn't generate moves there is no move list being touched
     public static void GenerateAreaBitboards(ref Board b)
     {
-        GeneratePieceBitboards(b);
+        GeneratePieceBitboards(b, false);
 
         //Virgo gets smeared
         b.globalData.bitboard_virgoWhite = MainManager.SmearBitboard(b.globalData.bitboard_virgoWhite);
@@ -1835,7 +1975,7 @@ public class MoveGeneratorInfoEntry
             {
                 Piece.PieceType pt = Piece.GetPieceType(b.pieces[i]);
 
-                PieceTableEntry pte = GlobalPieceManager.Instance.GetPieceTableEntry(pt);
+                PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pt);
 
                 if ((pte.pieceProperty & Piece.PieceProperty.Relay) != 0 || (pa == Piece.PieceAlignment.White && pt == Piece.PieceType.King && (b.globalData.playerModifier & Board.PlayerModifier.RelayKing) != 0))
                 {
@@ -1853,7 +1993,7 @@ public class MoveGeneratorInfoEntry
                     {
                         int index = MainManager.PopBitboardLSB1(relayBitboard, out relayBitboard);
 
-                        PieceTableEntry pteT = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
+                        PieceTableEntry pteT = GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
 
                         if (pteT.type != Piece.PieceType.King && (pteT.promotionType == Piece.PieceType.Null && (pteT.piecePropertyB & Piece.PiecePropertyB.TrueShiftImmune) == 0))
                         {
@@ -1888,7 +2028,7 @@ public class MoveGeneratorInfoEntry
                             continue;
                         }
 
-                        PieceTableEntry pteT = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
+                        PieceTableEntry pteT = GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
 
                         if (pteT.type != Piece.PieceType.King && (pteT.promotionType == Piece.PieceType.Null && (pteT.piecePropertyB & Piece.PiecePropertyB.TrueShiftImmune) == 0))
                         {
@@ -2088,7 +2228,7 @@ public class MoveGeneratorInfoEntry
                         if ((b.globalData.enemyModifier & Board.EnemyModifier.Envious) != 0)
                         {
                             //Debug.Log("Envy target = " + b.globalData.whiteHighestValuePiece + " " + b.globalData.whiteHighestValuedPieceValue);
-                            PieceTableEntry pteR = GlobalPieceManager.Instance.GetPieceTableEntry(b.globalData.whiteHighestValuePiece);
+                            PieceTableEntry pteR = GlobalPieceManager.GetPieceTableEntry(b.globalData.whiteHighestValuePiece);
                             for (int r = 0; r < pteR.moveInfo.Count; r++)
                             {
                                 GenerateMovesForMoveGeneratorEntry(moves, ref b, Piece.SetPieceModifier(Piece.PieceModifier.NoSpecial, piece), subX, subY, pteR.moveInfo[r], null, moveMetadata);
@@ -2162,7 +2302,7 @@ public class MoveGeneratorInfoEntry
 
                         if ((b.globalData.enemyModifier & Board.EnemyModifier.Xyloid) != 0)
                         {
-                            PieceTableEntry pteR = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.PieceType.Rootwalker);
+                            PieceTableEntry pteR = GlobalPieceManager.GetPieceTableEntry(Piece.PieceType.Rootwalker);
                             for (int r = 0; r < pteR.moveInfo.Count; r++)
                             {
                                 GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, subX, subY, pteR.moveInfo[r], null, moveMetadata);
@@ -2251,7 +2391,7 @@ public class MoveGeneratorInfoEntry
             {
                 Piece.PieceType pt = Piece.GetPieceType(b.pieces[i]);
 
-                PieceTableEntry pte = GlobalPieceManager.Instance.GetPieceTableEntry(pt);
+                PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pt);
 
                 if ((pte.pieceProperty & Piece.PieceProperty.Relay) != 0)
                 {
@@ -2268,7 +2408,7 @@ public class MoveGeneratorInfoEntry
                     {
                         int index = MainManager.PopBitboardLSB1(relayBitboard, out relayBitboard);
 
-                        PieceTableEntry pteT = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
+                        PieceTableEntry pteT = GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
 
                         if (pteT.type != Piece.PieceType.King && ((pteT.pieceProperty & Piece.PieceProperty.Giant) == 0) && pteT.promotionType == Piece.PieceType.Null && (pteT.piecePropertyB & Piece.PiecePropertyB.ShiftImmune) == 0)
                         {
@@ -2303,7 +2443,7 @@ public class MoveGeneratorInfoEntry
                             continue;
                         }
 
-                        PieceTableEntry pteT = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
+                        PieceTableEntry pteT = GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(b.pieces[index]));
 
                         if (pteT.type != Piece.PieceType.King && ((pteT.pieceProperty & Piece.PieceProperty.Giant) == 0) && pteT.promotionType == Piece.PieceType.Null && (pteT.piecePropertyB & Piece.PiecePropertyB.ShiftImmune) == 0)
                         {
@@ -2464,7 +2604,7 @@ public class MoveGeneratorInfoEntry
                         if ((b.globalData.enemyModifier & Board.EnemyModifier.Envious) != 0)
                         {
                             //Debug.Log("Envy target = " + b.globalData.whiteHighestValuePiece + " " + b.globalData.whiteHighestValuedPieceValue);
-                            PieceTableEntry pteR = GlobalPieceManager.Instance.GetPieceTableEntry(b.globalData.whiteHighestValuePiece);
+                            PieceTableEntry pteR = GlobalPieceManager.GetPieceTableEntry(b.globalData.whiteHighestValuePiece);
                             for (int r = 0; r < pteR.moveInfo.Count; r++)
                             {
                                 GenerateMovesForMoveGeneratorEntry(moves, ref b, Piece.SetPieceModifier(Piece.PieceModifier.NoSpecial, piece), subX, subY, pteR.moveInfo[r], null, moveMetadata);
@@ -2536,7 +2676,7 @@ public class MoveGeneratorInfoEntry
 
                         if ((b.globalData.enemyModifier & Board.EnemyModifier.Xyloid) != 0)
                         {
-                            PieceTableEntry pteR = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.PieceType.Rootwalker);
+                            PieceTableEntry pteR = GlobalPieceManager.GetPieceTableEntry(Piece.PieceType.Rootwalker);
                             for (int r = 0; r < pteR.moveInfo.Count; r++)
                             {
                                 GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, subX, subY, pteR.moveInfo[r], null, moveMetadata);
@@ -2653,7 +2793,7 @@ public class MoveGeneratorInfoEntry
         Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
 
         //Get all move generator info entries
-        PieceTableEntry pte = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(piece));
+        PieceTableEntry pte = b.globalData.GetPieceTableEntryFromCache((x + (y << 3)), piece); //GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(piece));
 
         //Unpredictable
         if (pa != Piece.PieceAlignment.Black && (b.globalData.enemyModifier & Board.EnemyModifier.Unpredictable) != 0)
@@ -2674,6 +2814,12 @@ public class MoveGeneratorInfoEntry
             }
         }
 
+        //hardcoded thing
+        if (pte.type == PieceType.MegaCannon && Piece.GetPieceSpecialData(piece) != 0)
+        {
+            return;
+        }
+
 
         if (pa == Piece.PieceAlignment.White)
         {
@@ -2691,7 +2837,7 @@ public class MoveGeneratorInfoEntry
             {
                 return;
             }
-            if ((pte.pieceProperty & Piece.PieceProperty.SlowMove) != 0 && b.whitePerPlayerInfo.lastPieceMovedType != Piece.PieceType.Null && (GlobalPieceManager.Instance.GetPieceTableEntry(b.whitePerPlayerInfo.lastPieceMovedType).pieceProperty & Piece.PieceProperty.SlowMove) != 0)
+            if ((pte.pieceProperty & Piece.PieceProperty.SlowMove) != 0 && (b.bonusPly > 0 || (b.whitePerPlayerInfo.lastPieceMovedType != Piece.PieceType.Null && (GlobalPieceManager.GetPieceTableEntry(b.whitePerPlayerInfo.lastPieceMovedType).pieceProperty & Piece.PieceProperty.SlowMove) != 0)))
             {
                 return;
             }
@@ -2711,7 +2857,7 @@ public class MoveGeneratorInfoEntry
             {
                 return;
             }
-            if ((pte.pieceProperty & Piece.PieceProperty.SlowMove) != 0 && b.blackPerPlayerInfo.lastPieceMovedType != Piece.PieceType.Null && (GlobalPieceManager.Instance.GetPieceTableEntry(b.blackPerPlayerInfo.lastPieceMovedType).pieceProperty & Piece.PieceProperty.SlowMove) != 0)
+            if ((pte.pieceProperty & Piece.PieceProperty.SlowMove) != 0 && (b.bonusPly > 0 || (b.blackPerPlayerInfo.lastPieceMovedType != Piece.PieceType.Null && (GlobalPieceManager.GetPieceTableEntry(b.blackPerPlayerInfo.lastPieceMovedType).pieceProperty & Piece.PieceProperty.SlowMove) != 0)))
             {
                 return;
             }
@@ -3043,11 +3189,11 @@ public class MoveGeneratorInfoEntry
             ulong a2Bitboard = 0;
             if (pa == PieceAlignment.White)
             {
-                a2Bitboard = b.globalData.bitboard_piecesWhiteAdjacent2 | b.globalData.bitboard_piecesWhiteAdjacent4;
+                a2Bitboard = b.globalData.bitboard_piecesWhiteAdjacent2 | b.globalData.bitboard_piecesWhiteAdjacent4 | b.globalData.bitboard_piecesWhiteAdjacent8;
             }
             if (pa == PieceAlignment.Black)
             {
-                a2Bitboard = b.globalData.bitboard_piecesBlackAdjacent2 | b.globalData.bitboard_piecesBlackAdjacent4;
+                a2Bitboard = b.globalData.bitboard_piecesBlackAdjacent2 | b.globalData.bitboard_piecesBlackAdjacent4 | b.globalData.bitboard_piecesBlackAdjacent8;
             }
 
             /*
@@ -3108,7 +3254,7 @@ public class MoveGeneratorInfoEntry
             flipCheckBitboard |= b.globalData.bitboard_hangedBlack;
         }
 
-        PieceTableEntry pte = GlobalPieceManager.Instance.GetPieceTableEntry(pt);
+        PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pt);
 
         bool directionRestricted = (mgie.modifier & MoveGeneratorPreModifier.DirectionModifiers) != 0;
 
@@ -3192,6 +3338,14 @@ public class MoveGeneratorInfoEntry
                     case Piece.PieceType.Recaller:
                         specialType = SpecialType.TeleportRecall;
                         break;
+                    case PieceType.AmoebaCitadel:
+                    case PieceType.AmoebaGryphon:
+                    case PieceType.AmoebaRaven:
+                    case PieceType.AmoebaArchbishop:
+                    case PieceType.AmoebaKnight:
+                    case PieceType.AmoebaPawn:
+                        specialType = SpecialType.AmoebaCombine;
+                        break;
                     case Piece.PieceType.Bunker:
                     case Piece.PieceType.Train:
                     case Piece.PieceType.Carrier:
@@ -3209,7 +3363,7 @@ public class MoveGeneratorInfoEntry
             {
                 specialType = Move.SpecialType.EmptyAbility;
 
-                if ((pte.pieceProperty & Piece.PieceProperty.Splitter) != 0)
+                if ((pte.pieceProperty & Piece.PieceProperty.Splitter) != 0 || (pte.piecePropertyB & Piece.PiecePropertyB.Amoeba) != 0)
                 {
                     specialType = SpecialType.Spawn;
                 }
@@ -3298,6 +3452,27 @@ public class MoveGeneratorInfoEntry
                                 break;
                         }
                     }
+                }
+                switch (pt)
+                {
+                    case PieceType.WarpWeaver:
+                        specialType = SpecialType.AimOccupied;
+                        break;
+                    case PieceType.Cannon:
+                        specialType = SpecialType.AimEnemy;
+                        break;
+                    case PieceType.MegaCannon:
+                        specialType = SpecialType.AimEnemy;
+                        break;
+                    case PieceType.SteelGolem:
+                        specialType = SpecialType.AimEnemy;
+                        break;
+                    case PieceType.SteelPuppet:
+                        specialType = SpecialType.AimEnemy;
+                        break;
+                    case PieceType.MetalFox:
+                        specialType = SpecialType.AimAny;
+                        break;
                 }
             }
 
@@ -4455,6 +4630,373 @@ public class MoveGeneratorInfoEntry
                         }
                     }
                     break;
+                case MoveGeneratorAtom.E:   //(0,2) then rook not backwards
+                    //up
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, 2, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        //3 rays
+                        (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, pa, specialType, pte, mgie, mbt);
+                        if (moveMetadata != null && (canContinue || wasGenerated))
+                        {
+                            //It is possible for wasGenerated to be false but I still need to report the middling step
+                            //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
+                            //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
+                            uint key = Move.PackMove((byte)x, (byte)y, (byte)(targetX), (byte)(targetY));
+                            if (!moveMetadata.ContainsKey(key))
+                            {
+                                moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 0), MoveMetadata.MakePathTag(mgie.atom, 1), MoveMetadata.MakePathTag(mgie.atom, 2) }));
+                            }
+                        }
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
+                            {
+                                //up then left
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 0, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 0));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
+                            {
+                                //up then right
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 0, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 1));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //up then up
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 2));
+                            }
+                        }
+                    }
+                    //down
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, -2, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        //3 rays
+                        (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, pa, specialType, pte, mgie, mbt);
+                        if (moveMetadata != null && (canContinue || wasGenerated))
+                        {
+                            //It is possible for wasGenerated to be false but I still need to report the middling step
+                            //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
+                            //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
+                            uint key = Move.PackMove((byte)x, (byte)y, (byte)(targetX), (byte)(targetY));
+                            if (!moveMetadata.ContainsKey(key))
+                            {
+                                moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 3), MoveMetadata.MakePathTag(mgie.atom, 4), MoveMetadata.MakePathTag(mgie.atom, 5) }));
+                            }
+                        }
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
+                            {
+                                //down then left
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 0, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 3));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
+                            {
+                                //down then right
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 0, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 4));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //down then down
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 5));
+                            }
+                        }
+                    }
+                    //left
+                    //actually no condition
+                    //This looks very cursed
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -2, 0, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        //3 rays
+                        (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, pa, specialType, pte, mgie, mbt);
+                        if (moveMetadata != null && (canContinue || wasGenerated))
+                        {
+                            //It is possible for wasGenerated to be false but I still need to report the middling step
+                            //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
+                            //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
+                            uint key = Move.PackMove((byte)x, (byte)y, (byte)(targetX), (byte)(targetY));
+                            if (!moveMetadata.ContainsKey(key))
+                            {
+                                moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 6), MoveMetadata.MakePathTag(mgie.atom, 7), MoveMetadata.MakePathTag(mgie.atom, 8) }));
+                            }
+                        }
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //left then up
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 6));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //left then down
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 7));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
+                            {
+                                //left then left
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 0, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 8));
+                            }
+                        }
+                    }
+                    //right
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 2, 0, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        //3 rays
+                        (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, pa, specialType, pte, mgie, mbt);
+                        if (moveMetadata != null && (canContinue || wasGenerated))
+                        {
+                            //It is possible for wasGenerated to be false but I still need to report the middling step
+                            //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
+                            //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
+                            uint key = Move.PackMove((byte)x, (byte)y, (byte)(targetX), (byte)(targetY));
+                            if (!moveMetadata.ContainsKey(key))
+                            {
+                                moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 9), MoveMetadata.MakePathTag(mgie.atom, 10), MoveMetadata.MakePathTag(mgie.atom, 11) }));
+                            }
+                        }
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //right then up
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 9));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //right then down
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 0, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 10));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
+                            {
+                                //right then right
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 0, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 11));
+                            }
+                        }
+                    }
+                    break;
+                case MoveGeneratorAtom.J:   //(2,2) then bishop not backwards
+                    //V allows the weird ricochet things in the vertical directions (<> shape paths
+                    //H allows the weird ricochet things in the horizontal directions (V^ shape paths)
+
+                    //up left
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -2, 2, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        //3 rays
+                        (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, pa, specialType, pte, mgie, mbt);
+                        if (moveMetadata != null && (canContinue || wasGenerated))
+                        {
+                            //It is possible for wasGenerated to be false but I still need to report the middling step
+                            //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
+                            //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
+                            uint key = Move.PackMove((byte)x, (byte)y, (byte)(targetX), (byte)(targetY));
+                            if (!moveMetadata.ContainsKey(key))
+                            {
+                                moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 0), MoveMetadata.MakePathTag(mgie.atom, 1), MoveMetadata.MakePathTag(mgie.atom, 2) }));
+                            }
+                        }
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //UL then UR
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 0));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.f)) == 0)
+                            {
+                                //UL then DL
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 1));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.h)) == 0)
+                            {
+                                //UL then UL
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 2));
+                            }
+                        }
+                    }
+                    //up right
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.b) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 2, 2, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        //3 rays
+                        (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, pa, specialType, pte, mgie, mbt);
+                        if (moveMetadata != null && (canContinue || wasGenerated))
+                        {
+                            //It is possible for wasGenerated to be false but I still need to report the middling step
+                            //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
+                            //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
+                            uint key = Move.PackMove((byte)x, (byte)y, (byte)(targetX), (byte)(targetY));
+                            if (!moveMetadata.ContainsKey(key))
+                            {
+                                moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 3), MoveMetadata.MakePathTag(mgie.atom, 4), MoveMetadata.MakePathTag(mgie.atom, 5) }));
+                            }
+                        }
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //UR then UL
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 3));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.f)) == 0)
+                            {
+                                //UR then DR
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 4));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.h)) == 0)
+                            {
+                                //UR then UR
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 5));
+                            }
+                        }
+                    }
+                    //down left
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -2, -2, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        //3 rays
+                        (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, pa, specialType, pte, mgie, mbt);
+                        if (moveMetadata != null && (canContinue || wasGenerated))
+                        {
+                            //It is possible for wasGenerated to be false but I still need to report the middling step
+                            //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
+                            //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
+                            uint key = Move.PackMove((byte)x, (byte)y, (byte)(targetX), (byte)(targetY));
+                            if (!moveMetadata.ContainsKey(key))
+                            {
+                                moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 6), MoveMetadata.MakePathTag(mgie.atom, 7), MoveMetadata.MakePathTag(mgie.atom, 8) }));
+                            }
+                        }
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //DL then DR
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 6));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.b)) == 0)
+                            {
+                                //DL then UL
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 7));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.h)) == 0)
+                            {
+                                //DL then DL
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 8));
+                            }
+                        }
+                    }
+                    //down right
+                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.f) == 0))
+                    {
+                        (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 2, -2, flip);
+                        targetX = x + deltaX;
+                        targetY = y + deltaY;
+
+                        //3 rays
+                        (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, ref b, piece, x, y, targetX, targetY, pa, specialType, pte, mgie, mbt);
+                        if (moveMetadata != null && (canContinue || wasGenerated))
+                        {
+                            //It is possible for wasGenerated to be false but I still need to report the middling step
+                            //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
+                            //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
+                            uint key = Move.PackMove((byte)x, (byte)y, (byte)(targetX), (byte)(targetY));
+                            if (!moveMetadata.ContainsKey(key))
+                            {
+                                moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 9), MoveMetadata.MakePathTag(mgie.atom, 10), MoveMetadata.MakePathTag(mgie.atom, 11) }));
+                            }
+                        }
+
+                        if (canContinue)
+                        {
+                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
+                            {
+                                //DR then DL
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, -1, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 9));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.b)) == 0)
+                            {
+                                //DR then UR
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, 1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 10));
+                            }
+
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.h)) == 0)
+                            {
+                                //DR then DR
+                                (deltaX, deltaY) = Move.TransformBasedOnAlignment(pa, 1, -1, flip);
+                                GenerateOffsetRayMoves(moves, ref b, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 11));
+                            }
+                        }
+                    }
+                    break;
                 case MoveGeneratorAtom.H:   //wheel
                                             //Uses the between points ray logic
                     int cxA = x;
@@ -4852,6 +5394,12 @@ public class MoveGeneratorInfoEntry
                             }
                         }
                     }
+                    break;
+                case MoveGeneratorAtom.S:   //Rose knight
+                    //Hardcoded
+                    deltaX = 1;
+                    deltaY = 2;
+                    GenerateRoseMoves(moves, ref b, piece, x, y, deltaX, deltaY, specialType, pte, mgie, mbt, moveMetadata);
                     break;
                 case MoveGeneratorAtom.Leaper:  //leaper
                                                 //Is this a 4 leaper
@@ -5433,6 +5981,53 @@ public class MoveGeneratorInfoEntry
                         }
                     }
                     break;
+                case MoveGeneratorAtom.CoastTeleport:
+                    ulong coastBitboard = BITBOARD_PATTERN_EDGES;
+                    coastBitboard &= ~b.globalData.bitboard_pieces;
+                    while (coastBitboard != 0)
+                    {
+                        int index = MainManager.PopBitboardLSB1(coastBitboard, out coastBitboard);
+
+                        //Plop a move down
+                        (_, bool wasGenerated) = GenerateSquareSingle(moves, true, ref b, piece, x, y, index & 7, (index & 56) >> 3, Dir.Null, pa, SpecialType.MoveOnly, pte, mbt);
+                        if (moveMetadata != null && wasGenerated)
+                        {
+                            uint key = Move.PackMove((byte)x, (byte)y, (byte)(index & 7), (byte)(index >> 3));
+                            if (!moveMetadata.ContainsKey(key))
+                            {
+                                moveMetadata.Add(key, new MoveMetadata(piece, index & 7, index >> 3, MoveMetadata.PathType.Teleport, SpecialType.MoveOnly, MoveMetadata.MakePathTag(mgie.atom, 0)));
+                            }
+                        }
+                    }
+                    break;
+                case MoveGeneratorAtom.AimMover:
+                    ushort value = Piece.GetPieceSpecialData(piece);
+
+                    switch (pt)
+                    {
+                        case PieceType.SteelGolem:
+                        case PieceType.SteelPuppet:
+                            specialType = SpecialType.CaptureOnly;
+                            break;
+                        case PieceType.Cannon:
+                            specialType = SpecialType.FireCaptureOnly;
+                            break;
+                    }
+
+                    //Debug.Log(value & 63);
+                    if (value != 0)
+                    {
+                        (_, bool wasGeneratedE) = GenerateSquareSingle(moves, true, ref b, piece, x, y, value & 7, (value & 56) >> 3, Dir.Null, pa, specialType, pte, mbt);
+                        if (moveMetadata != null && wasGeneratedE)
+                        {
+                            uint key = Move.PackMove((byte)x, (byte)y, (byte)(value & 7), (byte)((value & 56) >> 3));
+                            if (!moveMetadata.ContainsKey(key))
+                            {
+                                moveMetadata.Add(key, new MoveMetadata(piece, value & 7, (value & 56) >> 3, MoveMetadata.PathType.Teleport, specialType, MoveMetadata.MakePathTag(mgie.atom, 0)));
+                            }
+                        }
+                    }
+                    break;
                 case MoveGeneratorAtom.LensRook:
                     //plop a move down?
                     (bool keepGoingLR, bool wasGeneratedB) = GenerateSquareSingle(moves, true, ref b, piece, x, y, 7 - x, 7 - y, Dir.Null, pa, SpecialType.MoveOnly, pte, mbt);
@@ -5818,7 +6413,7 @@ public class MoveGeneratorInfoEntry
                 }
 
                 //For flying: change type to flying
-                if ((Move.CanFlyOverObstacles(specialType) || Piece.GetPieceModifier(piece) == Piece.PieceModifier.Winged || (pa == PieceAlignment.White && ((b.globalData.playerModifier & Board.PlayerModifier.SideWings) != 0) && (x < 2 || x > 5))) && specialType != SpecialType.FlyingMoveOnly)
+                if ((Move.CanFlyOverObstacles(specialType) || Piece.GetPieceModifier(piece) == Piece.PieceModifier.Winged || ((pte.piecePropertyB & PiecePropertyB.NaturalWinged) != 0) || (pa == PieceAlignment.White && ((b.globalData.playerModifier & Board.PlayerModifier.SideWings) != 0) && (x < 2 || x > 5))) && specialType != SpecialType.FlyingMoveOnly)
                 {
                     if (!Move.CanFlyOverObstacles(specialType))
                     {
@@ -6138,7 +6733,7 @@ public class MoveGeneratorInfoEntry
             if (!keepGoing)
             {
                 //For flying: change type to flying
-                if ((Move.CanFlyOverObstacles(specialType) || Piece.GetPieceModifier(piece) == Piece.PieceModifier.Winged || (pa == PieceAlignment.White && ((b.globalData.playerModifier & Board.PlayerModifier.SideWings) != 0) && (x < 2 || x > 5))) && specialType != SpecialType.FlyingMoveOnly)
+                if ((Move.CanFlyOverObstacles(specialType) || Piece.GetPieceModifier(piece) == Piece.PieceModifier.Winged || ((pte.piecePropertyB & PiecePropertyB.NaturalWinged) != 0) || (pa == PieceAlignment.White && ((b.globalData.playerModifier & Board.PlayerModifier.SideWings) != 0) && (x < 2 || x > 5))) && specialType != SpecialType.FlyingMoveOnly)
                 {
                     if (!Move.CanFlyOverObstacles(specialType))
                     {
@@ -6261,6 +6856,299 @@ public class MoveGeneratorInfoEntry
         }
 
         return GenerateOffsetRayMoves(moves, ref b, piece, x, y, startX, startY, dx, dy, specialType, pte, dist, mbt, moveMetadata, pathTag);
+    }
+
+    public static void GenerateRoseMoves(List<uint> moves, ref Board b, uint piece, int x, int y, int deltaX, int deltaY, Move.SpecialType specialType, PieceTableEntry pte, MoveGeneratorInfoEntry mgie, MoveBitTable mbt, Dictionary<uint, MoveMetadata> moveMetadata)
+    {
+        int[][] coordList = new int[8][];
+
+        coordList[0] = new int[2];
+        coordList[1] = new int[2];
+        coordList[2] = new int[2];
+        coordList[3] = new int[2];
+        coordList[4] = new int[2];
+        coordList[5] = new int[2];
+        coordList[6] = new int[2];
+        coordList[7] = new int[2];
+
+        coordList[0][0] = deltaX;
+        coordList[0][1] = deltaY;
+        coordList[1][0] = deltaY;
+        coordList[1][1] = deltaX;
+
+        coordList[2][0] = deltaY;
+        coordList[2][1] = -deltaX;
+        coordList[3][0] = deltaX;
+        coordList[3][1] = -deltaY;
+
+        coordList[4][0] = -deltaX;
+        coordList[4][1] = -deltaY;
+        coordList[5][0] = -deltaY;
+        coordList[5][1] = -deltaX;
+
+        coordList[6][0] = -deltaY;
+        coordList[6][1] = deltaX;
+        coordList[7][0] = -deltaX;
+        coordList[7][1] = deltaY;
+
+        //1, 2
+        //2, 1
+        //2, -1
+        //1, -2
+        //-1, -2
+        //-2, -1
+        //-2, 1
+        //-1, 2
+
+        //MoveMetadata.MakePathTag(mgie.atom, deltaX + (deltaY << 3), 0)
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 0, true, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 0));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 1, true, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 1));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 2, true, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 2));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 3, true, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 3));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 4, true, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 4));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 5, true, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 5));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 6, true, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 6));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 7, true, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 7));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 0, false, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 0));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 1, false, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 1));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 2, false, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 2));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 3, false, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 3));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 4, false, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 4));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 5, false, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 5));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 6, false, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 6));
+        GenerateRoseRay(moves, ref b, piece, x, y, coordList, 7, false, specialType, pte, mbt, moveMetadata, MoveMetadata.MakePathTag(mgie.atom, 7));
+    }
+    public static void GenerateRoseRay(List<uint> moves, ref Board b, uint piece, int x, int y, int[][] coordList, int index, bool forward, Move.SpecialType specialType, PieceTableEntry pte, MoveBitTable mbt, Dictionary<uint, MoveMetadata> moveMetadata, uint pathTag)
+    {
+        //I can precompute these in the above loop but that adds more arguments
+        bool cylindrical = (pte.pieceProperty & Piece.PieceProperty.Cylindrical) != 0;
+        bool tubular = (pte.pieceProperty & Piece.PieceProperty.Sneaky) != 0;
+
+        if (specialType == SpecialType.Spawn)
+        {
+            tubular = false;
+        }
+
+        int rangeMultiplier = 1;
+        bool specialRange = (pte.pieceProperty & Piece.PieceProperty.RangeChange) != 0;
+
+        if ((specialType == SpecialType.ChargeMove || specialType == SpecialType.ChargeMoveReset || specialType == SpecialType.FireCaptureOnly) && (pte.piecePropertyB & (Piece.PiecePropertyB.ChargeEnhanceStack | Piece.PiecePropertyB.ChargeEnhanceStackReset)) != 0)
+        {
+            rangeMultiplier = Piece.GetPieceSpecialData(piece);
+        }
+
+        Move.Dir dir = Dir.Null;
+
+        Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
+
+        if (pa == Piece.PieceAlignment.Black && (b.globalData.enemyModifier & Board.EnemyModifier.Knave) != 0)
+        {
+            tubular = true;
+        }
+
+        int tempX = x;
+        int tempY = y;
+
+        int lastTempX = tempX;
+        int lastTempY = tempY;
+
+        /*
+        if (moveMetadata != null)
+        {
+            bool isRider = false;
+            if ((x - tempX) > 1 || (x - tempX) < -1 || (y - tempY) > 1 || (y - tempY) < -1)
+            {
+                isRider = true;
+            }
+            MoveMetadata md;
+            uint mdKey = Move.PackMove((byte)x, (byte)y, (byte)(tempX), (byte)(tempY));
+            if ((lastTempX != x || lastTempY != y) && !moveMetadata.ContainsKey(mdKey))
+            {
+                if (isRider)
+                {
+                    md = new MoveMetadata(piece, tempX, tempY, MoveMetadata.PathType.Leaper, specialType, pathTag);
+                    moveMetadata.Add(mdKey, md);
+                }
+                else
+                {
+                    md = new MoveMetadata(piece, tempX, tempY, MoveMetadata.PathType.Slider, specialType, pathTag);
+                    moveMetadata.Add(mdKey, md);
+                }
+            }
+        }
+        */
+
+        bool wasGenerated = true;
+        bool keepGoing = true;
+
+        bool canMove = true;
+        int moveIndex = index;
+        while (true)
+        {
+            lastTempX = tempX;
+            lastTempY = tempY;
+            //tempX += deltaX;
+            //tempY += deltaY;
+            tempX += coordList[index][0];
+            tempY += coordList[index][1];
+
+            //Debug.Log(tempX + " " + tempY + " " + index + " " + forward + " " + coordList[index][0] + " " + coordList[index][1]);
+            if (forward)
+            {
+                index++;
+                if (index >= 8)
+                {
+                    index -= 8;
+                }
+            }
+            else
+            {
+                index--;
+                if (index < 0)
+                {
+                    index += 8;
+                }
+            }
+
+            //Out of bounds?
+            if (tempX < 0 || tempX > 7)
+            {
+                if (!cylindrical)
+                {
+                    keepGoing = false;
+                    break;
+                }
+
+                if (cylindrical)
+                {
+                    if (tempX < 0)
+                    {
+                        tempX += 8;
+                    }
+                    else
+                    {
+                        tempX -= 8;
+                    }
+                }
+            }
+            if (tempY < 0 || tempY > 7)
+            {
+                if (!tubular)
+                {
+                    keepGoing = false;
+                    break;
+                }
+
+                if (tempY < 0)
+                {
+                    tempY += 8;
+                }
+                else
+                {
+                    tempY -= 8;
+                }
+                if (specialType != SpecialType.FlyingMoveOnly)
+                {
+                    specialType = Move.SpecialType.MoveOnly;
+                }
+            }
+
+            //Is an obstacle in the way?
+            uint obstaclePiece = b.GetPieceAtCoordinate(tempX, tempY);
+            (keepGoing, wasGenerated) = GenerateSquareSingle(moves, canMove, ref b, piece, x, y, tempX, tempY, dir, pa, specialType, pte, mbt);
+
+            if (moveMetadata != null && (keepGoing || wasGenerated))
+            {
+                MoveMetadata md;
+                uint mdKey = Move.PackMove((byte)x, (byte)y, (byte)(tempX), (byte)(tempY));
+                uint nkey = Move.PackMove((byte)x, (byte)y, (byte)(lastTempX), (byte)(lastTempY));
+                if (!moveMetadata.ContainsKey(mdKey))
+                {
+                    md = new MoveMetadata(piece, tempX, tempY, MoveMetadata.PathType.Leaper, specialType, pathTag);
+                    if ((lastTempX != x || lastTempY != y) && moveMetadata.ContainsKey(nkey))
+                    {
+                        md.AddPredecessor(moveMetadata[nkey]);
+                    }
+                    moveMetadata.Add(mdKey, md);
+                }
+                else
+                {
+                    md = moveMetadata[mdKey];
+                    md.pathTags.Add(pathTag);
+                    if ((lastTempX != x || lastTempY != y) && moveMetadata.ContainsKey(nkey))
+                    {
+                        md.AddPredecessor(moveMetadata[nkey]);
+                    }
+                }
+            }
+
+            if ((obstaclePiece == 0 || Piece.GetPieceAlignment(obstaclePiece) == pa) && specialType == SpecialType.LongLeaperCaptureOnly)
+            {
+                return;
+            }
+
+            if (!keepGoing)
+            {
+                //For flying: change type to flying
+                if ((Move.CanFlyOverObstacles(specialType) || Piece.GetPieceModifier(piece) == Piece.PieceModifier.Winged || ((pte.piecePropertyB & PiecePropertyB.NaturalWinged) != 0) || (pa == PieceAlignment.White && ((b.globalData.playerModifier & Board.PlayerModifier.SideWings) != 0) && (x < 2 || x > 5))) && specialType != SpecialType.FlyingMoveOnly)
+                {
+                    if (!Move.CanFlyOverObstacles(specialType))
+                    {
+                        //No conversion of capture only to move only
+                        if (Move.SpecialMoveCantTargetEmpty(specialType))
+                        {
+                            return;
+                        }
+                        switch (specialType)
+                        {
+                            case SpecialType.AllyAbility:
+                            case SpecialType.EmptyAbility:
+                            case SpecialType.EnemyAbility:
+                            case SpecialType.PassiveAbility:
+                                break;
+                            default:
+                                specialType = SpecialType.FlyingMoveOnly;
+                                break;
+                        }
+                    }
+
+                    if (moveMetadata != null && (!wasGenerated) && moveMetadata != null)
+                    {
+                        MoveMetadata md;
+                        uint mdKey = Move.PackMove((byte)x, (byte)y, (byte)(tempX), (byte)(tempY));
+                        if (!moveMetadata.ContainsKey(mdKey))
+                        {
+                            md = new MoveMetadata(piece, tempX, tempY, MoveMetadata.PathType.Leaper, specialType, pathTag);
+                            if (lastTempX != x || lastTempY != y)
+                            {
+                                md.AddPredecessor(moveMetadata[Move.PackMove((byte)x, (byte)y, (byte)(lastTempX), (byte)(lastTempY))]);
+                            }
+                            moveMetadata.Add(mdKey, md);
+                        }
+                        else
+                        {
+                            md = moveMetadata[mdKey];
+                            md.pathTags.Add(pathTag);
+                            if (lastTempX != x || lastTempY != y)
+                            {
+                                md.AddPredecessor(moveMetadata[Move.PackMove((byte)x, (byte)y, (byte)(lastTempX), (byte)(lastTempY))]);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (specialType == SpecialType.LongLeaperCaptureOnly && (Piece.GetPieceAlignment(obstaclePiece) == pa))
+                    {
+                        return;
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        return;
     }
 
     //keep going, wasGenerated
@@ -6550,7 +7438,7 @@ public class MoveGeneratorInfoEntry
         uint obstaclePiece = b.GetPieceAtCoordinate(tX, tY);
         if (obstaclePiece != 0)
         {
-            PieceTableEntry pteO = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(obstaclePiece));
+            PieceTableEntry pteO = GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(obstaclePiece));
 
             if (Piece.GetPieceAlignment(obstaclePiece) == pa)
             {
@@ -6825,7 +7713,7 @@ public class MoveGeneratorInfoEntry
         uint obstaclePiece = b.GetPieceAtCoordinate(tX, tY);
         if (obstaclePiece != 0)
         {
-            PieceTableEntry pteO = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(obstaclePiece));
+            PieceTableEntry pteO = GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(obstaclePiece));
 
             if (Piece.GetPieceAlignment(obstaclePiece) == pa)
             {
@@ -7096,7 +7984,7 @@ public class MoveGeneratorInfoEntry
         uint obstaclePiece = b.GetPieceAtCoordinate(tX, tY);
         if (obstaclePiece != 0)
         {
-            PieceTableEntry pteO = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(obstaclePiece));
+            PieceTableEntry pteO = GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(obstaclePiece));
 
             if (Piece.GetPieceAlignment(obstaclePiece) == pa)
             {
@@ -7884,7 +8772,7 @@ public class MoveGeneratorInfoEntry
             //return moveStartIndex;
         }
 
-        PieceTableEntry pte = GlobalPieceManager.Instance.GetPieceTableEntry(Piece.GetPieceType(targetPiece));
+        PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(targetPiece));
 
         ulong pawnBitboard = 0;
         if (Piece.GetPieceAlignment(piece) == Piece.PieceAlignment.White)

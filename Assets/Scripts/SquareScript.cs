@@ -168,11 +168,11 @@ public class SquareScript : MonoBehaviour
 
         if (oldColor.a == 0)
         {
-            moveHighlight.color = new Color(1, 1, 1, 0.8f);
+            moveHighlight.color = new Color(1, 1, 0.8f, 0.8f);
             return;
         }
 
-        moveHighlight.color = new Color(1 - oldColor.r / 2, 1 - oldColor.g / 2, 1 - oldColor.b / 2, 0.8f);
+        moveHighlight.color = new Color(1 - oldColor.r / 2, 1 - oldColor.g / 4, 1 - oldColor.b / 2, 0.8f);
     }
     public void HighlightLegal(bool specialType, bool giant)
     {

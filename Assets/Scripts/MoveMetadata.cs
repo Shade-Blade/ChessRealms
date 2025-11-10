@@ -94,6 +94,11 @@ public class MoveMetadata
         return (uint)(((int)mga << 16) + (index << 8) + indexB);
     }
 
+    public static string PathTagToString(uint pathTag)
+    {
+        return ((MoveGeneratorInfoEntry.MoveGeneratorAtom)(pathTag >> 16)) + " " + (pathTag & 0xffff);
+    }
+
     public void AddSuccessor(MoveMetadata successor)
     {
         if (successors == null)

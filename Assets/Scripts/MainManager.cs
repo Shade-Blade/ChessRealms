@@ -73,7 +73,7 @@ public class MainManager : MonoBehaviour
     {
         Application.targetFrameRate = 60;
 
-        //GlobalPieceManager.Instance.GetPieceTableEntry(Piece.PieceType.King);
+        //GlobalPieceManager.GetPieceTableEntry(Piece.PieceType.King);
 
         //currently 1.7 mil per second
         //"Good" speed = 100 mil?
@@ -91,13 +91,16 @@ public class MainManager : MonoBehaviour
         
         //optimization: now it is 350k again
 
-        for (int i = 0; i <= 4; i++)
+        //~500k normal after optimizing TickDownStatusEffects to reduce PieceTableEntry checks
+
+        //220 ish seconds for depth 6 normal
+        for (int i = 0; i <= 3; i++)
         {
             DateTime currentTime = DateTime.UtcNow;
             long unixTime = ((DateTimeOffset)currentTime).ToUnixTimeMilliseconds();
 
             Board board = new Board();
-            board.Setup(Board.BoardPreset.TerrainTest);
+            board.Setup(Board.BoardPreset.Normal);
 
             ulong perftResult = Board.PerftTest(ref board, i);
 

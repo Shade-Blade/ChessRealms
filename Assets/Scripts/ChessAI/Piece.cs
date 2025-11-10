@@ -820,19 +820,25 @@ public static class Piece
 
         InvincibleNoEnemyAdjacent = 1uL << 20,
 
-        SeasonalSwapper = 1uL << 22,
-        SeasonalSwapperB = 1uL << 23,
+        //Made into hardcoded things for optimization per turn
+        //SeasonalSwapper = 1uL << 22,
+        //SeasonalSwapperB = 1uL << 23,
 
         ClockworkSwapperB = 1uL << 24,
 
-        Fading = 1uL << 25,
+        //left unimplemented because it is difficult to give a balanced value
+        //Many fading pieces reach an asymptote of value because you lose them after some time
+        //If you can't win in 10 turns they lose all value (So if I underprice them you can basically go from having little value to having too much as you can instantly use the real material differential to win)
+        //Fading = 1uL << 25,
+
         ShiftImmune = 1uL << 26,
 
         //NoCount = 1uL << 27,        //not counted in piece count    (Note that for implementation reasons ArcanaMoon and MoonIllusion do not do this)
         Giant = 1uL << 27,
 
-        DaySwapper = 1uL << 28,
-        DaySwapperB = 1uL << 29,
+        //Made into hardcoded things for optimization per turn
+        //DaySwapper = 1uL << 28,
+        //DaySwapperB = 1uL << 29,
 
         InvincibleFar = 1uL << 30,  //inverse of close (i.e. invincible from range 2+)
         InvincibleFar2 = 1uL << 31, //invincible from range 3+ (So knights can attack it)
@@ -843,6 +849,23 @@ public static class Piece
         GliderMover = 1uL << 32,
         CoastMover = 1uL << 33,
         ShadowMover = 1uL << 34,
+
+        //AimMover = 1uL << 35,
+        Amoeba = 1uL << 36,
+
+        Momentum = 1uL << 37,
+        ReverseMomentum = 1uL << 38,
+        BounceMomentum = 1uL << 39,
+
+        TandemMover = 1uL << 40,
+        TandemMoverDiag = 1uL << 41,
+        TandemMoverOrtho = 1uL << 42,
+        EnemyTandemMover = 1uL << 43,
+        EnemyTandemMoverOrtho = 1uL << 44,
+
+        HoneyExplode = 1uL << 45,
+
+        NaturalWinged = 1uL << 46,
 
         TrueShiftImmune = ShiftImmune | Giant,
 
@@ -1027,8 +1050,8 @@ public static class Piece
         Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
         Piece.PieceAlignment paA = Piece.GetPieceAlignment(attackerPiece);
 
-        //PieceTableEntry pteA = GlobalPieceManager.Instance.GetPieceTableEntry(ptA);
-        //PieceTableEntry pteV = GlobalPieceManager.Instance.GetPieceTableEntry(ptV);
+        //PieceTableEntry pteA = GlobalPieceManager.GetPieceTableEntry(ptA);
+        //PieceTableEntry pteV = GlobalPieceManager.GetPieceTableEntry(ptV);
 
         //Voided can't capture
         if (Piece.GetPieceStatusEffect(attackerPiece) == PieceStatusEffect.Soaked)
@@ -1218,6 +1241,11 @@ public static class Piece
         }
 
         if ((pteV.pieceProperty & PieceProperty.Invincible) != 0)
+        {
+            return true;
+        }
+
+        if (pteV.type == PieceType.MegaCannon && Piece.GetPieceSpecialData(piece) != 0)
         {
             return true;
         }

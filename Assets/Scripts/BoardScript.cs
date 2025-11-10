@@ -404,6 +404,48 @@ public class BoardScript : MonoBehaviour
             }
         }
 
+        //targetted squares
+        switch (Piece.GetPieceType(board.pieces[piece.x + (piece.y << 3)]))
+        {
+            case PieceType.MegaCannon:
+                int targetted = Piece.GetPieceSpecialData(board.pieces[piece.x + (piece.y << 3)]);
+                if (targetted != 0)
+                {
+                    int targetIndex = targetted & 63;
+
+                    squares[targetIndex].HighlightTargetted();
+
+                    if ((targetIndex & 7) < 7)
+                    {
+                        squares[targetIndex + 1].HighlightTargetted();
+                    }
+                    if ((targetIndex & 7) > 0)
+                    {
+                        squares[targetIndex - 1].HighlightTargetted();
+                    }
+                    if ((targetIndex) < 56)
+                    {
+                        squares[targetIndex + 8].HighlightTargetted();
+                    }
+                    if ((targetIndex) >= 8)
+                    {
+                        squares[targetIndex - 8].HighlightTargetted();
+                    }
+                }
+                break;
+            case PieceType.SteelGolem:
+            case PieceType.SteelPuppet:
+            case PieceType.Cannon:
+            case PieceType.MetalFox:
+                int targettedB = Piece.GetPieceSpecialData(board.pieces[piece.x + (piece.y << 3)]);
+                if (targettedB != 0)
+                {
+                    int targetIndex = targettedB & 63;
+                    squares[targetIndex].HighlightTargetted();
+                }
+                break;
+        }
+
         selectedPiece = piece;
     }
     public void DestroyLastMovedTrail()
@@ -527,7 +569,10 @@ public class BoardScript : MonoBehaviour
             {
                 Destroy(lastMoveTrail.gameObject);
             }
-
+            if (illegalMoveTrail != null)
+            {
+                Destroy(illegalMoveTrail.gameObject);
+            }
             if (checkMoveTrail != null)
             {
                 Destroy(checkMoveTrail.gameObject);
@@ -713,7 +758,10 @@ public class BoardScript : MonoBehaviour
             {
                 Destroy(lastMoveTrail.gameObject);
             }
-
+            if (illegalMoveTrail != null)
+            {
+                Destroy(illegalMoveTrail.gameObject);
+            }
             if (checkMoveTrail != null)
             {
                 Destroy(checkMoveTrail.gameObject);
@@ -789,6 +837,7 @@ public class BoardScript : MonoBehaviour
             List<MoveMetadata> moveTrail = null;
             if (moveMetadata.ContainsKey(Move.RemoveNonLocation(move))) {
                 moveTrail = moveMetadata[Move.RemoveNonLocation(move)].TracePath(Move.GetFromX(move), Move.GetFromY(move), Move.GetDir(move));
+                //Debug.Log(MoveMetadata.PathTagToString(moveTrail[0].pathTags[0]));
             }
 
             /*
@@ -854,6 +903,10 @@ public class BoardScript : MonoBehaviour
                 lastMoveTrail.Setup(Move.GetFromX(move), Move.GetFromY(move), moveTrail);
             }
 
+            if (illegalMoveTrail != null)
+            {
+                Destroy(illegalMoveTrail.gameObject);
+            }
             if (checkMoveTrail != null)
             {
                 Destroy(checkMoveTrail.gameObject);
@@ -1087,6 +1140,10 @@ public class BoardScript : MonoBehaviour
             lastMoveTrail.Setup(Move.GetFromX(aiMove), Move.GetFromY(aiMove), moveTrail);
         }
 
+        if (illegalMoveTrail != null)
+        {
+            Destroy(illegalMoveTrail.gameObject);
+        }
         if (checkMoveTrail != null)
         {
             Destroy(checkMoveTrail.gameObject);
@@ -1552,9 +1609,24 @@ public class BoardScript : MonoBehaviour
             }
         }
 
-        float kingValue = (GlobalPieceManager.Instance.GetPieceTableEntry(PieceType.King).pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE);
+        float kingValue = (GlobalPieceManager.GetPieceTableEntry(PieceType.King).pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE);
         scoreText.text = "Pieces (" + (board.whitePerPlayerInfo.pieceCount - board.blackPerPlayerInfo.pieceCount) + ")\n" + (board.whitePerPlayerInfo.pieceCount) + "\n<color=#000000>" + (board.blackPerPlayerInfo.pieceCount) + "</color>";
         scoreText.text += "\n\nValues (" + (((board.whitePerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) - (board.blackPerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE))/2f) + ")\n" + (((board.whitePerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) - kingValue)/2f) + "\n" + (board.whitePerPlayerInfo.pieceValueSumX2 / GlobalPieceManager.KING_VALUE_BONUS) + " king(s)\n<color=#000000>" + (((board.blackPerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) - kingValue) / 2f) + "\n" + (board.blackPerPlayerInfo.pieceValueSumX2 / GlobalPieceManager.KING_VALUE_BONUS) + " king(s)\n</color>";
+
+        int whiteMoves = 0;
+        int blackMoves = 0;
+        if (board.blackToMove) {
+            blackMoves = moveList.Count;
+            whiteMoves = enemyMoveList.Count;
+        } else
+        {
+            blackMoves = enemyMoveList.Count;
+            whiteMoves = moveList.Count;
+        }
+        scoreText.text += "\n\nMoves Available";
+        scoreText.text += "\n" + whiteMoves;
+        scoreText.text += "\n<color=#000000>" + blackMoves + "</color>";
+
         if (gameOver)
         {
             if (winnerPA == PieceAlignment.Null)

@@ -17,16 +17,19 @@ public class MoveTrailScript : MonoBehaviour
     {
         lr.startColor = new Color(0.6f, 0.3f, 0, 0.5f);
         lr.endColor = new Color(1, 0.5f, 0, 0.8f);
+        lr.widthMultiplier *= 1.25f;
     }
     public void SetColorMoveCheck()
     {
         lr.startColor = new Color(0.6f, 0, 0, 0.5f);
         lr.endColor = new Color(1, 0, 0, 0.8f);
+        lr.widthMultiplier *= 0.8f;
     }
     public void SetColorMoveSecondary()
     {
         lr.startColor = new Color(0f, 0.6f, 0.6f, 0.5f);
         lr.endColor = new Color(0, 1, 1, 0.8f);
+        lr.widthMultiplier *= 0.8f;
     }
     public void SetColorMoveStationary()
     {
@@ -69,20 +72,28 @@ public class MoveTrailScript : MonoBehaviour
                     break;
                 case MoveMetadata.PathType.Teleport:
                 case MoveMetadata.PathType.TeleportGiant:
-                    AddTeleportSegment(pointList, pastPos, futurePos);
+                    if (pastX - trail[i].x > 1 || pastX - trail[i].x < -1 || pastY - trail[i].y > 1 || pastY - trail[i].y < -1)
+                    {
+                        AddTeleportSegment(pointList, pastPos, futurePos);
+                    }
                     break;
                 case MoveMetadata.PathType.Leaper:
                 case MoveMetadata.PathType.LeaperGiant:
-                    if (pastX - trail[i].x < -4 || pastX - trail[i].x > 4)
+                    //length 1 leaper section = only slider segment
+                    if (pastX - trail[i].x > 1 || pastX - trail[i].x < -1 || pastY - trail[i].y > 1 || pastY - trail[i].y < -1)
                     {
-                        AddLeaperSegmentCylinder(pointList, pastPos, futurePos);
-                    }
-                    else if (pastY - trail[i].y < -4 || pastY - trail[i].y > 4)
-                    {
-                        AddLeaperSegmentTubular(pointList, pastPos, futurePos);
-                    } else
-                    {
-                        AddLeaperSegment(pointList, pastPos, futurePos);
+                        if (pastX - trail[i].x < -4 || pastX - trail[i].x > 4)
+                        {
+                            AddLeaperSegmentCylinder(pointList, pastPos, futurePos);
+                        }
+                        else if (pastY - trail[i].y < -4 || pastY - trail[i].y > 4)
+                        {
+                            AddLeaperSegmentTubular(pointList, pastPos, futurePos);
+                        }
+                        else
+                        {
+                            AddLeaperSegment(pointList, pastPos, futurePos);
+                        }
                     }
                     break;
             }
@@ -358,7 +369,7 @@ public class MoveTrailScript : MonoBehaviour
     {
         float offset = BoardScript.SQUARE_SIZE / 2f;
 
-        lr.widthMultiplier = 1f;
+        lr.widthMultiplier *= 3f;
 
         for (int i = 0; i < pointList.Count; i++)
         {

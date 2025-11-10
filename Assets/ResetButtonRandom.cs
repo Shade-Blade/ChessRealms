@@ -35,16 +35,16 @@ public class ResetButtonRandom : MonoBehaviour
 
         List<PieceTableEntry> piecePool = new List<PieceTableEntry>();
 
-        for (int i = 0; i < GlobalPieceManager.Instance.pieceTable.Length; i++)
+        for (int i = 0; i < GlobalPieceManager.pieceTable.Length; i++)
         {
-            if (GlobalPieceManager.Instance.pieceTable[i] == null || GlobalPieceManager.Instance.pieceTable[i].type == Piece.PieceType.King || GlobalPieceManager.Instance.pieceTable[i].type == Piece.PieceType.Rock)
+            if (GlobalPieceManager.pieceTable[i] == null || GlobalPieceManager.pieceTable[i].type == Piece.PieceType.King || GlobalPieceManager.pieceTable[i].type == Piece.PieceType.Rock)
             {
                 continue;
             }
 
-            if (pieceClass == Piece.PieceClass.None || GlobalPieceManager.Instance.pieceTable[i].pieceClass == pieceClass)
+            if (pieceClass == Piece.PieceClass.None || GlobalPieceManager.pieceTable[i].pieceClass == pieceClass)
             {
-                piecePool.Add(GlobalPieceManager.Instance.pieceTable[i]);
+                piecePool.Add(GlobalPieceManager.pieceTable[i]);
             }
         }
 
@@ -305,7 +305,7 @@ public class ResetButtonRandom : MonoBehaviour
 
         for (int i = 0; i < extraPieces.Count; i++)
         {
-            subArmy.Add(GlobalPieceManager.Instance.GetPieceTableEntry(extraPieces[i]));
+            subArmy.Add(GlobalPieceManager.GetPieceTableEntry(extraPieces[i]));
         }
 
         string debug = "";
@@ -330,7 +330,7 @@ public class ResetButtonRandom : MonoBehaviour
 
         subArmy.Sort((a, b) => (GiantScore(a) - GiantScore(b)));
         subArmy.Reverse();
-        subArmy.Insert(0, GlobalPieceManager.Instance.GetPieceTableEntry(Piece.PieceType.King));
+        subArmy.Insert(0, GlobalPieceManager.GetPieceTableEntry(Piece.PieceType.King));
         subArmy = MainManager.ShuffleListSegments(subArmy, rowSize);
 
         //Don't put the king on the edge (especially bad for row size < 8, you can rush the king on the exposed side)
@@ -535,24 +535,24 @@ public class ResetButtonRandom : MonoBehaviour
 
         List<PieceTableEntry> piecePool = new List<PieceTableEntry>();
 
-        for (int i = 0; i < GlobalPieceManager.Instance.pieceTable.Length; i++)
+        for (int i = 0; i < GlobalPieceManager.pieceTable.Length; i++)
         {
-            if (GlobalPieceManager.Instance.pieceTable[i] == null || GlobalPieceManager.Instance.pieceTable[i].type == Piece.PieceType.King || GlobalPieceManager.Instance.pieceTable[i].type == Piece.PieceType.Rock)
+            if (GlobalPieceManager.pieceTable[i] == null || GlobalPieceManager.pieceTable[i].type == Piece.PieceType.King || GlobalPieceManager.pieceTable[i].type == Piece.PieceType.Rock)
             {
                 continue;
             }
-            if (GlobalPieceManager.Instance.pieceTable[i].type == Piece.PieceType.GeminiTwin || GlobalPieceManager.Instance.pieceTable[i].type == Piece.PieceType.MoonIllusion)
+            if (GlobalPieceManager.pieceTable[i].type == Piece.PieceType.GeminiTwin || GlobalPieceManager.pieceTable[i].type == Piece.PieceType.MoonIllusion)
             {
                 continue;
             }
-            if (GlobalPieceManager.Instance.pieceTable[i].pieceValueX2 == 0)
+            if (GlobalPieceManager.pieceTable[i].pieceValueX2 == 0)
             {
                 continue;
             }
 
-            if (pieceClass == Piece.PieceClass.None || GlobalPieceManager.Instance.pieceTable[i].pieceClass == pieceClass)
+            if (pieceClass == Piece.PieceClass.None || GlobalPieceManager.pieceTable[i].pieceClass == pieceClass)
             {
-                piecePool.Add(GlobalPieceManager.Instance.pieceTable[i]);
+                piecePool.Add(GlobalPieceManager.pieceTable[i]);
             }
         }
 
