@@ -38,6 +38,11 @@ public class BoardScript : MonoBehaviour
 
     public List<MoveTrailScript> extraMoveTrails;
 
+    public Coroutine animCoroutine;
+    public bool animating;
+    public PieceScript lastMovedPiece;
+    public float animationSpeed = 5;
+
     public PieceScript selectedPiece;
 
     public ChessAI chessAI;
@@ -111,6 +116,11 @@ public class BoardScript : MonoBehaviour
 
     public void ResetBoard(Board.BoardPreset bp)
     {
+        animating = false;
+        if (animCoroutine != null)
+        {
+            StopCoroutine(animCoroutine);
+        }
         DestroyLastMovedTrail();
         whiteIsAI = false;  //so you can make your own move
         ResetSelected();
@@ -610,7 +620,8 @@ public class BoardScript : MonoBehaviour
                 }
             }
 
-            FixBoardBasedOnPosition();
+            StartAnimatingBoardUpdate(move, board.GetLastMoveStationary(), null, boardUpdateMetadata);
+            //FixBoardBasedOnPosition();
 
             if (board.GetVictoryCondition() != PieceAlignment.Null)
             {
@@ -665,7 +676,8 @@ public class BoardScript : MonoBehaviour
                 }
                 else if (stalemateAI)
                 {
-                    winnerPA = PieceAlignment.Null;
+                    //new: stalemate is loss
+                    winnerPA = PieceAlignment.White;
                     Debug.Log("Draw (Black stalemated)");
                     gameOver = true;
                 }
@@ -789,6 +801,12 @@ public class BoardScript : MonoBehaviour
 
     public void TryMove(PieceScript ps, Piece.PieceAlignment pa, int x, int y, int newX, int newY)
     {
+        //No
+        if (animating)
+        {
+            return;
+        }
+
         //Ai makes moves
         if (whiteIsAI && blackIsAI)
         {
@@ -944,7 +962,8 @@ public class BoardScript : MonoBehaviour
                 }
             }
 
-            FixBoardBasedOnPosition();
+            StartAnimatingBoardUpdate(move, board.GetLastMoveStationary(), moveTrail, boardUpdateMetadata);
+            //FixBoardBasedOnPosition();
 
             if (board.GetVictoryCondition() != PieceAlignment.Null)
             {
@@ -1062,8 +1081,8 @@ public class BoardScript : MonoBehaviour
             }
             else if (stalemateAI)
             {
-                winnerPA = PieceAlignment.Null;
-                Debug.Log("Draw (Black stalemated)");
+                winnerPA = PieceAlignment.White;
+                Debug.Log("Black stalemated");
                 gameOver = true;
             }
             else
@@ -1181,7 +1200,8 @@ public class BoardScript : MonoBehaviour
             }
         }
 
-        FixBoardBasedOnPosition();
+        StartAnimatingBoardUpdate(aiMove, board.GetLastMoveStationary(), moveTrail, boardUpdateMetadata);
+        //FixBoardBasedOnPosition();
 
         bool check = Board.PositionIsCheck(ref board);
         bool stalemate = Board.PositionIsStalemate(ref board);
@@ -1237,8 +1257,9 @@ public class BoardScript : MonoBehaviour
         }
         else if (stalemate)
         {
-            winnerPA = PieceAlignment.Null;
-            Debug.Log("Draw (White stalemated)");
+            //stalemate is loss
+            winnerPA = PieceAlignment.Black;
+            Debug.Log("White stalemated");
             gameOver = true;
         }
     }
@@ -1364,6 +1385,373 @@ public class BoardScript : MonoBehaviour
                 Destroy(psList[i].gameObject);
             }
         }
+    }
+
+    public IEnumerator AnimatePieceSpawn(Piece.PieceType pt, int ofx, int ofy, int otx, int oty)
+    {
+        //Spawn a piece
+
+        int i = otx + (oty << 3);
+        if (pieces[i] != null)
+        {
+            Destroy(pieces[i].gameObject);
+        }
+
+        GameObject go = Instantiate(pieceTemplate, pieceHolder.transform);
+        go.name = "Piece " + i % 8 + " " + i / 8;
+        PieceScript ps = go.GetComponent<PieceScript>();
+        ps.bs = this;
+        pieces[i] = ps;
+        ps.Setup(Piece.SetPieceAlignment(Piece.GetPieceAlignment(pieces[ofx + (ofy << 3)].piece), Piece.SetPieceType(pt, 0)), otx, oty);
+
+        float duration = 0;
+        float animationDuration = 0.2f;
+
+        while (duration < 1)
+        {
+            ps.transform.localScale = Vector3.one * duration;
+
+            duration += Time.deltaTime / animationDuration;
+            yield return null;
+        }
+
+        ps.transform.localScale = Vector3.one;
+    }
+    public IEnumerator AnimatePieceSpin(PieceScript ps, int otx, int oty)
+    {
+        PieceScript targetPiece = ps;
+        if (targetPiece == null)
+        {
+            yield break;
+        }
+
+        if (targetPiece.isGiant)
+        {
+            int dx = Piece.GetPieceSpecialData(targetPiece.piece) & 1;
+            int dy = (Piece.GetPieceSpecialData(targetPiece.piece) & 2) >> 1;
+
+            ps = pieces[ps.x - dx + ((ps.y - dy) << 3)];
+            if (targetPiece == null)
+            {
+                yield break;
+            }
+        }
+
+        Vector3 targetPos = GetSpritePositionFromCoordinates(otx, oty, -0.5f);
+
+        float duration = 0;
+        float animationDuration = 0.2f;
+
+        while (duration < 1)
+        {
+            ps.transform.localEulerAngles = Vector3.forward * duration * 360;
+            duration += Time.deltaTime / animationDuration;
+            yield return null;
+        }
+
+        ps.transform.localEulerAngles = Vector3.zero;
+    }
+    public IEnumerator AnimatePieceCapture(PieceScript ps, int otx, int oty)
+    {
+        PieceScript targetPiece = ps;
+        if (targetPiece == null)
+        {
+            yield break;
+        }
+
+        if (targetPiece.isGiant)
+        {
+            int dx = Piece.GetPieceSpecialData(targetPiece.piece) & 1;
+            int dy = (Piece.GetPieceSpecialData(targetPiece.piece) & 2) >> 1;
+
+            ps = pieces[ps.x - dx + ((ps.y - dy) << 3)];
+            if (targetPiece == null)
+            {
+                yield break;
+            }
+        }
+
+        Vector3 targetPos = GetSpritePositionFromCoordinates(otx, oty, -0.4f);
+
+        float duration = 0;
+        float animationDuration = 0.2f;
+
+        Vector3 startPos = ps.transform.position;
+
+        while (duration < 1)
+        {
+            if (targetPiece.isGiant)
+            {
+                ps.transform.position = startPos + new Vector3(1, 1, 0) * (SQUARE_SIZE / 2) * (duration);
+            }
+            ps.transform.localScale = Vector3.one * (1 - duration);
+
+            duration += Time.deltaTime / animationDuration;
+            yield return null;
+        }
+
+        ps.transform.localScale = Vector3.zero;
+        Destroy(ps.gameObject);
+        pieces[(otx + (oty << 3))] = null;
+    }
+    public IEnumerator AnimatePieceShift(PieceScript ps, int otx, int oty)
+    {
+        PieceScript targetPiece = ps;
+        if (targetPiece == null)
+        {
+            yield break;
+        }
+
+        Vector3 targetPos = GetSpritePositionFromCoordinates(otx, oty, -1.1f);
+
+        while (targetPiece.transform.position != targetPos)
+        {
+            Vector3 delta = (targetPos - targetPiece.transform.position).normalized * animationSpeed * Time.deltaTime;
+
+            if ((targetPos - targetPiece.transform.position).magnitude < animationSpeed * Time.deltaTime)
+            {
+                targetPiece.transform.position = targetPos;
+                break;
+            }
+
+            targetPiece.transform.position += delta;
+            yield return null;
+        }
+
+        if (pieces[ps.x + (ps.y << 3)] != null)
+        {
+            pieces[ps.x + (ps.y << 3)] = null;
+        }
+        pieces[(otx + (oty << 3))] = targetPiece;
+        targetPiece.x = otx;
+        targetPiece.y = oty;
+    }
+    public IEnumerator AnimatePieceMove(int ofx, int ofy, int otx, int oty)
+    {
+        if (ofx < 0 || ofx > 7 || ofy < 0 || ofy > 7)
+        {
+            yield break;
+        }
+
+        PieceScript targetPiece = pieces[ofx + (ofy << 3)];
+        if (targetPiece == null)
+        {
+            yield break;
+        }
+
+        targetPiece.transform.position = GetSpritePositionFromCoordinates(ofx, ofy, -1.1f);
+
+        Vector3 targetPos = GetSpritePositionFromCoordinates(otx, oty, -1.1f);
+
+        while (targetPiece.transform.position != targetPos)
+        {
+            Vector3 delta = (targetPos - targetPiece.transform.position).normalized * animationSpeed * Time.deltaTime;
+
+            if ((targetPos - targetPiece.transform.position).magnitude < animationSpeed * Time.deltaTime)
+            {
+                targetPiece.transform.position = targetPos;
+                break;
+            }
+
+            targetPiece.transform.position += delta;
+            yield return null;
+        }
+    }
+    public IEnumerator AnimatePieceMove(int ofx, int ofy, List<MoveMetadata> moveTrail)
+    {
+        PieceScript targetPiece = pieces[ofx + (ofy << 3)];
+        if (targetPiece == null)
+        {
+            yield break;
+        }
+        targetPiece.transform.position  = GetSpritePositionFromCoordinates(ofx, ofy, -1.1f);
+
+        Vector3 targetPos;
+
+        int sx = ofx;
+        int sy = ofy;
+
+        foreach (MoveMetadata m in moveTrail)
+        {
+            int mx = m.x;
+            int my = m.y;
+
+            if (mx - sx > 4)
+            {
+                mx -= 8;
+            }
+            if (sx - mx > 4)
+            {
+                mx += 8;
+            }
+            if (my - sy > 4)
+            {
+                my -= 8;
+            }
+            if (sy - my > 4)
+            {
+                my += 8;
+            }
+            targetPos = GetSpritePositionFromCoordinates(mx, my, -1.1f);
+            sx = m.x;
+            sy = m.y;
+
+            while (targetPiece.transform.position != targetPos)
+            {
+                Vector3 delta = (targetPos - targetPiece.transform.position).normalized * animationSpeed * Time.deltaTime;
+
+                if ((targetPos - targetPiece.transform.position).magnitude < animationSpeed * Time.deltaTime)
+                {
+                    targetPiece.transform.position = targetPos;
+                    break;
+                }
+
+                targetPiece.transform.position += delta;
+
+                if (targetPiece.transform.position.x > SQUARE_SIZE * 4)
+                {
+                    targetPiece.transform.position -= Vector3.right * SQUARE_SIZE * 8;
+                    targetPos -= Vector3.right * SQUARE_SIZE * 8;
+                }
+                if (targetPiece.transform.position.x < -SQUARE_SIZE * 4)
+                {
+                    targetPiece.transform.position += Vector3.right * SQUARE_SIZE * 8;
+                    targetPos += Vector3.right * SQUARE_SIZE * 8;
+                }
+                if (targetPiece.transform.position.y > SQUARE_SIZE * 4)
+                {
+                    targetPiece.transform.position -= Vector3.up * SQUARE_SIZE * 8;
+                    targetPos -= Vector3.up * SQUARE_SIZE * 8;
+                }
+                if (targetPiece.transform.position.y < -SQUARE_SIZE * 4)
+                {
+                    targetPiece.transform.position += Vector3.up * SQUARE_SIZE * 8;
+                    targetPos += Vector3.up * SQUARE_SIZE * 8;
+                }
+
+                yield return null;
+            }
+            yield return null;
+        }
+    }
+
+    public void StartAnimatingBoardUpdate(uint move, bool lastMoveStationary, List<MoveMetadata> moveTrail, List<BoardUpdateMetadata> boardUpdateMetadata)
+    {
+        animating = true;
+        animCoroutine = StartCoroutine(AnimateBoardUpdate(move, lastMoveStationary, moveTrail, boardUpdateMetadata));
+    }
+
+    public IEnumerator AnimateBoardUpdate(uint move, bool lastMoveStationary, List<MoveMetadata> moveTrail, List<BoardUpdateMetadata> boardUpdateMetadata)
+    {
+        int ofx = Move.GetFromX(move);
+        int ofy = Move.GetFromY(move);
+
+        int otx = Move.GetToX(move);
+        int oty = Move.GetToY(move);
+
+        if (ofx >= 0 && ofx <= 7 && ofy >= 0 && ofy <= 7)
+        {
+            lastMovedPiece = pieces[ofx + (ofy << 3)];
+        }
+        if (!lastMoveStationary)
+        {
+            //Animate trail
+            if (moveTrail == null)
+            {
+                yield return StartCoroutine(AnimatePieceMove(ofx, ofy, otx, oty));
+            }
+            else
+            {
+                yield return StartCoroutine(AnimatePieceMove(ofx, ofy, moveTrail));
+            }
+        }
+
+        //to do later: animation for stationary moves (some particle travels along the path instead of the piece moving)
+
+        //To do later: some kind of parallel data structure that can handle mixed ordering and parallel components
+
+        for (int i = 0; i < boardUpdateMetadata.Count; i++)
+        {
+            int fx = boardUpdateMetadata[i].fx;
+            int fy = boardUpdateMetadata[i].fy;
+            int tx = boardUpdateMetadata[i].tx;
+            int ty = boardUpdateMetadata[i].ty;
+            if (tx == -1 && ty == -1)
+            {
+                tx = fx;
+                ty = fy;
+            }
+
+            if (boardUpdateMetadata[i].wasLastMovedPiece)
+            {
+                switch (boardUpdateMetadata[i].type)
+                {
+                    case BoardUpdateMetadata.BoardUpdateType.Move:
+                    case BoardUpdateMetadata.BoardUpdateType.Shift:
+                        yield return AnimatePieceShift(lastMovedPiece, tx, ty);
+                        break;
+                    case BoardUpdateMetadata.BoardUpdateType.Capture:
+                        yield return AnimatePieceCapture(lastMovedPiece, fx, fy);
+                        break;
+                    case BoardUpdateMetadata.BoardUpdateType.Spawn:
+                        yield return AnimatePieceSpawn(boardUpdateMetadata[i].pieceType, fx, fy, tx, ty);
+                        break;
+                    case BoardUpdateMetadata.BoardUpdateType.TypeChange:
+                        yield return AnimatePieceSpin(lastMovedPiece, fx, fy);
+                        break;
+                    case BoardUpdateMetadata.BoardUpdateType.AlignmentChange:
+                        yield return AnimatePieceSpin(lastMovedPiece, fx, fy);
+                        break;
+                    case BoardUpdateMetadata.BoardUpdateType.StatusCure:
+                    case BoardUpdateMetadata.BoardUpdateType.StatusApply:
+                        yield return AnimatePieceSpin(lastMovedPiece, fx, fy);
+                        break;
+                }
+            }
+            else
+            {
+                switch (boardUpdateMetadata[i].type)
+                {
+                    case BoardUpdateMetadata.BoardUpdateType.Move:
+                    case BoardUpdateMetadata.BoardUpdateType.Shift:
+                        yield return AnimatePieceShift(pieces[fx + (fy << 3)], tx, ty);
+                        break;
+                    case BoardUpdateMetadata.BoardUpdateType.Capture:
+                        yield return AnimatePieceCapture(pieces[fx + (fy << 3)], fx, fy);
+                        break;
+                    case BoardUpdateMetadata.BoardUpdateType.Spawn:
+                        yield return AnimatePieceSpawn(boardUpdateMetadata[i].pieceType, fx, fy, tx, ty);
+                        break;
+                    case BoardUpdateMetadata.BoardUpdateType.TypeChange:
+                        yield return AnimatePieceSpin(pieces[fx + (fy << 3)], fx, fy);
+                        break;
+                    case BoardUpdateMetadata.BoardUpdateType.AlignmentChange:
+                        yield return AnimatePieceSpin(pieces[fx + (fy << 3)], fx, fy);
+                        break;
+                    case BoardUpdateMetadata.BoardUpdateType.StatusCure:
+                    case BoardUpdateMetadata.BoardUpdateType.StatusApply:
+                        yield return AnimatePieceSpin(pieces[fx + (fy << 3)], fx, fy);
+                        break;
+                }
+            }
+        }
+
+        bool found = false;
+        for (int i = 0; i < 64; i++)
+        {
+            if (pieces[i] == lastMovedPiece)
+            {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+        {
+            Destroy(lastMovedPiece.gameObject);
+        }
+
+        FixBoardBasedOnPosition();
+        animating = false;
     }
 
     public void UpdateControlHighlight()
@@ -1655,7 +2043,7 @@ public class BoardScript : MonoBehaviour
                 StartCoroutine(chessAI.BestMoveCoroutine(errorMove));
             }
 
-            if (whiteIsAI && !board.blackToMove && chessAI.moveFound)
+            if (whiteIsAI && !board.blackToMove && chessAI.moveFound && !animating)
             {
                 uint bestMove = chessAI.bestMove;
                 //uint bestMove = chessAI.GetBestMove(ref board);
@@ -1721,7 +2109,10 @@ public class BoardScript : MonoBehaviour
                 {
                     whiteIsAI = false;
                     TryMove(pieces[bestX + bestY * 8], PieceAlignment.White, bestX, bestY, bestToX, bestToY);
-                    FixBoardBasedOnPosition();
+                    if (!animating)
+                    {
+                        FixBoardBasedOnPosition();
+                    }
                     moveDelay = moveDelayValue;
                     whiteIsAI = true;
                 }
@@ -1745,7 +2136,7 @@ public class BoardScript : MonoBehaviour
                 StartCoroutine(chessAI.BestMoveCoroutine(errorMove));
             }
 
-            if (board.blackToMove && blackIsAI && chessAI.moveFound)
+            if (board.blackToMove && blackIsAI && chessAI.moveFound && !animating)
             {
                 ApplyAIMove();
                 moveDelay = moveDelayValue;

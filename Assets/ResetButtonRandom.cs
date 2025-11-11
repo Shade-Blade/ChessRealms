@@ -550,6 +550,13 @@ public class ResetButtonRandom : MonoBehaviour
                 continue;
             }
 
+            //piece must be at least 1/36 the total to count
+            //Or at least 10 value
+            if (GlobalPieceManager.pieceTable[i].pieceValueX2 <= 20 && GlobalPieceManager.pieceTable[i].pieceValueX2 <= targetTotal / 18)
+            {
+                continue;
+            }
+
             if (pieceClass == Piece.PieceClass.None || GlobalPieceManager.pieceTable[i].pieceClass == pieceClass)
             {
                 piecePool.Add(GlobalPieceManager.pieceTable[i]);

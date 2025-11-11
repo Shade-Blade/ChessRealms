@@ -260,7 +260,9 @@ public class Board
 
         RelayPieces,
         TerrainTest,
-        GiantTest
+        GiantTest,
+
+        SoulMages,  //no button for it
     }
 
     //Badges
@@ -413,7 +415,10 @@ public class Board
             case BoardPreset.GiantTest:
                 SetupGiantArmy();
                 break;
-                //SetupGiantArmy();
+            //SetupGiantArmy();
+            case BoardPreset.SoulMages:
+                SetupSoulMages();
+                break;
         }
     }
     public void Setup(Piece.PieceType[] army, PlayerModifier pm, EnemyModifier em)
@@ -1159,6 +1164,39 @@ public class Board
         PostSetupInit();
     }
 
+    public void SetupSoulMages()
+    {
+        Init();
+
+        Piece.PieceType[] ptList = new Piece.PieceType[]
+        {
+            PieceType.QueenLeech, PieceType.SoulDevourer, PieceType.QueenLeech, PieceType.Lich, PieceType.King, 0, 0, PieceType.SoulDevourer,
+            PieceType.Leech, PieceType.SoulCannon, PieceType.Leech, PieceType.Lich, PieceType.Pawn, 0, 0, 0,
+            0,0,0,0,0,0,0,0,
+            0,0,0,0,0,0,0,0
+        };
+
+        for (int i = 0; i < pieces.Length; i++)
+        {
+            int indexToRead = i;
+            if (indexToRead > 31)
+            {
+                indexToRead = 63 - indexToRead;
+                indexToRead = indexToRead - (indexToRead % 8) + (7 - (indexToRead % 8));
+            }
+            Piece.PieceType pt = ptList[indexToRead];
+
+            if (pt == PieceType.Null)
+            {
+                continue;
+            }
+
+            pieces[i] = Piece.PackPieceData(pt, i < 32 ? PieceAlignment.White : PieceAlignment.Black);
+        }
+
+        PostSetupInit();
+    }
+
     public void PostSetupInit()
     {
         ModifierSetup();
@@ -1184,6 +1222,14 @@ public class Board
                     globalData.noLastMoveHash = false;
                 }
                 if ((pte.pieceProperty & PieceProperty.InvinciblePride) != 0)
+                {
+                    globalData.noLastMoveHash = false;
+                }
+                if (pte.type == PieceType.ArcanaFool)
+                {
+                    globalData.noLastMoveHash = false;
+                }
+                if (pte.type == PieceType.Imitator)
                 {
                     globalData.noLastMoveHash = false;
                 }
@@ -2714,7 +2760,7 @@ public class Board
                             {
                                 boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, pteO.type, BoardUpdateMetadata.BoardUpdateType.StatusApply));
                             }
-                            pieceChange = true;
+                            //pieceChange = true;
                         }
                         if ((pteT.piecePropertyB & PiecePropertyB.PoisonCapturer) != 0)
                         {
@@ -2724,11 +2770,11 @@ public class Board
                             {
                                 boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, pteO.type, BoardUpdateMetadata.BoardUpdateType.StatusApply));
                             }
-                            pieceChange = true;
+                            //pieceChange = true;
                         }
                     }
 
-                    if (boardUpdateMetadata != null)
+                    if (boardUpdateMetadata != null && pteO.type != PieceType.King)
                     {
                         if (pieceChange)
                         {
@@ -2740,11 +2786,11 @@ public class Board
                             {
                                 if (opt == Piece.GetPieceType(oldPiece))
                                 {
-                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.GetPieceType(oldPiece), BoardUpdateMetadata.BoardUpdateType.TypeChange, true));
+                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.GetPieceType(oldPiece), BoardUpdateMetadata.BoardUpdateType.AlignmentChange, true));
                                 }
                                 else
                                 {
-                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.GetPieceType(oldPiece), BoardUpdateMetadata.BoardUpdateType.AlignmentChange, true));
+                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.GetPieceType(oldPiece), BoardUpdateMetadata.BoardUpdateType.TypeChange, true));
                                 }
                             }
                         }
@@ -3662,10 +3708,12 @@ public class Board
                         if (opa == PieceAlignment.White)
                         {
                             whitePerPlayerInfo.pieceValueSumX2 -= (short)(pteO.pieceValueX2 - 2 * pteGT.pieceValueX2);
+                            whitePerPlayerInfo.pieceCount++;
                         }
                         if (opa == PieceAlignment.Black)
                         {
                             blackPerPlayerInfo.pieceValueSumX2 -= (short)(pteO.pieceValueX2 - 2 * pteGT.pieceValueX2);
+                            blackPerPlayerInfo.pieceCount++;
                         }
 
                         if (boardUpdateMetadata != null)
@@ -7628,14 +7676,14 @@ public class Board
             pincer = true;
         } else
         {
-            if (pieces[x + dx + (y + dy) * 8] != 0 && Piece.GetPieceAlignment(pieces[x + dx + (y + dy) * 8]) == pa)
+            if (pieces[px + (py << 3)] != 0 && Piece.GetPieceAlignment(pieces[px + (py << 3)]) == pa)
             {
                 pincer = true;
             }
         }
 
         //PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pieces[x + y * 8]);
-        PieceTableEntry pte = globalData.GetPieceTableEntryFromCache((x + (y << 3)), pieces[(x + y << 3)]);
+        PieceTableEntry pte = globalData.GetPieceTableEntryFromCache((x + (y << 3)), pieces[(x + (y << 3))]);
         if (pincer && pieces[x + y * 8] != 0 && Piece.GetPieceAlignment(pieces[x + y * 8]) != pa && !Piece.IsPieceInvincible(this, pieces[x + y * 8], x, y, pieces[ox + oy * 8], ox, oy, Move.SpecialType.Advancer, pteO, pte))
         {
             //Destroy x, y

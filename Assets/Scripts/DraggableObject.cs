@@ -59,13 +59,17 @@ public class DraggableObject : MonoBehaviour
             dragOut--;
         }
 
-        if (isDragged)
+        if (canDrag)
         {
-            transform.position = MainManager.XYProjectPreserve(Camera.main.ScreenToWorldPoint(Input.mousePosition) - dragOffset) + Vector3.forward * dragZ;
-            OnDragStay();
-        } else
-        {
-            transform.position = transform.position + Vector3.back * transform.position.z + Vector3.forward * normalZ;
+            if (isDragged)
+            {
+                transform.position = MainManager.XYProjectPreserve(Camera.main.ScreenToWorldPoint(Input.mousePosition) - dragOffset) + Vector3.forward * dragZ;
+                OnDragStay();
+            }
+            else
+            {
+                transform.position = transform.position + Vector3.back * transform.position.z + Vector3.forward * normalZ;
+            }
         }
     }
 

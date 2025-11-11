@@ -424,7 +424,7 @@ SteelGolem,9,mWmFoWoF,,AimMover|InvincibleNoEnemyAdjacent|Deadly,TRUE,,Targetter
 MegaCannon,10,mR2mB2oR5,,EnchantImmune|NoTerrain|StatusImmune|Deadly|ShiftImmune|Unique,TRUE,,Targetters,4
 Cannon,4,mR2oR4,,AimMover,TRUE,,Targetters,3.5
 MetalFox,5,"WFo(2,2)o(0,2)",,,TRUE,,Targetters,3.5
-SteelPuppet,4,fFfWofFofW,,AimMover|InvincibleNoEnemyAdjacent|Deadly,TRUE,,Targetters,3.5
+SteelPuppet,4,mfFmfWofFofW,,AimMover|InvincibleNoEnemyAdjacent|Deadly,TRUE,,Targetters,3.5
 RollerQueen,12,RB,,Momentum,FALSE,,Rollers,3
 ReboundRook,4,R,,ReverseMomentum,FALSE,,Rollers,3
 BounceBishop,5,B,,BounceMomentum,FALSE,,Rollers,3

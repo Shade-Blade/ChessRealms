@@ -4342,6 +4342,10 @@ public class MoveGeneratorInfoEntry
                             if (!moveMetadata.ContainsKey(key))
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Slider, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 0), MoveMetadata.MakePathTag(mgie.atom, 1) }));
+                            } else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 0));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 1));
                             }
                         }
 
@@ -4381,6 +4385,11 @@ public class MoveGeneratorInfoEntry
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Slider, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 2), MoveMetadata.MakePathTag(mgie.atom, 3) }));
                             }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 2));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 3));
+                            }
                         }
 
                         if (canContinue)
@@ -4419,6 +4428,11 @@ public class MoveGeneratorInfoEntry
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Slider, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 4), MoveMetadata.MakePathTag(mgie.atom, 5) }));
                             }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 4));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 5));
+                            }
                         }
 
                         if (canContinue)
@@ -4456,6 +4470,11 @@ public class MoveGeneratorInfoEntry
                             if (!moveMetadata.ContainsKey(key))
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Slider, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 6), MoveMetadata.MakePathTag(mgie.atom, 7) }));
+                            }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 6));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 7));
                             }
                         }
 
@@ -4497,6 +4516,11 @@ public class MoveGeneratorInfoEntry
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Slider, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 0), MoveMetadata.MakePathTag(mgie.atom, 1) }));
                             }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 0));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 1));
+                            }
                         }
 
                         if (canContinue)
@@ -4533,6 +4557,11 @@ public class MoveGeneratorInfoEntry
                             if (!moveMetadata.ContainsKey(key))
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Slider, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 2), MoveMetadata.MakePathTag(mgie.atom, 3) }));
+                            }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 2));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 3));
                             }
                         }
 
@@ -4572,6 +4601,11 @@ public class MoveGeneratorInfoEntry
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Slider, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 4), MoveMetadata.MakePathTag(mgie.atom, 5) }));
                             }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 4));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 5));
+                            }
                         }
 
                         if (canContinue)
@@ -4609,6 +4643,11 @@ public class MoveGeneratorInfoEntry
                             if (!moveMetadata.ContainsKey(key))
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Slider, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 6), MoveMetadata.MakePathTag(mgie.atom, 7) }));
+                            }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 6));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 7));
                             }
                         }
 
@@ -4649,6 +4688,12 @@ public class MoveGeneratorInfoEntry
                             if (!moveMetadata.ContainsKey(key))
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 0), MoveMetadata.MakePathTag(mgie.atom, 1), MoveMetadata.MakePathTag(mgie.atom, 2) }));
+                            }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 0));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 1));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 2));
                             }
                         }
 
@@ -4694,6 +4739,12 @@ public class MoveGeneratorInfoEntry
                             if (!moveMetadata.ContainsKey(key))
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 3), MoveMetadata.MakePathTag(mgie.atom, 4), MoveMetadata.MakePathTag(mgie.atom, 5) }));
+                            }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 3));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 4));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 5));
                             }
                         }
 
@@ -4741,6 +4792,12 @@ public class MoveGeneratorInfoEntry
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 6), MoveMetadata.MakePathTag(mgie.atom, 7), MoveMetadata.MakePathTag(mgie.atom, 8) }));
                             }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 6));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 7));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 8));
+                            }
                         }
 
                         if (canContinue)
@@ -4784,6 +4841,12 @@ public class MoveGeneratorInfoEntry
                             if (!moveMetadata.ContainsKey(key))
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 9), MoveMetadata.MakePathTag(mgie.atom, 10), MoveMetadata.MakePathTag(mgie.atom, 11) }));
+                            }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 9));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 10));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 11));
                             }
                         }
 
@@ -4835,6 +4898,12 @@ public class MoveGeneratorInfoEntry
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 0), MoveMetadata.MakePathTag(mgie.atom, 1), MoveMetadata.MakePathTag(mgie.atom, 2) }));
                             }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 0));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 1));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 2));
+                            }
                         }
 
                         if (canContinue)
@@ -4879,6 +4948,12 @@ public class MoveGeneratorInfoEntry
                             if (!moveMetadata.ContainsKey(key))
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 3), MoveMetadata.MakePathTag(mgie.atom, 4), MoveMetadata.MakePathTag(mgie.atom, 5) }));
+                            }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 3));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 4));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 5));
                             }
                         }
 
@@ -4925,6 +5000,12 @@ public class MoveGeneratorInfoEntry
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 6), MoveMetadata.MakePathTag(mgie.atom, 7), MoveMetadata.MakePathTag(mgie.atom, 8) }));
                             }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 6));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 7));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 8));
+                            }
                         }
 
                         if (canContinue)
@@ -4969,6 +5050,12 @@ public class MoveGeneratorInfoEntry
                             if (!moveMetadata.ContainsKey(key))
                             {
                                 moveMetadata.Add(key, new MoveMetadata(piece, targetX, targetY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, 9), MoveMetadata.MakePathTag(mgie.atom, 10), MoveMetadata.MakePathTag(mgie.atom, 11) }));
+                            }
+                            else
+                            {
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 9));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 10));
+                                moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 11));
                             }
                         }
 
@@ -8801,7 +8888,15 @@ public class MoveGeneratorInfoEntry
 
             if (moveMetadata != null)
             {
-                moveMetadata.Add(Move.PackMove((byte)x, (byte)y, (byte)(tempX), (byte)(tempY)), new MoveMetadata(piece, tempX, tempY, MoveMetadata.PathType.Leaper, SpecialType.Castling, pathTag));
+                uint key = Move.PackMove((byte)x, (byte)y, (byte)(tempX), (byte)(tempY));
+                if (moveMetadata.ContainsKey(key))
+                {
+                    moveMetadata[key].pathTags.Add(pathTag);
+                }
+                else
+                {
+                    moveMetadata.Add(key, new MoveMetadata(piece, tempX, tempY, MoveMetadata.PathType.Leaper, SpecialType.Castling, pathTag));
+                }
             }
         }
 

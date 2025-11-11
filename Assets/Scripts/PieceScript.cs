@@ -51,6 +51,8 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                 text.enabled = false;
                 backSprite.enabled = false;
                 bc.enabled = false;
+                this.x = x;
+                this.y = y;
                 return;
             }
 
@@ -105,6 +107,12 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         text.text = pieceType;
         backSprite.color = color;
         text.color = color;
+    }
+
+    public void Update()
+    {
+        dob.canDrag = !bs.animating;
+        bc.enabled = !bs.animating && text.enabled; //Become intangible while animating
     }
 
     public void OnSelect()
@@ -186,10 +194,14 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
             }
         }
-        x = bs.hoverX;
-        y = bs.hoverY;
-        transform.position = BoardScript.GetSpritePositionFromCoordinates(bs.hoverX, bs.hoverY, -0.5f);
-        bs.FixBoardBasedOnPosition();
+
+        if (!bs.animating)
+        {
+            x = bs.hoverX;
+            y = bs.hoverY;
+            transform.position = BoardScript.GetSpritePositionFromCoordinates(bs.hoverX, bs.hoverY, -0.5f);
+            bs.FixBoardBasedOnPosition();
+        }
     }
 
     public void SetPosition(int nx, int ny)

@@ -94,7 +94,7 @@ public class MainManager : MonoBehaviour
         //~500k normal after optimizing TickDownStatusEffects to reduce PieceTableEntry checks
 
         //220 ish seconds for depth 6 normal
-        for (int i = 0; i <= 3; i++)
+        for (int i = 0; i <= 4; i++) 
         {
             DateTime currentTime = DateTime.UtcNow;
             long unixTime = ((DateTimeOffset)currentTime).ToUnixTimeMilliseconds();

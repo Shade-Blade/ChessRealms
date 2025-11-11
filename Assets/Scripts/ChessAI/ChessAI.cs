@@ -2052,7 +2052,7 @@ public class ChessAI
 
             if (history.Contains(chash))
             {
-                PenalizeMove(candidateEval, 0.25f);
+                PenalizeMove(candidateEval, 0f);
             }
 
             if (killerMoves == null)
@@ -2180,6 +2180,7 @@ public class ChessAI
         //Every move leads to king capture = stalemate or checkmate
         if (float.IsNaN(bestEvaluation) || bestEvaluation > KING_CAPTURE / 2)
         {
+            /*
             if (Board.PositionIsCheck(ref b))
             {
                 //Checkmate :(
@@ -2196,8 +2197,19 @@ public class ChessAI
             {
                 //Stalemate :|
                 //Populate the Z table still
-                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, 0));
-                return (0, 0);
+            }
+            */
+            //new: stalemate for side to move is loss
+            //So there is no point in checking for check
+            if (b.blackToMove)
+            {
+                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
+                return (0, WHITE_VICTORY);
+            }
+            else
+            {
+                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
+                return (0, BLACK_VICTORY);
             }
         }
 
@@ -2226,13 +2238,14 @@ public class ChessAI
                 return score;
             } else
             {
+                //Big penalty now to stop infinite loops
                 if (score > 0)
                 {
-                    return score - 0.5f;
+                    return score - 10f;
                 }
                 else
                 {
-                    return score + 0.5f;
+                    return score + 10f;
                 }
             }
         }
@@ -2260,7 +2273,7 @@ public class ChessAI
         //Try to find it in the Z table
         ZTableEntry zte = GetZTableEntry(boardOldHash);
 
-        float repetitionPenalty = 0.25f;
+        float repetitionPenalty = 0f;
         if (!history.Contains(boardOldHash))
         {
             repetitionPenalty = 1;
