@@ -1943,6 +1943,7 @@ MonoBehaviour:
   squareTemplate: {fileID: 2766149324201673735, guid: 812c53cd20389ea4cbe30ffa178981b9, type: 3}
   pieceTemplate: {fileID: 7872257274312544191, guid: 1f3f75d5a605199468bd014c49004afc, type: 3}
   moveTrailTemplate: {fileID: 307889686730510020, guid: 70cccbf0364c71a409b503d96349d450, type: 3}
+  moveParticleTemplate: {fileID: 2675936083115365684, guid: 865cf15c53a7695428b135c52ba71f8f, type: 3}
   squareHolder: {fileID: 1698968437}
   pieceHolder: {fileID: 754700096}
   squares: []
@@ -2154,6 +2155,9 @@ MonoBehaviour:
   illegalMoveTrail: {fileID: 0}
   checkMoveTrail: {fileID: 0}
   extraMoveTrails: []
+  animating: 0
+  lastMovedPiece: {fileID: 0}
+  animationSpeed: 36
   selectedPiece: {fileID: 0}
   whiteIsAI: 0
   blackIsAI: 1

@@ -2951,7 +2951,13 @@ public class MoveGeneratorInfoEntry
                     GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.moveInfo[i], mbt, moveMetadata);
                 }
 
-                entry = mbt.Get(x, y);
+                if (mbt == null)
+                {
+                    entry = 0;
+                } else
+                {
+                    entry = mbt.Get(x, y);
+                }
 
                 ulong emptyBitboard = ~b.globalData.bitboard_pieces;
 
@@ -2985,7 +2991,14 @@ public class MoveGeneratorInfoEntry
                     GenerateMovesForMoveGeneratorEntry(moves, ref b, piece, x, y, pte.moveInfo[i], mbt, moveMetadata);
                 }
 
-                entry = mbt.Get(x, y);
+                if (mbt == null)
+                {
+                    entry = 0;
+                }
+                else
+                {
+                    entry = mbt.Get(x, y);
+                }
 
                 if ((entry & ~allyBitboard) != 0)
                 {
@@ -5798,7 +5811,7 @@ public class MoveGeneratorInfoEntry
                         int pieceIndex = MainManager.PopBitboardLSB1(enemyBBitboard, out enemyBBitboard);
 
                         //Plop a move down
-                        (_, bool wasGenerated) = GenerateSquareSingle(moves, true, ref b, piece, x, y, pieceIndex & 7, (pieceIndex & 56) >> 3, Dir.Null, pa, SpecialType.AllySwap, pte, mbt);
+                        (_, bool wasGenerated) = GenerateSquareSingle(moves, true, ref b, piece, x, y, pieceIndex & 7, (pieceIndex & 56) >> 3, Dir.Null, pa, SpecialType.MoveOnly, pte, mbt);
                         if (moveMetadata != null && wasGenerated)
                         {
                             uint key = Move.PackMove((byte)x, (byte)y, (byte)(pieceIndex & 7), (byte)(pieceIndex >> 3));
@@ -8743,8 +8756,14 @@ public class MoveGeneratorInfoEntry
                 else
                 {
                     md = moveMetadata[mdKey];
-                    md.pathTags.Add(pathtagA);
-                    md.pathTags.Add(pathtagB);
+                    if (!blockedA)
+                    {
+                        md.pathTags.Add(pathtagA);
+                    }
+                    if (!blockedB)
+                    {
+                        md.pathTags.Add(pathtagB);
+                    }
                     if (!blockedA)
                     {
                         md.AddPredecessor(moveMetadata[Move.PackMove((byte)x, (byte)y, (byte)(tempXA), (byte)(tempYA))]);

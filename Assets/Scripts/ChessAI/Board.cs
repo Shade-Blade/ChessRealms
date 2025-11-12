@@ -2257,6 +2257,12 @@ public class Board
                             Piece.PieceType spt = Piece.GetPieceType(pieces[index]);
                             if (spt == PieceType.ArcanaMoon || spt == PieceType.MoonIllusion)
                             {
+                                /*
+                                if (boardUpdateMetadata != null && spt != PieceType.MoonIllusion)
+                                {
+                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, pieces[index], BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                                }
+                                */
                                 pieces[index] = Piece.SetPieceType(Piece.PieceType.MoonIllusion, pieces[index]);
                             }
                         }
@@ -2546,7 +2552,7 @@ public class Board
                                     continue;
                                 }
 
-                                PieceTableEntry pteE = globalData.GetPieceTableEntryFromCache(tx + i + 8 * (ty + j), pieces[tx + i + 8 * (ty + j)]); // GlobalPieceManager.GetPieceTableEntry(pieces[tx + i + 8 * (ty + j)]);
+                                PieceTableEntry pteE = globalData.GetPieceTableEntryFromCache(tx + i + ((ty + j) << 3), pieces[tx + i + ((ty + j) << 3)]); // GlobalPieceManager.GetPieceTableEntry(pieces[tx + i + 8 * (ty + j)]);
 
                                 Piece.PieceAlignment epa = Piece.GetPieceAlignment(GetPieceAtCoordinate(tx + i, ty + j));
                                 if (epa != opa && pteE != null && !Piece.IsPieceInvincible(this, pieces[tx + i + ((ty + j) << 3)], tx + i, ty + j, oldPiece, fx, fy, Move.SpecialType.InflictFreeze, pteO, pteE))
@@ -2554,7 +2560,7 @@ public class Board
                                     pieces[tx + i + ((ty + j) << 3)] = Piece.SetPieceStatusEffect(PieceStatusEffect.Frozen, Piece.SetPieceStatusDuration(3, pieces[tx + i + ((ty + j) << 3)]));
                                     if (boardUpdateMetadata != null)
                                     {
-                                        boardUpdateMetadata.Add(new BoardUpdateMetadata(tx + i, ty + j, pteE.type, BoardUpdateMetadata.BoardUpdateType.StatusApply));
+                                        boardUpdateMetadata.Add(new BoardUpdateMetadata(tx + i, ty + j, pieces[tx + i + ((ty + j) << 3)], BoardUpdateMetadata.BoardUpdateType.StatusApply));
                                     }
                                 }
                             }
@@ -2611,7 +2617,7 @@ public class Board
                                     pieces[tx + i + ((ty + j) << 3)] = Piece.SetPieceStatusEffect(PieceStatusEffect.Poisoned, Piece.SetPieceStatusDuration(3, tempPiece));
                                     if (boardUpdateMetadata != null)
                                     {
-                                        boardUpdateMetadata.Add(new BoardUpdateMetadata(tx + i, ty + j, pteE.type, BoardUpdateMetadata.BoardUpdateType.StatusApply));
+                                        boardUpdateMetadata.Add(new BoardUpdateMetadata(tx + i, ty + j, pieces[tx + i + ((ty + j) << 3)], BoardUpdateMetadata.BoardUpdateType.StatusApply));
                                     }
                                 }
                             }
@@ -2664,7 +2670,7 @@ public class Board
                                     pieces[tx + i + ((ty + j) << 3)] = Piece.SetPieceType(PieceType.HoneyPuddle, Piece.SetPieceAlignment(PieceAlignment.Neutral, 0));
                                     if (boardUpdateMetadata != null)
                                     {
-                                        boardUpdateMetadata.Add(new BoardUpdateMetadata(tx + i, ty + j, PieceType.HoneyPuddle, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                                        boardUpdateMetadata.Add(new BoardUpdateMetadata(tx + i, ty + j, pieces[tx + i + ((ty + j) << 3)], BoardUpdateMetadata.BoardUpdateType.Spawn));
                                     }
                                 }
                             }
@@ -2731,7 +2737,8 @@ public class Board
                         pieceChange = true;
                     }
 
-                    if (!pieceChange && (pteO.piecePropertyB & PiecePropertyB.NeutralOnCapture) != 0)
+                    //Neutral converting to neutral doesn't make sense
+                    if (!pieceChange && opa != PieceAlignment.Neutral && (pteO.piecePropertyB & PiecePropertyB.NeutralOnCapture) != 0)
                     {
                         if (opa == PieceAlignment.White)
                         {
@@ -2758,7 +2765,7 @@ public class Board
 
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, pteO.type, BoardUpdateMetadata.BoardUpdateType.StatusApply));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.StatusApply));
                             }
                             //pieceChange = true;
                         }
@@ -2768,37 +2775,37 @@ public class Board
 
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, pteO.type, BoardUpdateMetadata.BoardUpdateType.StatusApply));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.StatusApply));
                             }
                             //pieceChange = true;
                         }
                     }
+                }
 
-                    if (boardUpdateMetadata != null && pteO.type != PieceType.King)
+                if (boardUpdateMetadata != null && pteO.type != PieceType.King)
+                {
+                    if (oldPiece == 0)
                     {
-                        if (pieceChange)
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.Capture, true));
+                    }
+                    else
+                    {
+                        if (opt == Piece.GetPieceType(oldPiece))
                         {
-                            if (oldPiece == 0)
+                            if (opa != Piece.GetPieceAlignment(oldPiece))
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, opt, BoardUpdateMetadata.BoardUpdateType.Capture, true));
-                            }
-                            else
-                            {
-                                if (opt == Piece.GetPieceType(oldPiece))
-                                {
-                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.GetPieceType(oldPiece), BoardUpdateMetadata.BoardUpdateType.AlignmentChange, true));
-                                }
-                                else
-                                {
-                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.GetPieceType(oldPiece), BoardUpdateMetadata.BoardUpdateType.TypeChange, true));
-                                }
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.AlignmentChange, true));
                             }
                         }
+                        else
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.TypeChange, true));
+                        }
+                    }
 
-                        if (residuePiece != 0)
-                        {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, Piece.GetPieceType(residuePiece), BoardUpdateMetadata.BoardUpdateType.Spawn, false));
-                        }
+                    if (residuePiece != 0)
+                    {
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, fx, fy, residuePiece, BoardUpdateMetadata.BoardUpdateType.Spawn, false));
                     }
                 }
 
@@ -2888,7 +2895,7 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx + pulldx, fy + pulldy, tx + pulldx, ty + pulldy, Piece.GetPieceType(pullPiece), BoardUpdateMetadata.BoardUpdateType.Shift));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx + pulldx, fy + pulldy, tx + pulldx, ty + pulldy, pullPiece, BoardUpdateMetadata.BoardUpdateType.Shift));
                         }
 
                         SetPieceAtCoordinate(tx + pulldx, ty + pulldy, pullPiece);
@@ -2960,16 +2967,11 @@ public class Board
 
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.GetPieceType(targetPiece), BoardUpdateMetadata.BoardUpdateType.AlignmentChange));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.SetPieceAlignment(opa, targetPiece), BoardUpdateMetadata.BoardUpdateType.AlignmentChange));
                 }
 
                 if ((pteO.piecePropertyB & PiecePropertyB.EnemyOnCapture) != 0)
                 {
-                    if (boardUpdateMetadata != null)
-                    {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, opt, BoardUpdateMetadata.BoardUpdateType.AlignmentChange));
-                    }
-
                     if (opa == PieceAlignment.White)
                     {
                         whitePerPlayerInfo.pieceCount--;
@@ -2987,6 +2989,11 @@ public class Board
                         whitePerPlayerInfo.pieceCount++;
                         whitePerPlayerInfo.pieceValueSumX2 += pteO.pieceValueX2;
                         SetPieceAtCoordinate(fx, fy, Piece.SetPieceAlignment(PieceAlignment.White, oldPiece));
+                    }
+
+                    if (boardUpdateMetadata != null)
+                    {
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, GetPieceAtCoordinate(fx, fy), BoardUpdateMetadata.BoardUpdateType.AlignmentChange));
                     }
                 }
 
@@ -3126,11 +3133,6 @@ public class Board
                     whitePerPlayerInfo.capturedLastTurn = true;
                 }
 
-                if (boardUpdateMetadata != null)
-                {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, opt, BoardUpdateMetadata.BoardUpdateType.AlignmentChange));
-                }
-
                 if ((pteT.piecePropertyB & PiecePropertyB.Giant) != 0)
                 {
                     ushort pieceValue = Piece.GetPieceSpecialData(targetPiece);
@@ -3165,6 +3167,11 @@ public class Board
 
                     DeletePieceAtCoordinate(tx, ty, pteT, tpa, boardUpdateMetadata);
                     SetPieceAtCoordinate(tx, ty, Piece.SetPieceAlignment(opa, targetPiece));
+                }
+
+                if (boardUpdateMetadata != null)
+                {
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, GetPieceAtCoordinate(tx, ty), BoardUpdateMetadata.BoardUpdateType.AlignmentChange));
                 }
                 break;
             case Move.SpecialType.FireCapture:
@@ -3262,11 +3269,6 @@ public class Board
                     //Outlaw switching sides
                     if ((pteO.piecePropertyB & PiecePropertyB.EnemyOnCapture) != 0)
                     {
-                        if (boardUpdateMetadata != null)
-                        {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, opt, BoardUpdateMetadata.BoardUpdateType.AlignmentChange));
-                        }
-
                         if (opa == PieceAlignment.White)
                         {
                             whitePerPlayerInfo.pieceCount--;
@@ -3284,6 +3286,11 @@ public class Board
                             whitePerPlayerInfo.pieceCount++;
                             whitePerPlayerInfo.pieceValueSumX2 += pteO.pieceValueX2;
                             SetPieceAtCoordinate(fx, fy, Piece.SetPieceAlignment(PieceAlignment.White, oldPiece));
+                        }
+
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, GetPieceAtCoordinate(fx, fy), BoardUpdateMetadata.BoardUpdateType.AlignmentChange));
                         }
                     }
 
@@ -3312,7 +3319,7 @@ public class Board
 
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, tx + pushdx, ty + pushdy, Piece.GetPieceType(targetPiece), BoardUpdateMetadata.BoardUpdateType.Shift));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, tx + pushdx, ty + pushdy, targetPiece, BoardUpdateMetadata.BoardUpdateType.Shift));
                 }
 
                 //Push piece towards delta
@@ -3389,7 +3396,7 @@ public class Board
                 if (Piece.GetPieceStatusEffect(oldPiece) == PieceStatusEffect.Bloodlust)
                 {
                     oldPiece = Piece.SetPieceStatusEffect(0, oldPiece);
-                    oldPiece = Piece.SetPieceStatusDuration(0, oldPiece);
+                    oldPiece = Piece.SetPieceStatusDuration(0, oldPiece);                    
                 }
                 DeletePieceAtCoordinate(tx + a2dx, ty + a2dy, GlobalPieceManager.GetPieceTableEntry(a2Piece), opa, boardUpdateMetadata);
                 goto case Move.SpecialType.Withdrawer;
@@ -3559,7 +3566,7 @@ public class Board
             case Move.SpecialType.AllySwap:
             case Move.SpecialType.AnyoneSwap:
                 //ally swap vs non ally = capture
-                if (opa != tpa)
+                if (opa != tpa && specialType == SpecialType.AllySwap)
                 {
                     goto case Move.SpecialType.Normal;
                 }
@@ -3568,7 +3575,7 @@ public class Board
                 {
                     if (pieces[tx + (ty << 3)] != 0)
                     {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, fx, fy, Piece.GetPieceType(targetPiece), BoardUpdateMetadata.BoardUpdateType.Shift));
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, fx, fy, targetPiece, BoardUpdateMetadata.BoardUpdateType.Shift));
                     }
                 }
                 //Very straightforward
@@ -3621,6 +3628,10 @@ public class Board
                         SetPieceAtCoordinate(tx, ty, Piece.SetPieceModifier(PieceModifier.Shielded, Piece.SetPieceStatusDuration(0, Piece.SetPieceStatusEffect(PieceStatusEffect.None, targetPiece))));
                         break;
                 }
+                if (boardUpdateMetadata != null)
+                {
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, GetPieceAtCoordinate(tx, ty), BoardUpdateMetadata.BoardUpdateType.ImbueModifier));
+                }
                 break;
             case SpecialType.ChargeApplyModifier:
                 switch (opt)
@@ -3629,6 +3640,10 @@ public class Board
                     case PieceType.DivineApprentice:
                         SetPieceAtCoordinate(tx, ty, Piece.SetPieceModifier(PieceModifier.Shielded, targetPiece));
                         break;
+                }
+                if (boardUpdateMetadata != null)
+                {
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, GetPieceAtCoordinate(tx, ty), BoardUpdateMetadata.BoardUpdateType.ImbueModifier));
                 }
                 if (Piece.GetPieceSpecialData(oldPiece) > 0)
                 {
@@ -3665,12 +3680,11 @@ public class Board
                     blackPerPlayerInfo.pieceValueSumX2 += (short)(pteIP.pieceValueX2 - pteO.pieceValueX2);
                 }
 
+                SetPieceAtCoordinate(tx, ty, Piece.SetPieceStatusDuration(0, Piece.SetPieceStatusEffect(PieceStatusEffect.None, Piece.SetPieceType(pteT.promotionType, targetPiece))));
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, pteT.promotionType, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, GetPieceAtCoordinate(tx, ty), BoardUpdateMetadata.BoardUpdateType.TypeChange));
                 }
-
-                SetPieceAtCoordinate(tx, ty, Piece.SetPieceStatusDuration(0, Piece.SetPieceStatusEffect(PieceStatusEffect.None, Piece.SetPieceType(pteT.promotionType, targetPiece))));
                 break;
             case Move.SpecialType.MorphIntoTarget:
                 if (targetPiece == 0)
@@ -3687,13 +3701,12 @@ public class Board
                     blackPerPlayerInfo.pieceValueSumX2 += (short)(pteT.pieceValueX2 - pteO.pieceValueX2);
                 }
 
-                if (boardUpdateMetadata != null)
-                {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, opt, BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                }
-
                 //not a capture like so it just turns you into the target
                 SetPieceAtCoordinate(fx, fy, Piece.SetPieceAlignment(opa, targetPiece));
+                if (boardUpdateMetadata != null)
+                {
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, GetPieceAtCoordinate(fx, fy), BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                }
                 break;
             case Move.SpecialType.Spawn:
                 switch (opt)
@@ -3718,8 +3731,8 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, PieceType.GeminiTwin, BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, PieceType.GeminiTwin, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, oldPiece, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.Spawn));
                         }
 
                         SetPieceAtCoordinate(fx, fy, oldPiece);
@@ -3755,11 +3768,11 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, PieceType.Knight, BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, PieceType.Knight, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, oldPiece, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.Spawn));
                             if (knightsMade == 3)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, ox, oy, PieceType.Knight, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, ox, oy, oldPiece, BoardUpdateMetadata.BoardUpdateType.Spawn));
                             }
                         }
 
@@ -3813,11 +3826,11 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, PieceType.Bishop, BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, PieceType.Bishop, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, oldPiece, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.Spawn));
                             if (bishopsMade == 3)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, oxB, oyB, PieceType.Bishop, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, oxB, oyB, oldPiece, BoardUpdateMetadata.BoardUpdateType.Spawn));
                             }
                         }
 
@@ -3849,8 +3862,8 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, PieceType.Rook, BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, PieceType.Rook, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, oldPiece, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.Spawn));
                         }
 
                         if (opa == PieceAlignment.White)
@@ -3881,7 +3894,7 @@ public class Board
 
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, fx + i, ty, PieceType.Pawn, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, fx + i, ty, newPawn, BoardUpdateMetadata.BoardUpdateType.Spawn));
                             }
                         }
 
@@ -3896,6 +3909,10 @@ public class Board
                             blackPerPlayerInfo.pieceCount += (byte)(pawnCount - 1);
                         }
 
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, oldPiece, BoardUpdateMetadata.BoardUpdateType.Capture));
+                        }
                         oldPiece = 0;
                         SetPieceAtCoordinate(fx, fy, oldPiece);
                         break;
@@ -3916,10 +3933,10 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, PieceType.Leech, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, newLeech, BoardUpdateMetadata.BoardUpdateType.Spawn));
                             if (leechCount == 2)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, leechX, ty, PieceType.Leech, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, leechX, ty, newLeech, BoardUpdateMetadata.BoardUpdateType.Spawn));
                             }
                         }
 
@@ -3949,8 +3966,8 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, PieceType.AmoebaArchbishop, BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, PieceType.AmoebaArchbishop, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, oldPiece, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.Spawn));
                         }
 
                         if (opa == PieceAlignment.White)
@@ -3976,8 +3993,8 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, PieceType.AmoebaArchbishop, BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, PieceType.AmoebaKnight, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, oldPiece, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, Piece.SetPieceType(PieceType.AmoebaKnight, oldPiece), BoardUpdateMetadata.BoardUpdateType.Spawn));
                         }
 
                         if (opa == PieceAlignment.White)
@@ -4002,8 +4019,8 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, PieceType.AmoebaKnight, BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, PieceType.AmoebaKnight, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, oldPiece, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.Spawn));
                         }
 
                         if (opa == PieceAlignment.White)
@@ -4029,8 +4046,8 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, PieceType.AmoebaKnight, BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, PieceType.AmoebaPawn, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, oldPiece, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, Piece.SetPieceType(PieceType.AmoebaPawn, oldPiece), BoardUpdateMetadata.BoardUpdateType.Spawn));
                         }
 
                         if (opa == PieceAlignment.White)
@@ -4055,8 +4072,8 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, PieceType.AmoebaPawn, BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, PieceType.AmoebaPawn, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, oldPiece, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.Spawn));
                         }
 
                         if (opa == PieceAlignment.White)
@@ -4109,7 +4126,7 @@ public class Board
                 SetPieceAtCoordinate(tx, ty, Piece.SetPieceStatusDuration(pd, Piece.SetPieceStatusEffect(pse, targetPiece)));
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.GetPieceType(targetPiece), BoardUpdateMetadata.BoardUpdateType.StatusApply));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, targetPiece, BoardUpdateMetadata.BoardUpdateType.StatusApply));
                 }
                 break;
             case SpecialType.TeleportMirror:
@@ -4119,7 +4136,7 @@ public class Board
                 SetPieceAtCoordinate(tmx, ty, targetPiece);
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, tmx, ty, Piece.GetPieceType(targetPiece), BoardUpdateMetadata.BoardUpdateType.Shift));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, tmx, ty, targetPiece, BoardUpdateMetadata.BoardUpdateType.Shift));
                 }
                 break;
             case SpecialType.TeleportRecall:
@@ -4138,7 +4155,7 @@ public class Board
                 SetPieceAtCoordinate(trex, trey, targetPiece);
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, trex, trey, Piece.GetPieceType(targetPiece), BoardUpdateMetadata.BoardUpdateType.Shift));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, trex, trey, targetPiece, BoardUpdateMetadata.BoardUpdateType.Shift));
                 }
                 break;
             case SpecialType.TeleportOpposite:
@@ -4160,7 +4177,7 @@ public class Board
                 SetPieceAtCoordinate(tox, toy, targetPiece);
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, tox, toy, Piece.GetPieceType(targetPiece), BoardUpdateMetadata.BoardUpdateType.Shift));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, tox, toy, targetPiece, BoardUpdateMetadata.BoardUpdateType.Shift));
                 }
                 break;
             case SpecialType.CarryAlly:
@@ -4183,13 +4200,17 @@ public class Board
             case SpecialType.DepositAllyPlantMove:
                 //Spawn an ally piece at the position
                 //+1 piece count
-                if (tpa == PieceAlignment.White)
+                if (opa == PieceAlignment.White)
                 {
                     whitePerPlayerInfo.pieceCount++;
                 }
-                if (tpa == PieceAlignment.Black)
+                if (opa == PieceAlignment.Black)
                 {
                     blackPerPlayerInfo.pieceCount++;
+                }
+                if (boardUpdateMetadata != null)
+                {
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, Piece.SetPieceAlignment(opa, Piece.SetPieceType((Piece.PieceType)Piece.GetPieceSpecialData(oldPiece), 0)),  BoardUpdateMetadata.BoardUpdateType.Spawn));
                 }
                 SetPieceAtCoordinate(tx, ty, Piece.SetPieceAlignment(opa, Piece.SetPieceType((Piece.PieceType)Piece.GetPieceSpecialData(oldPiece), 0)));
                 //remove it from inside the carry piece
@@ -4313,12 +4334,19 @@ public class Board
                 {
                     SetPieceAtCoordinate(fx, fy, Piece.SetPieceType(newDonorType, oldPiece));
                 }
-                SetPieceAtCoordinate(tx, ty, Piece.SetPieceType(newTargetType, oldPiece));
+                SetPieceAtCoordinate(tx, ty, Piece.SetPieceType(newTargetType, targetPiece));
 
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, newDonorType, BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, newTargetType, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                    if (newDonorType == PieceType.Null)
+                    {
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, Piece.SetPieceType(newDonorType, oldPiece), BoardUpdateMetadata.BoardUpdateType.Capture));
+                    }
+                    else
+                    {
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, Piece.SetPieceType(newDonorType, oldPiece), BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                    }
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, Piece.SetPieceType(newTargetType, targetPiece), BoardUpdateMetadata.BoardUpdateType.Spawn));
                 }
 
                 if (opa == PieceAlignment.White)
@@ -4326,6 +4354,7 @@ public class Board
                     if (newDonorType == PieceType.Null)
                     {
                         whitePerPlayerInfo.pieceValueSumX2 -= (short)(pteO.pieceValueX2 + pteT.pieceValueX2 - pteAC_T.pieceValueX2);
+                        whitePerPlayerInfo.pieceCount--;
                     } else
                     {
                         whitePerPlayerInfo.pieceValueSumX2 -= (short)(pteO.pieceValueX2 + pteT.pieceValueX2 - pteAC_O.pieceValueX2 - pteAC_T.pieceValueX2);
@@ -4336,6 +4365,7 @@ public class Board
                     if (newDonorType == PieceType.Null)
                     {
                         blackPerPlayerInfo.pieceValueSumX2 -= (short)(pteO.pieceValueX2 + pteT.pieceValueX2 - pteAC_T.pieceValueX2);
+                        blackPerPlayerInfo.pieceCount--;
                     }
                     else
                     {
@@ -4352,7 +4382,7 @@ public class Board
 
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(allyX, ty, hopX, ty, Piece.GetPieceType(GetPieceAtCoordinate(allyX, ty)), BoardUpdateMetadata.BoardUpdateType.Shift));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(allyX, ty, hopX, ty, GetPieceAtCoordinate(allyX, ty), BoardUpdateMetadata.BoardUpdateType.Shift));
                 }
 
                 //move king
@@ -4772,7 +4802,7 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(tempX, tempY, Piece.PieceType.SludgeTrail, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(tempX, tempY, pieces[tempX + (tempY << 3)], BoardUpdateMetadata.BoardUpdateType.Spawn));
                         }
                     }
 
@@ -4886,7 +4916,7 @@ public class Board
                             pieces[tx + i + ((ty + j) << 3)] = Piece.SetPieceStatusEffect(PieceStatusEffect.Frozen, Piece.SetPieceStatusDuration(3, pieces[tx + i + ((ty + j) << 3)]));
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx + i, ty + j, pteE.type, BoardUpdateMetadata.BoardUpdateType.StatusApply));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx + i, ty + j, pieces[tx + i + ((ty + j) << 3)], BoardUpdateMetadata.BoardUpdateType.StatusApply));
                             }
                         }
                     }
@@ -5173,12 +5203,12 @@ public class Board
             //update for the giant
             if (pieceChange == 2)
             {
-                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, pteO.type, BoardUpdateMetadata.BoardUpdateType.Capture, true));
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.Capture, true));
             }
 
             if (pieceChange == 1)
             {
-                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.GetPieceType(oldPiece), BoardUpdateMetadata.BoardUpdateType.TypeChange, true));
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.TypeChange, true));
             }
         }
 
@@ -5228,7 +5258,7 @@ public class Board
                 pieces[x + (y << 3)] = Piece.SetPieceType(PieceType.Rock, Piece.SetPieceAlignment(PieceAlignment.Neutral, 0));
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, PieceType.Rock, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, pieces[x + (y << 3)], BoardUpdateMetadata.BoardUpdateType.Spawn));
                 }
                 break;
             case ConsumableMoveType.PocketRockslide:
@@ -5251,7 +5281,7 @@ public class Board
                             pieces[x + i + ((y + j) << 3)] = Piece.SetPieceType(PieceType.Rock, Piece.SetPieceAlignment(PieceAlignment.Neutral, 0));
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, PieceType.Rock, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, pieces[x + i + ((y + j) << 3)], BoardUpdateMetadata.BoardUpdateType.Spawn));
                             }
                         }
                     }
@@ -5264,7 +5294,7 @@ public class Board
                 whitePerPlayerInfo.pieceValueSumX2 += pte.pieceValueX2;
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, PieceType.Pawn, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, pieces[x + (y << 3)], BoardUpdateMetadata.BoardUpdateType.Spawn));
                 }
                 break;
             case ConsumableMoveType.PocketKnight:
@@ -5274,7 +5304,7 @@ public class Board
                 whitePerPlayerInfo.pieceValueSumX2 += pte.pieceValueX2;
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, PieceType.Knight, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, pieces[x + (y << 3)], BoardUpdateMetadata.BoardUpdateType.Spawn));
                 }
                 break;
             case ConsumableMoveType.Horns:
@@ -5348,7 +5378,7 @@ public class Board
                 if (boardUpdateMetadata != null)
                 {
                     //shift
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, Piece.GetPieceType(pieces[tx + ty * 8]), BoardUpdateMetadata.BoardUpdateType.Shift));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, pieces[tx + ty * 8], BoardUpdateMetadata.BoardUpdateType.Shift));
                 }
                 break;
             case ConsumableMoveType.SplashFreeze:
@@ -5371,7 +5401,7 @@ public class Board
                             pieces[(x + i) + ((y + j) << 3)] = Piece.SetPieceStatusEffect(PieceStatusEffect.Frozen, Piece.SetPieceStatusDuration(3, pieces[(x + i) + ((y + j) << 3)]));
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(x + i, y + j, Piece.GetPieceType(pieces[(x + i) + ((y + j) << 3)]), BoardUpdateMetadata.BoardUpdateType.StatusApply));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(x + i, y + j, pieces[(x + i) + ((y + j) << 3)], BoardUpdateMetadata.BoardUpdateType.StatusApply));
                             }
                         }
                     }
@@ -5397,7 +5427,7 @@ public class Board
                             pieces[(x + i) + ((y + j) << 3)] = Piece.SetPieceStatusEffect(PieceStatusEffect.Ghostly, Piece.SetPieceStatusDuration(3, pieces[(x + i) + ((y + j) << 3)]));
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(x + i, y + j, Piece.GetPieceType(pieces[(x + i) + ((y + j) << 3)]), BoardUpdateMetadata.BoardUpdateType.StatusApply));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(x + i, y + j, pieces[(x + i) + ((y + j) << 3)], BoardUpdateMetadata.BoardUpdateType.StatusApply));
                             }
                         }
                     }
@@ -5483,7 +5513,7 @@ public class Board
                 whitePerPlayerInfo.pieceValueSumX2 += (short)(GlobalPieceManager.GetPieceTableEntry(pte.promotionType).pieceValueX2 - pte.pieceValueX2);
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, PieceType.Knight, BoardUpdateMetadata.BoardUpdateType.Spawn));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, pieces[x + (y << 3)], BoardUpdateMetadata.BoardUpdateType.Spawn));
                 }
                 break;
             case ConsumableMoveType.SplashCure:
@@ -5542,7 +5572,16 @@ public class Board
 
         if (boardUpdateMetadata != null)
         {
-            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, pte.type, BoardUpdateMetadata.BoardUpdateType.Capture));
+            //ArcanaMoon makes a lot more updates
+            if (pte.type != PieceType.ArcanaMoon && pte.type != PieceType.MoonIllusion)
+            {
+                PieceTableEntry realPTE = GlobalPieceManager.GetPieceTableEntry(piece);
+                //check to not add a double update for the piece carry special case below
+                if (realPTE == pte)
+                {
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, piece, BoardUpdateMetadata.BoardUpdateType.Capture));
+                }
+            }
         }
 
         if ((pte.piecePropertyB & PiecePropertyB.Giant) != 0)
@@ -5676,7 +5715,7 @@ public class Board
                 //Double check is here
                 if (pieces[index] != 0)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, Piece.PieceType.MoonIllusion, BoardUpdateMetadata.BoardUpdateType.Capture));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, pieces[index], BoardUpdateMetadata.BoardUpdateType.Capture));
                 }
             }
 
@@ -5733,7 +5772,7 @@ public class Board
 
         if (boardUpdateMetadata != null)
         {
-            boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, PieceType.Pawn, BoardUpdateMetadata.BoardUpdateType.Spawn));
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, pieces[tx + ty * 8], BoardUpdateMetadata.BoardUpdateType.Spawn));
         }
 
         PieceTableEntry pteR = GlobalPieceManager.GetPieceTableEntry(PieceType.Pawn);
@@ -5797,7 +5836,7 @@ public class Board
 
         if (boardUpdateMetadata != null)
         {
-            boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.GetPieceType(piece), BoardUpdateMetadata.BoardUpdateType.Spawn));
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, piece, BoardUpdateMetadata.BoardUpdateType.Spawn));
         }
 
         PieceTableEntry pteR = GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(piece));
@@ -5861,7 +5900,7 @@ public class Board
 
         if (boardUpdateMetadata != null)
         {
-            boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.GetPieceType(piece), BoardUpdateMetadata.BoardUpdateType.Spawn));
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, piece, BoardUpdateMetadata.BoardUpdateType.Spawn));
         }
 
         PieceTableEntry pteR = GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(piece));
@@ -5926,7 +5965,7 @@ public class Board
         if (boardUpdateMetadata != null)
         {
             //Spawn a new lich
-            boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, Piece.PieceType.Lich, BoardUpdateMetadata.BoardUpdateType.Spawn));
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, pieces[tx + ty * 8], BoardUpdateMetadata.BoardUpdateType.Spawn));
         }
 
         PieceTableEntry pteR = GlobalPieceManager.GetPieceTableEntry(PieceType.Lich);
@@ -5991,7 +6030,7 @@ public class Board
         if (boardUpdateMetadata != null)
         {
             //Spawn a new lich
-            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, Piece.PieceType.Revenant, BoardUpdateMetadata.BoardUpdateType.Spawn));
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, pieces[tx + ty * 8], BoardUpdateMetadata.BoardUpdateType.Spawn));
         }
 
         PieceTableEntry pteR = GlobalPieceManager.GetPieceTableEntry(PieceType.Revenant);
@@ -6045,13 +6084,12 @@ public class Board
 
         PieceTableEntry pteS = GlobalPieceManager.GetPieceTableEntry(PieceType.Slime);
 
-        if (boardUpdateMetadata != null)
-        {
-            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x + dx, y + dy, Piece.PieceType.Slime, BoardUpdateMetadata.BoardUpdateType.Spawn));
-        }
-
         //Spawn a thing
         pieces[(x + dx) + (y + dy) * 8] = Piece.SetPieceType(PieceType.Slime, GetPieceAtCoordinate(x, y));
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x + dx, y + dy, pieces[(x + dx) + (y + dy) * 8], BoardUpdateMetadata.BoardUpdateType.Spawn));
+        }
         if (pa == PieceAlignment.White)
         {
             whitePerPlayerInfo.pieceValueSumX2 += pteS.pieceValueX2;
@@ -6072,13 +6110,12 @@ public class Board
             return;
         }
 
-        if (boardUpdateMetadata != null)
-        {
-            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x + dx * 2, y + dy * 2, Piece.PieceType.Slime, BoardUpdateMetadata.BoardUpdateType.Spawn));
-        }
-
         //Spawn a thing
         pieces[(x + dx * 2) + (y + dy * 2) * 8] = Piece.SetPieceType(PieceType.Slime, GetPieceAtCoordinate(x, y));
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x + dx * 2, y + dy * 2, pieces[(x + dx * 2) + (y + dy * 2) * 8], BoardUpdateMetadata.BoardUpdateType.Spawn));
+        }
         if (pa == PieceAlignment.White)
         {
             whitePerPlayerInfo.pieceValueSumX2 += pteS.pieceValueX2;
@@ -6127,13 +6164,12 @@ public class Board
 
         PieceTableEntry pteS = GlobalPieceManager.GetPieceTableEntry(newPiece);
 
-        if (boardUpdateMetadata != null)
-        {
-            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x + dx, y + dy, newPiece, BoardUpdateMetadata.BoardUpdateType.Spawn));
-        }
-
         //Spawn a thing
         pieces[(x + dx) + (y + dy) * 8] = Piece.SetPieceType(newPiece, GetPieceAtCoordinate(x, y));
+        if (boardUpdateMetadata != null)
+        {
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x + dx, y + dy, pieces[(x + dx) + (y + dy) * 8], BoardUpdateMetadata.BoardUpdateType.Spawn));
+        }
         if (pa == PieceAlignment.White)
         {
             whitePerPlayerInfo.pieceValueSumX2 += pteS.pieceValueX2;
@@ -6561,7 +6597,7 @@ public class Board
                     pieces[index] = 0;
                     if (boardUpdateMetadata != null)
                     {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, newindex & 7, newindex >> 3, Piece.PieceType.Zombie, BoardUpdateMetadata.BoardUpdateType.Shift));
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, newindex & 7, newindex >> 3, pieces[newindex], BoardUpdateMetadata.BoardUpdateType.Shift));
                     }
                 }
             }
@@ -6633,7 +6669,7 @@ public class Board
                     pieces[index] = 0;
                     if (boardUpdateMetadata != null)
                     {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, newindex & 7, newindex >> 3, Piece.PieceType.Abomination, BoardUpdateMetadata.BoardUpdateType.Shift));
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, newindex & 7, newindex >> 3, pieces[newindex], BoardUpdateMetadata.BoardUpdateType.Shift));
                     }
                 }
             }
@@ -6742,7 +6778,7 @@ public class Board
 
             if (boardUpdateMetadata != null)
             {
-                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, pteO.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.Shift));
             }
 
             DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, 0);
@@ -6861,7 +6897,7 @@ public class Board
 
             if (boardUpdateMetadata != null)
             {
-                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, pteO.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.Shift));
             }
 
             PieceTableEntry pte = globalData.GetPieceTableEntryFromCache(index, oldPiece);
@@ -7007,7 +7043,7 @@ public class Board
                     {
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, fx - dx, fy - dy, pteO.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, fx - dx, fy - dy, oldPiece, BoardUpdateMetadata.BoardUpdateType.Shift));
                         }
 
                         pieces[(fx - dx) + ((fy - dy) << 3)] = Piece.SetPieceSpecialData((ushort)(Move.ReverseDir((Dir)data)), oldPiece);
@@ -7021,7 +7057,7 @@ public class Board
             {
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, fx + dx, fy + dy, pteO.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, fx + dx, fy + dy, oldPiece, BoardUpdateMetadata.BoardUpdateType.Shift));
                 }
 
                 //Go
@@ -7093,12 +7129,11 @@ public class Board
 
                 if (pte.promotionType != PieceType.Null)
                 {
+                    pieces[i + yLevel * 8] = Piece.SetPieceType(pte.promotionType, piece);
                     if (boardUpdateMetadata != null)
                     {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i, yLevel, pte.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i, yLevel, pieces[i + yLevel * 8], BoardUpdateMetadata.BoardUpdateType.TypeChange));
                     }
-
-                    pieces[i + yLevel * 8] = Piece.SetPieceType(pte.promotionType, piece);
 
                     if ((pte.piecePropertyB & PiecePropertyB.Giant) != 0)
                     {
@@ -7163,11 +7198,11 @@ public class Board
                     pieces[i] = Piece.SetPieceSpecialData(1, pieces[i]);
                 } else
                 {
-                    pieces[i] = 0;
                     if (boardUpdateMetadata != null)
                     {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pt, BoardUpdateMetadata.BoardUpdateType.Capture));
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.Capture));
                     }
+                    pieces[i] = 0;
                 }
                 continue;
             }
@@ -7278,7 +7313,7 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
                         }
 
                         pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
@@ -7305,12 +7340,11 @@ public class Board
                             whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
                         }
 
+                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
                         }
-
-                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
                     }
                     break;
                 case PieceType.DayQueen:
@@ -7332,12 +7366,11 @@ public class Board
                             whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
                         }
 
+                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
                         }
-
-                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
                     }
                     break;
                 case PieceType.NightQueen:
@@ -7359,12 +7392,11 @@ public class Board
                             whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
                         }
 
+                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
                         }
-
-                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
                     }
                     break;
                 case PieceType.FlameEgg:
@@ -7392,11 +7424,11 @@ public class Board
                         {
                             whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
                         }
+                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
                         }
-                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
                     }
                     break;
                 case PieceType.WaveEgg:
@@ -7425,11 +7457,11 @@ public class Board
                         {
                             whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
                         }
+                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
                         }
-                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
                     }
                     break;
                 case PieceType.RockEgg:
@@ -7478,11 +7510,11 @@ public class Board
                         {
                             whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
                         }
+                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
                         }
-                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
                     }
                     break;
             }
@@ -7527,7 +7559,7 @@ public class Board
 
                     if (boardUpdateMetadata != null)
                     {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pt, BoardUpdateMetadata.BoardUpdateType.Capture));
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.Capture));
                     }
 
                     DeletePieceAtCoordinate(i & 7, i >> 3, pte, pa, boardUpdateMetadata);
@@ -7562,7 +7594,7 @@ public class Board
                             globalData.bitboard_piecesBlack &= ~(1uL << (i));
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, i & 7, (i >> 3) - 1, pt, BoardUpdateMetadata.BoardUpdateType.Shift));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, i & 7, (i >> 3) - 1, pieces[i - 8], BoardUpdateMetadata.BoardUpdateType.Shift));
                             }
                         }
                     }
@@ -7578,7 +7610,7 @@ public class Board
                             globalData.bitboard_piecesWhite &= ~(1uL << (i));
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, i & 7, (i >> 3) + 1, pt, BoardUpdateMetadata.BoardUpdateType.Shift));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, i & 7, (i >> 3) + 1, pieces[i + 8], BoardUpdateMetadata.BoardUpdateType.Shift));
                             }
                         }
                     }
@@ -7605,7 +7637,7 @@ public class Board
                             globalData.bitboard_piecesBlack &= ~(1uL << (i));
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, i & 7, (i >> 3) + 1, pt, BoardUpdateMetadata.BoardUpdateType.Shift));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, i & 7, (i >> 3) + 1, pieces[i + 8], BoardUpdateMetadata.BoardUpdateType.Shift));
                             }
                         }
                     }
@@ -7621,7 +7653,7 @@ public class Board
                             globalData.bitboard_piecesWhite &= ~(1uL << (i));
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, i & 7, (i >> 3) - 1, pt, BoardUpdateMetadata.BoardUpdateType.Shift));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, i & 7, (i >> 3) - 1, pieces[i - 8], BoardUpdateMetadata.BoardUpdateType.Shift));
                             }
                         }
                     }
@@ -7694,7 +7726,7 @@ public class Board
 
             if (boardUpdateMetadata != null)
             {
-                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, pte.type, BoardUpdateMetadata.BoardUpdateType.Capture));
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, pieces[x + (y << 3)], BoardUpdateMetadata.BoardUpdateType.Capture));
             }
 
             Piece.PieceAlignment targetPA = Piece.GetPieceAlignment(pieces[x + y * 8]);
@@ -7746,7 +7778,7 @@ public class Board
         {
             if (boardUpdateMetadata != null)
             {
-                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, pieces[x + (y << 3)], BoardUpdateMetadata.BoardUpdateType.Shift));
             }
 
             //blow wind towards ty
@@ -7784,14 +7816,14 @@ public class Board
         {
             if (pieces[x + (y << 3)] != 0)
             {
-                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x2, y2, pteA.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x2, y2, pieces[x + (y << 3)], BoardUpdateMetadata.BoardUpdateType.Shift));
             }
         }
         if (boardUpdateMetadata != null)
         {
             if (pieces[x2 + (y2 << 3)] != 0)
             {
-                boardUpdateMetadata.Add(new BoardUpdateMetadata(x2, y2, x, y, pteB.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(x2, y2, x, y, pieces[x2 + (y2 << 3)], BoardUpdateMetadata.BoardUpdateType.Shift));
             }
         }
 
@@ -7823,14 +7855,14 @@ public class Board
         {
             if (pieces[x + (y << 3)] != 0)
             {
-                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x2, y2, pteA.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x2, y2, pieces[x + (y << 3)], BoardUpdateMetadata.BoardUpdateType.Shift));
             }
         }
         if (boardUpdateMetadata != null)
         {
             if (pieces[x2 + (y2 << 3)] != 0)
             {
-                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x2, y2, pteA.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, x2, y2, pieces[x2 + (y2 << 3)], BoardUpdateMetadata.BoardUpdateType.Shift));
             }
         }
 
@@ -7898,7 +7930,7 @@ public class Board
 
         if (boardUpdateMetadata != null)
         {
-            boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, (tx - dx), (ty - dy), pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, (tx - dx), (ty - dy), pieces[tx + ty * 8], BoardUpdateMetadata.BoardUpdateType.Shift));
         }
 
         //obstacle at tx, ty, pull to 1 step earlier
@@ -7960,7 +7992,7 @@ public class Board
 
         if (boardUpdateMetadata != null)
         {
-            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+            boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, tx, ty, pieces[x + y * 8], BoardUpdateMetadata.BoardUpdateType.Shift));
         }
 
         //Debug.Log("L: " + x + " " + y + " " + dx + " " + dy + " " + tx + " " + ty + " " + Piece.GetPieceType(pieces[tx + ty * 8]));
@@ -8154,7 +8186,7 @@ public class Board
                 pieces[x + dx + ((y + dy) << 3)] = Piece.SetPieceStatusEffect(PieceStatusEffect.None, Piece.SetPieceStatusDuration(0, piece));
                 if (boardUpdateMetadata != null)
                 {
-                    boardUpdateMetadata.Add(new BoardUpdateMetadata(x + dx, y + dy, Piece.GetPieceType(piece), BoardUpdateMetadata.BoardUpdateType.StatusCure));
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(x + dx, y + dy, piece, BoardUpdateMetadata.BoardUpdateType.StatusCure));
                 }
             }
         }
@@ -8209,7 +8241,7 @@ public class Board
                 {
                     if (boardUpdateMetadata != null)
                     {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7), (lastMoveIndex >> 3) + 1, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7), (lastMoveIndex >> 3) + 1, pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.Shift));
                     }
 
                     //blow wind upwards
@@ -8231,7 +8263,7 @@ public class Board
                     {
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7) - 1, (lastMoveIndex >> 3), pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7) - 1, (lastMoveIndex >> 3), pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.Shift));
                         }
 
                         pieces[lastMoveIndex - 1] = pieces[lastMoveIndex];
@@ -8246,7 +8278,7 @@ public class Board
                     {
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7) + 1, (lastMoveIndex >> 3), pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7) + 1, (lastMoveIndex >> 3), pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.Shift));
                         }
 
                         pieces[lastMoveIndex + 1] = pieces[lastMoveIndex];
@@ -8280,7 +8312,7 @@ public class Board
                     {
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7), (lastMoveIndex >> 3) - 1, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7), (lastMoveIndex >> 3) - 1, pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.Shift));
                         }
 
                         pieces[lastMoveIndex - 8] = pieces[lastMoveIndex];
@@ -8295,7 +8327,7 @@ public class Board
                     {
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7), (lastMoveIndex >> 3) + 1, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7), (lastMoveIndex >> 3) + 1, pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.Shift));
                         }
 
                         //blow wind upwards
@@ -8316,7 +8348,7 @@ public class Board
                         {
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7), (lastMoveIndex >> 3) + 1, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7), (lastMoveIndex >> 3) + 1, pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.Shift));
                             }
 
                             //blow wind upwards
@@ -8330,7 +8362,7 @@ public class Board
                         {
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7), (lastMoveIndex >> 3) - 1, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7), (lastMoveIndex >> 3) - 1, pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.Shift));
                             }
 
                             pieces[lastMoveIndex - 8] = pieces[lastMoveIndex];
@@ -8343,7 +8375,7 @@ public class Board
                         {
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7) - 1, (lastMoveIndex >> 3), pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7) - 1, (lastMoveIndex >> 3), pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.Shift));
                             }
 
                             pieces[lastMoveIndex - 1] = pieces[lastMoveIndex];
@@ -8356,7 +8388,7 @@ public class Board
                         {
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7) + 1, (lastMoveIndex >> 3), pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, (lastMoveIndex & 7) + 1, (lastMoveIndex >> 3), pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.Shift));
                             }
 
                             pieces[lastMoveIndex + 1] = pieces[lastMoveIndex];
@@ -8379,7 +8411,7 @@ public class Board
                             {
                                 if (boardUpdateMetadata != null)
                                 {
-                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, iceDx, iceDy, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, iceDx, iceDy, pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.Shift));
                                 }
 
                                 processedSquares |= 1uL << (iceDx + iceDy * 8);
@@ -8404,7 +8436,7 @@ public class Board
                             {
                                 if (boardUpdateMetadata != null)
                                 {
-                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, bouncyDx, bouncyDy, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, bouncyDx, bouncyDy, pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.Shift));
                                 }
 
                                 processedSquares |= 1uL << (bouncyDx + bouncyDy * 8);
@@ -8445,7 +8477,7 @@ public class Board
 
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.TypeChange));
                             }
                         }
                         break;
@@ -8455,6 +8487,14 @@ public class Board
                         {
                             pieces[lastMoveIndex] = Piece.SetPieceStatusEffect(PieceStatusEffect.Frozen, pieces[lastMoveIndex]);
                             pieces[lastMoveIndex] = Piece.SetPieceStatusDuration(2, pieces[lastMoveIndex]);
+
+                            if (boardUpdateMetadata != null)
+                            {
+                                if (pieces[lastMoveIndex] != 0)
+                                {
+                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.StatusApply));
+                                }
+                            }
                         }
                         break;
                     default:
@@ -8474,7 +8514,7 @@ public class Board
                                 {
                                     if (boardUpdateMetadata != null)
                                     {
-                                        boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, piceDx, piceDy, pte.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                                        boardUpdateMetadata.Add(new BoardUpdateMetadata(lastMoveIndex & 7, lastMoveIndex >> 3, piceDx, piceDy, pieces[lastMoveIndex], BoardUpdateMetadata.BoardUpdateType.Shift));
                                     }
 
                                     processedSquares |= 1uL << (piceDx + piceDy * 8);
@@ -8596,7 +8636,7 @@ public class Board
                         {
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7), (index >> 3) + 1, pteI.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7), (index >> 3) + 1, pieces[index], BoardUpdateMetadata.BoardUpdateType.Shift));
                             }
 
                             //blow wind upwards
@@ -8611,7 +8651,7 @@ public class Board
                         {
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7), (index >> 3) - 1, pteI.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7), (index >> 3) - 1, pieces[index], BoardUpdateMetadata.BoardUpdateType.Shift));
                             }
 
                             pieces[index - 8] = pieces[index];
@@ -8643,7 +8683,7 @@ public class Board
                     {
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7), (index >> 3) + 1, pteI.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7), (index >> 3) + 1, pieces[index], BoardUpdateMetadata.BoardUpdateType.Shift));
                         }
 
                         //blow wind upwards
@@ -8657,7 +8697,7 @@ public class Board
                     {
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7), (index >> 3) - 1, pteI.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7), (index >> 3) - 1, pieces[index], BoardUpdateMetadata.BoardUpdateType.Shift));
                         }
 
                         pieces[index - 8] = pieces[index];
@@ -8670,7 +8710,7 @@ public class Board
                     {
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7) - 1, (index >> 3), pteI.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7) - 1, (index >> 3), pieces[index], BoardUpdateMetadata.BoardUpdateType.Shift));
                         }
 
                         pieces[index - 1] = pieces[index];
@@ -8683,7 +8723,7 @@ public class Board
                     {
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7) + 1, (index >> 3), pteI.type, BoardUpdateMetadata.BoardUpdateType.Shift));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, (index & 7) + 1, (index >> 3), pieces[index], BoardUpdateMetadata.BoardUpdateType.Shift));
                         }
 
                         pieces[index + 1] = pieces[index];
@@ -8714,7 +8754,7 @@ public class Board
 
                         if (boardUpdateMetadata != null)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(index & 7, index >> 3, pieces[index], BoardUpdateMetadata.BoardUpdateType.TypeChange));
                         }
 
                         if (black)
@@ -8772,7 +8812,7 @@ public class Board
 
                     if (boardUpdateMetadata != null)
                     {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(subindex & 7, subindex >> 3, PieceType.King, BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(subindex & 7, subindex >> 3, pieces[subindex], BoardUpdateMetadata.BoardUpdateType.TypeChange));
                     }
 
                     pieces[subindex] = Piece.SetPieceType(PieceType.King, pieces[subindex]);

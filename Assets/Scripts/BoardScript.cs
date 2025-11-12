@@ -13,6 +13,7 @@ public class BoardScript : MonoBehaviour
     public GameObject squareTemplate;
     public GameObject pieceTemplate;
     public GameObject moveTrailTemplate;
+    public GameObject moveParticleTemplate;
 
     public GameObject squareHolder;
     public GameObject pieceHolder;
@@ -41,7 +42,7 @@ public class BoardScript : MonoBehaviour
     public Coroutine animCoroutine;
     public bool animating;
     public PieceScript lastMovedPiece;
-    public float animationSpeed = 5;
+    public float animationSpeed = 5;            //speeds: 6 (slow), 12 (normal), 36 (fast), 500 (very fast), 10000 (instant)
 
     public PieceScript selectedPiece;
 
@@ -1306,6 +1307,16 @@ public class BoardScript : MonoBehaviour
 
     public void FixBoardBasedOnPosition()
     {
+        //To fix wack bugs I should just refresh the entire piece list anyway?
+        for (int i = 0; i < pieces.Count; i++)
+        {
+            if (pieces[i] != null)
+            {
+                Destroy(pieces[i].gameObject);
+            }
+            pieces[i] = null;
+        }
+
         //fix the pieces to match the board state
         for (int i = 0; i < pieces.Count; i++)
         {
@@ -1319,11 +1330,13 @@ public class BoardScript : MonoBehaviour
             int checkY = i / 8;
 
             //Create a new piece
-            if (board.pieces[i] != 0 && pieces[i] == null)
+            //if (board.pieces[i] != 0 && pieces[i] == null)
+            if (board.pieces[i] != 0)
             {
                 needRecreate = true;
             }
 
+            /*
             //Destroy a piece that is on an empty
             if (board.pieces[i] == 0 && pieces[i] != null)
             {
@@ -1343,6 +1356,7 @@ public class BoardScript : MonoBehaviour
             {
                 pieces[i].Setup(board.pieces[i], checkX, checkY);
             }
+            */
 
             if (needRecreate)
             {
@@ -1387,25 +1401,28 @@ public class BoardScript : MonoBehaviour
         }
     }
 
-    public IEnumerator AnimatePieceSpawn(Piece.PieceType pt, int ofx, int ofy, int otx, int oty)
+    public IEnumerator AnimatePieceSpawn(uint piece, int ofx, int ofy, int otx, int oty)
     {
         //Spawn a piece
 
         int i = otx + (oty << 3);
+        //for residue piece leavers the piece here is the last piece moved so don't destroy it yet
+        /*
         if (pieces[i] != null)
         {
             Destroy(pieces[i].gameObject);
         }
+        */
 
         GameObject go = Instantiate(pieceTemplate, pieceHolder.transform);
         go.name = "Piece " + i % 8 + " " + i / 8;
         PieceScript ps = go.GetComponent<PieceScript>();
         ps.bs = this;
         pieces[i] = ps;
-        ps.Setup(Piece.SetPieceAlignment(Piece.GetPieceAlignment(pieces[ofx + (ofy << 3)].piece), Piece.SetPieceType(pt, 0)), otx, oty);
+        ps.Setup(piece, otx, oty);
 
         float duration = 0;
-        float animationDuration = 0.2f;
+        float animationDuration = 3.6f / animationSpeed;
 
         while (duration < 1)
         {
@@ -1416,6 +1433,7 @@ public class BoardScript : MonoBehaviour
         }
 
         ps.transform.localScale = Vector3.one;
+        pieces[i] = ps;
     }
     public IEnumerator AnimatePieceSpin(PieceScript ps, int otx, int oty)
     {
@@ -1425,6 +1443,7 @@ public class BoardScript : MonoBehaviour
             yield break;
         }
 
+        Transform pivot = targetPiece.transform;
         if (targetPiece.isGiant)
         {
             int dx = Piece.GetPieceSpecialData(targetPiece.piece) & 1;
@@ -1435,18 +1454,30 @@ public class BoardScript : MonoBehaviour
             {
                 yield break;
             }
+
+            //make a different pivot
+            pivot = new GameObject().transform;
+            pivot.parent = pieceHolder.transform;
+            pivot.transform.position = GetSpritePositionFromCoordinates(otx + 0.5f, oty + 0.5f, -0.5f);
+            targetPiece.transform.parent = pivot;
         }
 
         Vector3 targetPos = GetSpritePositionFromCoordinates(otx, oty, -0.5f);
 
         float duration = 0;
-        float animationDuration = 0.2f;
+        float animationDuration = 3.6f / animationSpeed;
 
         while (duration < 1)
         {
-            ps.transform.localEulerAngles = Vector3.forward * duration * 360;
+            pivot.transform.localEulerAngles = Vector3.forward * duration * 360;
             duration += Time.deltaTime / animationDuration;
             yield return null;
+        }
+
+        if (targetPiece.isGiant)
+        {
+            ps.transform.parent = pieceHolder.transform;
+            Destroy(pivot.gameObject);
         }
 
         ps.transform.localEulerAngles = Vector3.zero;
@@ -1471,10 +1502,10 @@ public class BoardScript : MonoBehaviour
             }
         }
 
-        Vector3 targetPos = GetSpritePositionFromCoordinates(otx, oty, -0.4f);
+        Vector3 targetPos = GetSpritePositionFromCoordinates(otx, oty, targetPiece.transform.position.z + 0.1f);
 
         float duration = 0;
-        float animationDuration = 0.2f;
+        float animationDuration = 3.6f / animationSpeed;
 
         Vector3 startPos = ps.transform.position;
 
@@ -1482,7 +1513,10 @@ public class BoardScript : MonoBehaviour
         {
             if (targetPiece.isGiant)
             {
-                ps.transform.position = startPos + new Vector3(1, 1, 0) * (SQUARE_SIZE / 2) * (duration);
+                ps.transform.position = targetPos + new Vector3(1, 1, 0) * (SQUARE_SIZE / 2) * (duration);
+            } else
+            {
+                ps.transform.position = targetPos;
             }
             ps.transform.localScale = Vector3.one * (1 - duration);
 
@@ -1492,11 +1526,15 @@ public class BoardScript : MonoBehaviour
 
         ps.transform.localScale = Vector3.zero;
         Destroy(ps.gameObject);
-        pieces[(otx + (oty << 3))] = null;
+        if (ps != lastMovedPiece)
+        {
+            pieces[(otx + (oty << 3))] = null;
+        }
     }
     public IEnumerator AnimatePieceShift(PieceScript ps, int otx, int oty)
     {
         PieceScript targetPiece = ps;
+
         if (targetPiece == null)
         {
             yield break;
@@ -1526,6 +1564,119 @@ public class BoardScript : MonoBehaviour
         targetPiece.x = otx;
         targetPiece.y = oty;
     }
+
+    public IEnumerator AnimatePieceMove(MoveParticleScript mps, int ofx, int ofy, int otx, int oty)
+    {
+        if (ofx < 0 || ofx > 7 || ofy < 0 || ofy > 7)
+        {
+            yield break;
+        }
+
+        PieceScript targetPiece = pieces[ofx + (ofy << 3)];
+        if (targetPiece == null)
+        {
+            yield break;
+        }
+
+        mps.transform.position = GetSpritePositionFromCoordinates(ofx, ofy, -1.1f);
+
+        Vector3 targetPos = GetSpritePositionFromCoordinates(otx, oty, -1.1f);
+
+        while (mps.transform.position != targetPos)
+        {
+            Vector3 delta = (targetPos - mps.transform.position).normalized * animationSpeed * Time.deltaTime;
+
+            if ((targetPos - mps.transform.position).magnitude < animationSpeed * Time.deltaTime)
+            {
+                mps.transform.position = targetPos;
+                break;
+            }
+
+            mps.transform.position += delta;
+            yield return null;
+        }
+    }
+    public IEnumerator AnimatePieceMove(MoveParticleScript mps, int ofx, int ofy, List<MoveMetadata> moveTrail)
+    {
+        PieceScript targetPiece = pieces[ofx + (ofy << 3)];
+        if (targetPiece == null)
+        {
+            yield break;
+        }
+        mps.transform.position = GetSpritePositionFromCoordinates(ofx, ofy, -1.1f);
+
+        Vector3 targetPos;
+
+        int sx = ofx;
+        int sy = ofy;
+
+        foreach (MoveMetadata m in moveTrail)
+        {
+            int mx = m.x;
+            int my = m.y;
+
+            if (m.path != MoveMetadata.PathType.Teleport && m.path != MoveMetadata.PathType.TeleportGiant)
+            {
+                if (mx - sx > 4)
+                {
+                    mx -= 8;
+                }
+                if (sx - mx > 4)
+                {
+                    mx += 8;
+                }
+                if (my - sy > 4)
+                {
+                    my -= 8;
+                }
+                if (sy - my > 4)
+                {
+                    my += 8;
+                }
+            }
+            targetPos = GetSpritePositionFromCoordinates(mx, my, -1.1f);
+            sx = m.x;
+            sy = m.y;
+
+            while (mps.transform.position != targetPos)
+            {
+                Vector3 delta = (targetPos - mps.transform.position).normalized * animationSpeed * Time.deltaTime;
+
+                if ((targetPos - mps.transform.position).magnitude < animationSpeed * Time.deltaTime)
+                {
+                    mps.transform.position = targetPos;
+                    break;
+                }
+
+                mps.transform.position += delta;
+
+                if (mps.transform.position.x > SQUARE_SIZE * 4)
+                {
+                    mps.transform.position -= Vector3.right * SQUARE_SIZE * 8;
+                    targetPos -= Vector3.right * SQUARE_SIZE * 8;
+                }
+                if (mps.transform.position.x < -SQUARE_SIZE * 4)
+                {
+                    mps.transform.position += Vector3.right * SQUARE_SIZE * 8;
+                    targetPos += Vector3.right * SQUARE_SIZE * 8;
+                }
+                if (mps.transform.position.y > SQUARE_SIZE * 4)
+                {
+                    mps.transform.position -= Vector3.up * SQUARE_SIZE * 8;
+                    targetPos -= Vector3.up * SQUARE_SIZE * 8;
+                }
+                if (mps.transform.position.y < -SQUARE_SIZE * 4)
+                {
+                    mps.transform.position += Vector3.up * SQUARE_SIZE * 8;
+                    targetPos += Vector3.up * SQUARE_SIZE * 8;
+                }
+
+                yield return null;
+            }
+            yield return null;
+        }
+    }
+
     public IEnumerator AnimatePieceMove(int ofx, int ofy, int otx, int oty)
     {
         if (ofx < 0 || ofx > 7 || ofy < 0 || ofy > 7)
@@ -1556,6 +1707,12 @@ public class BoardScript : MonoBehaviour
             targetPiece.transform.position += delta;
             yield return null;
         }
+
+        //other functions reset the position so fix it here?
+        //      (Resets because it calls Setup which sets piece positions)
+        //I could remove the position reset (make a second Setup) but ehh
+        targetPiece.x = otx;
+        targetPiece.y = oty;
     }
     public IEnumerator AnimatePieceMove(int ofx, int ofy, List<MoveMetadata> moveTrail)
     {
@@ -1576,21 +1733,24 @@ public class BoardScript : MonoBehaviour
             int mx = m.x;
             int my = m.y;
 
-            if (mx - sx > 4)
+            if (m.path != MoveMetadata.PathType.Teleport && m.path != MoveMetadata.PathType.TeleportGiant)
             {
-                mx -= 8;
-            }
-            if (sx - mx > 4)
-            {
-                mx += 8;
-            }
-            if (my - sy > 4)
-            {
-                my -= 8;
-            }
-            if (sy - my > 4)
-            {
-                my += 8;
+                if (mx - sx > 4)
+                {
+                    mx -= 8;
+                }
+                if (sx - mx > 4)
+                {
+                    mx += 8;
+                }
+                if (my - sy > 4)
+                {
+                    my -= 8;
+                }
+                if (sy - my > 4)
+                {
+                    my += 8;
+                }
             }
             targetPos = GetSpritePositionFromCoordinates(mx, my, -1.1f);
             sx = m.x;
@@ -1633,12 +1793,23 @@ public class BoardScript : MonoBehaviour
             }
             yield return null;
         }
+
+        //other functions reset the position so fix it here?
+        //      (Resets because it calls Setup which sets piece positions)
+        //I could remove the position reset (make a second Setup) but ehh
+        targetPiece.x = moveTrail[moveTrail.Count - 1].x;
+        targetPiece.y = moveTrail[moveTrail.Count - 1].y;
     }
 
     public void StartAnimatingBoardUpdate(uint move, bool lastMoveStationary, List<MoveMetadata> moveTrail, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
-        animating = true;
-        animCoroutine = StartCoroutine(AnimateBoardUpdate(move, lastMoveStationary, moveTrail, boardUpdateMetadata));
+        //"instant animations"
+        //It basically doesn't even play them at all and just uses FixBoardBasedOnPosition to fix the position
+        if (animationSpeed < 10000)
+        {
+            animating = true;
+            animCoroutine = StartCoroutine(AnimateBoardUpdate(move, lastMoveStationary, moveTrail, boardUpdateMetadata));
+        }
     }
 
     public IEnumerator AnimateBoardUpdate(uint move, bool lastMoveStationary, List<MoveMetadata> moveTrail, List<BoardUpdateMetadata> boardUpdateMetadata)
@@ -1664,6 +1835,33 @@ public class BoardScript : MonoBehaviour
             {
                 yield return StartCoroutine(AnimatePieceMove(ofx, ofy, moveTrail));
             }
+        } else
+        {
+            //Spawn a particle that moves along the path
+            switch (Move.GetSpecialType(move))
+            {
+                case Move.SpecialType.CarryAlly:
+                    yield return StartCoroutine(AnimatePieceMove(otx, oty, ofx, ofy));
+                    if (pieces[otx + (oty << 3)] != null)
+                    {
+                        Destroy(pieces[otx + (oty << 3)].gameObject);
+                    }
+                    break;
+                default:
+                    //for now it's just a generic dot for most stuff
+                    MoveParticleScript mps = Instantiate(moveParticleTemplate, pieces[ofx + (ofy << 3)].transform).GetComponent<MoveParticleScript>();
+                    mps.Setup(Piece.GetPieceAlignment(pieces[ofx + (ofy << 3)].piece));
+                    if (moveTrail == null)
+                    {
+                        yield return StartCoroutine(AnimatePieceMove(mps, ofx, ofy, otx, oty));
+                    }
+                    else
+                    {
+                        yield return StartCoroutine(AnimatePieceMove(mps, ofx, ofy, moveTrail));
+                    }
+                    Destroy(mps.gameObject);
+                    break;
+            }
         }
 
         //to do later: animation for stationary moves (some particle travels along the path instead of the piece moving)
@@ -1688,49 +1886,74 @@ public class BoardScript : MonoBehaviour
                 {
                     case BoardUpdateMetadata.BoardUpdateType.Move:
                     case BoardUpdateMetadata.BoardUpdateType.Shift:
-                        yield return AnimatePieceShift(lastMovedPiece, tx, ty);
+                        yield return StartCoroutine(AnimatePieceShift(lastMovedPiece, tx, ty));
                         break;
                     case BoardUpdateMetadata.BoardUpdateType.Capture:
-                        yield return AnimatePieceCapture(lastMovedPiece, fx, fy);
+                        yield return StartCoroutine(AnimatePieceCapture(lastMovedPiece, fx, fy));
                         break;
                     case BoardUpdateMetadata.BoardUpdateType.Spawn:
-                        yield return AnimatePieceSpawn(boardUpdateMetadata[i].pieceType, fx, fy, tx, ty);
+                        yield return StartCoroutine(AnimatePieceSpawn(boardUpdateMetadata[i].piece, fx, fy, tx, ty));
                         break;
                     case BoardUpdateMetadata.BoardUpdateType.TypeChange:
-                        yield return AnimatePieceSpin(lastMovedPiece, fx, fy);
+                        yield return StartCoroutine(AnimatePieceSpin(lastMovedPiece, fx, fy));
+                        lastMovedPiece.Setup(boardUpdateMetadata[i].piece, lastMovedPiece.x, lastMovedPiece.y);
                         break;
                     case BoardUpdateMetadata.BoardUpdateType.AlignmentChange:
-                        yield return AnimatePieceSpin(lastMovedPiece, fx, fy);
+                        yield return StartCoroutine(AnimatePieceSpin(lastMovedPiece, fx, fy));
+                        lastMovedPiece.Setup(boardUpdateMetadata[i].piece, lastMovedPiece.x, lastMovedPiece.y);
                         break;
+                    case BoardUpdateMetadata.BoardUpdateType.ImbueModifier:
                     case BoardUpdateMetadata.BoardUpdateType.StatusCure:
                     case BoardUpdateMetadata.BoardUpdateType.StatusApply:
-                        yield return AnimatePieceSpin(lastMovedPiece, fx, fy);
+                        yield return StartCoroutine(AnimatePieceSpin(lastMovedPiece, fx, fy));
+                        lastMovedPiece.Setup(boardUpdateMetadata[i].piece, lastMovedPiece.x, lastMovedPiece.y);
                         break;
                 }
             }
             else
             {
+                PieceScript pieceActive = pieces[fx + (fy << 3)];
+
+                //Events that apply to the last moved piece need to be handled in a special way (because it might move on top of a piece to capture but there are events that apply to it vs the piece that was there before)
+                //The events that apply to the last moved that aren't handled by the last moved bool should end up in this case
+                if (pieceActive == null && lastMovedPiece.x == fx && lastMovedPiece.y == fy)
+                {
+                    pieceActive = lastMovedPiece;
+                }
                 switch (boardUpdateMetadata[i].type)
                 {
                     case BoardUpdateMetadata.BoardUpdateType.Move:
                     case BoardUpdateMetadata.BoardUpdateType.Shift:
-                        yield return AnimatePieceShift(pieces[fx + (fy << 3)], tx, ty);
+                        yield return StartCoroutine(AnimatePieceShift(pieceActive, tx, ty));
                         break;
                     case BoardUpdateMetadata.BoardUpdateType.Capture:
-                        yield return AnimatePieceCapture(pieces[fx + (fy << 3)], fx, fy);
+                        yield return StartCoroutine(AnimatePieceCapture(pieceActive, fx, fy));
                         break;
                     case BoardUpdateMetadata.BoardUpdateType.Spawn:
-                        yield return AnimatePieceSpawn(boardUpdateMetadata[i].pieceType, fx, fy, tx, ty);
+                        yield return StartCoroutine(AnimatePieceSpawn(boardUpdateMetadata[i].piece, fx, fy, tx, ty));
                         break;
                     case BoardUpdateMetadata.BoardUpdateType.TypeChange:
-                        yield return AnimatePieceSpin(pieces[fx + (fy << 3)], fx, fy);
+                        yield return StartCoroutine(AnimatePieceSpin(pieceActive, fx, fy));
+                        if (pieceActive != null)
+                        {
+                            pieceActive.Setup(boardUpdateMetadata[i].piece, pieceActive.x, pieceActive.y);
+                        }
                         break;
                     case BoardUpdateMetadata.BoardUpdateType.AlignmentChange:
-                        yield return AnimatePieceSpin(pieces[fx + (fy << 3)], fx, fy);
+                        yield return StartCoroutine(AnimatePieceSpin(pieceActive, fx, fy));
+                        if (pieceActive != null)
+                        {
+                            pieceActive.Setup(boardUpdateMetadata[i].piece, pieceActive.x, pieceActive.y);
+                        }
                         break;
+                    case BoardUpdateMetadata.BoardUpdateType.ImbueModifier:
                     case BoardUpdateMetadata.BoardUpdateType.StatusCure:
                     case BoardUpdateMetadata.BoardUpdateType.StatusApply:
-                        yield return AnimatePieceSpin(pieces[fx + (fy << 3)], fx, fy);
+                        yield return StartCoroutine(AnimatePieceSpin(pieceActive, fx, fy));
+                        if (pieceActive != null)
+                        {
+                            pieceActive.Setup(boardUpdateMetadata[i].piece, pieceActive.x, pieceActive.y);
+                        }
                         break;
                 }
             }

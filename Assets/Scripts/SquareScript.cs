@@ -148,7 +148,7 @@ public class SquareScript : MonoBehaviour
                 image.color = isBlack ? new Color(0.5f, 0.1f, 0.1f) : new Color(1, 0.1f, 0.1f);
                 break;
             case Square.SquareType.Frost:
-                image.color = isBlack ? new Color(0.5f, 0.5f, 0.1f) : new Color(1, 1f, 0.1f);
+                image.color = isBlack ? new Color(0.5f, 0.5f, 0.6f) : new Color(0.8f, 0.8f, 1f);
                 break;
             case Square.SquareType.BronzeTreasure:
                 image.color = isBlack ? new Color(0.3f, 0.2f, 0.1f) : new Color(0.6f, 0.3f, 0.1f);

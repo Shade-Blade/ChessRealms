@@ -39,6 +39,13 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     {
         this.piece = piece;
 
+        //should not be possible
+        if (piece == 0)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         isGiant = (GlobalPieceManager.GetPieceTableEntry(piece).piecePropertyB & Piece.PiecePropertyB.Giant) != 0;
 
         text.enabled = true;

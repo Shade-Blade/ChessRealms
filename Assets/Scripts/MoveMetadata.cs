@@ -562,7 +562,8 @@ public class BoardUpdateMetadata
     public int fy;
     public int tx;
     public int ty;
-    public Piece.PieceType pieceType;  //for type change stuff (promotion or other things)
+    //public Piece.PieceType pieceType;  //for type change stuff (promotion or other things)
+    public uint piece;  //piece in question (for spawn, type / alignment change)
     public BoardUpdateType type;
     public bool wasLastMovedPiece;  //to distinguish last moved from thing that was on the square before
 
@@ -575,46 +576,47 @@ public class BoardUpdateMetadata
         Shift,
         TypeChange,  //promotion / lycanthrope conversion
         AlignmentChange,
+        ImbueModifier,
         StatusCure,
         StatusApply,
     }
 
-    public BoardUpdateMetadata(int fx, int fy, int tx, int ty, Piece.PieceType pieceType, BoardUpdateType type, bool wasLastMoved)
+    public BoardUpdateMetadata(int fx, int fy, int tx, int ty, uint piece, BoardUpdateType type, bool wasLastMoved)
     {
         this.fx = fx;
         this.fy = fy;
         this.tx = tx;
         this.ty = ty;
-        this.pieceType = pieceType;
+        this.piece = piece;
         this.type = type;
         this.wasLastMovedPiece = wasLastMoved;
     }
-    public BoardUpdateMetadata(int fx, int fy, int tx, int ty, Piece.PieceType pieceType, BoardUpdateType type)
+    public BoardUpdateMetadata(int fx, int fy, int tx, int ty, uint piece, BoardUpdateType type)
     {
         this.fx = fx;
         this.fy = fy;
         this.tx = tx;
         this.ty = ty;
-        this.pieceType = pieceType;
+        this.piece = piece;
         this.type = type;
     }
 
-    public BoardUpdateMetadata(int fx, int fy, Piece.PieceType pieceType, BoardUpdateType type)
+    public BoardUpdateMetadata(int fx, int fy, uint piece, BoardUpdateType type)
     {
         this.fx = fx;
         this.fy = fy;
         this.tx = -1;
         this.ty = -1;
-        this.pieceType = pieceType;
+        this.piece = piece;
         this.type = type;
     }
-    public BoardUpdateMetadata(int fx, int fy, Piece.PieceType pieceType, BoardUpdateType type, bool wasLastMoved)
+    public BoardUpdateMetadata(int fx, int fy, uint piece, BoardUpdateType type, bool wasLastMoved)
     {
         this.fx = fx;
         this.fy = fy;
         this.tx = -1;
         this.ty = -1;
-        this.pieceType = pieceType;
+        this.piece = piece;
         this.type = type;
         this.wasLastMovedPiece = wasLastMoved;
     }

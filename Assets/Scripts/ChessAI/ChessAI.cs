@@ -302,6 +302,11 @@ public class ChessAI
 
         int pvmin = whiteValue < blackValue ? whiteValue : blackValue;
 
+        //new thing: if you have few (3? 4? 5?) pieces left it doesn't matter that much the king is in the corner
+        //Even if there's queens around the king being in the corner isn't really helped that much by being there (because you don't have much stuff for the king to hide behind)        
+
+        int pcmin = b.whitePerPlayerInfo.pieceCount < b.blackPerPlayerInfo.pieceCount ? b.whitePerPlayerInfo.pieceCount : b.blackPerPlayerInfo.pieceCount;
+
         output = pvmin / 2f;
 
         //subtract out the king
@@ -321,7 +326,26 @@ public class ChessAI
             output = 0;
         }
 
-        return 1 - output;
+        output = 1 - output;
+
+        if (pcmin <= 3)
+        {
+            return 1;
+        }
+        if (pcmin == 4 && output <= 0.8f)
+        {
+            return 0.8f;
+        }
+        if (pcmin == 5 && output <= 0.4f)
+        {
+            return 0.4f;
+        }
+        if (pcmin == 6 && output <= 0.1f)
+        {
+            return 0.1f;
+        }
+
+        return output;
     }
 
     public float EvaluateBoard(ref Board b, ulong boardHash, List<uint> moves)
