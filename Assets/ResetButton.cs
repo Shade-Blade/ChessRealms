@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class ResetButton : MonoBehaviour
 {
-    public BoardScript bs;
+    public BattleBoardScript bs;
     public Board.BoardPreset preset;
 
     public void OnMouseDown()

@@ -471,6 +471,62 @@ public class Board
 
         PostSetupInit();
     }
+    public void Setup(Piece.PieceType[] warmy, Piece.PieceType[] barmy, PlayerModifier pm, EnemyModifier em)
+    {
+        Init();
+
+        Piece.PieceType[] ptList = warmy;
+
+        for (int i = 0; i < pieces.Length; i++)
+        {
+            int indexToRead = i;
+            if (indexToRead > 31)
+            {
+                ptList = barmy;
+                indexToRead = 63 - indexToRead;
+                indexToRead = indexToRead - (indexToRead % 8) + (7 - (indexToRead % 8));
+            }
+
+            if (indexToRead >= ptList.Length)
+            {
+                continue;
+            }
+
+            Piece.PieceType pt = ptList[indexToRead];
+
+            if (pt == PieceType.Null)
+            {
+                continue;
+            }
+
+            if (GlobalPieceManager.GetPieceTableEntry(pt) == null)
+            {
+                Debug.Log(pt);
+            }
+
+            pieces[i] = Piece.PackPieceData(pt, i < 32 ? PieceAlignment.White : PieceAlignment.Black);
+
+            if ((GlobalPieceManager.GetPieceTableEntry(pt).piecePropertyB & PiecePropertyB.Giant) != 0)
+            {
+                //Based on how the giants are oriented to get the giants to appear the same way on both sides the bottom right corner becomes the top right
+                //So on the black side the bottom corner is down 1
+                if (i > 32)
+                {
+                    PlaceGiant(pieces[i], i & 7, (i >> 3) - 1);
+                }
+                else
+                {
+                    PlaceGiant(pieces[i], i & 7, i >> 3);
+                }
+            }
+        }
+
+        globalData.enemyModifier = em;
+
+        globalData.playerModifier = pm;
+
+        PostSetupInit();
+    }
 
     public void SetupNormal()
     {

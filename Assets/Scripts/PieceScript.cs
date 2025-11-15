@@ -118,8 +118,8 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
     public void Update()
     {
-        dob.canDrag = !bs.animating;
-        bc.enabled = !bs.animating && text.enabled; //Become intangible while animating
+        dob.canDrag = bs.CanSelectPieces();
+        bc.enabled = bs.CanSelectPieces() && text.enabled; //Become intangible while animating
     }
 
     public void OnSelect()
@@ -161,13 +161,27 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             //don't treat adjustments as moves
             if (!(x == bs.hoverX && y == bs.hoverY))
             {
-                if (bs.hoverX < 0 || bs.hoverX > 7 || bs.hoverY < 0 || bs.hoverY > 7)
+                if (bs is SetupBoardScript sbs)
                 {
-                    bs.TrySetupMove(this, Move.PackMove((byte)x, (byte)y, 15, 15));
+                    if (bs.hoverX < 0 || bs.hoverX > 7 || bs.hoverY < 0 || bs.hoverY > 1)
+                    {
+                        bs.TrySetupMove(this, Move.PackMove((byte)x, (byte)y, 15, 15));
+                    }
+                    else
+                    {
+                        bs.TrySetupMove(this, x, y, bs.hoverX, bs.hoverY);
+                    }
                 }
                 else
                 {
-                    bs.TrySetupMove(this, x, y, bs.hoverX, bs.hoverY);
+                    if (bs.hoverX < 0 || bs.hoverX > 7 || bs.hoverY < 0 || bs.hoverY > 7)
+                    {
+                        bs.TrySetupMove(this, Move.PackMove((byte)x, (byte)y, 15, 15));
+                    }
+                    else
+                    {
+                        bs.TrySetupMove(this, x, y, bs.hoverX, bs.hoverY);
+                    }
                 }
             } else
             {
@@ -179,7 +193,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
         //debug: lets you play as black
         //bs.TryMove(this, Piece.GetPieceAlignment(piece), x, y, bs.hoverX, bs.hoverY);
-        if (!bs.blackIsAI)
+        if (bs is BattleBoardScript bbs && !bbs.blackIsAI)
         {
             //don't treat adjustments as moves
             if (!(x == bs.hoverX && y == bs.hoverY))
@@ -202,7 +216,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             }
         }
 
-        if (!bs.animating)
+        if (bs.CanSelectPieces())
         {
             x = bs.hoverX;
             y = bs.hoverY;

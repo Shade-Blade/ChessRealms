@@ -6,7 +6,7 @@ using static Piece;
 
 public class DifficultyButton : MonoBehaviour
 {
-    public BoardScript bs;
+    public BattleBoardScript bs;
     public int difficulty;
     public SpriteRenderer backSprite;
 

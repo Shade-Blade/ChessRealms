@@ -10,7 +10,7 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
     public SpriteRenderer backSprite;
     public BoxCollider bc;
 
-    public BoardScript bs;
+    public BattleBoardScript bs;
 
     public DraggableObject dob;
     public SelectableObject seb;

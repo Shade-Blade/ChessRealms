@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class RedoButton : MonoBehaviour
 {
-    public BoardScript bs;
+    public BattleBoardScript bs;
     public void OnMouseDown()
     {
         bs.Redo();

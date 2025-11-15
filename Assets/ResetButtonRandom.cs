@@ -7,7 +7,7 @@ using static Piece;
 
 public class ResetButtonRandom : MonoBehaviour
 {
-    public BoardScript bs;
+    public BattleBoardScript bs;
     public Piece.PieceType[] army;
     public Board.PlayerModifier pm;
     public Board.EnemyModifier em;
@@ -16,6 +16,8 @@ public class ResetButtonRandom : MonoBehaviour
     public float targetNonKingValue;
     public float lowPieceBias;
     public float lowComplexityBias;
+
+    public bool useSetupBoard;
 
     public TMPro.TMP_InputField valueField;
     public TMPro.TMP_InputField typeField;
@@ -505,7 +507,14 @@ public class ResetButtonRandom : MonoBehaviour
             }
         }
 
-        bs.ResetBoard(army, pm, em);
+        if (useSetupBoard)
+        {
+            bs.ResetBoard(MainManager.Instance.playerData.army, army, pm, em);
+        }
+        else
+        {
+            bs.ResetBoard(army, pm, em);
+        }
     }
 
     public RandomTable<PieceTableEntry> GetPieceTable(Piece.PieceClass pc, int types, float targetTotal, float lowPieceBias, float lowComplexityBias)

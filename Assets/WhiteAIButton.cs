@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class WhiteAIButton : MonoBehaviour
 {
-    public BoardScript bs;
+    public BattleBoardScript bs;
 
     public SpriteRenderer backSprite;
 

@@ -61,10 +61,10 @@ public class GlobalPieceManager : MonoBehaviour
     public void Awake()
     {
         intInstance = this;
+        LoadPieceTable();
     }
     public void Start()
     {
-        LoadPieceTable();
         LoadPieceSquareTables();
         LoadOrbiterDirections();
 

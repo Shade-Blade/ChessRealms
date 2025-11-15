@@ -6,11 +6,21 @@ using UnityEngine;
 using static Unity.Burst.Intrinsics.X86.Bmi1;
 using static Unity.Burst.Intrinsics.X86.Popcnt;
 
+[System.Serializable]
 public class PlayerData
 {
     public Piece.PieceType[] army;
 
     public Move.ConsumableMoveType[] consumables;
+
+    public PlayerData()
+    {
+        army = new Piece.PieceType[16];
+
+        consumables = new Move.ConsumableMoveType[4];
+
+        army[0] = Piece.PieceType.King;
+    }
 } 
 
 public class MainManager : MonoBehaviour
@@ -48,6 +58,8 @@ public class MainManager : MonoBehaviour
     public const ulong NO_DEFGH_FILE = 0x0707070707070707;
     public const ulong NO_CDEFGH_FILE = 0x0303030303030303;
     public const ulong NO_BCDEFGH_FILE = 0x0101010101010101;
+
+    public PlayerData playerData;
 
     public string bitboardTest = "";
 
@@ -94,7 +106,7 @@ public class MainManager : MonoBehaviour
         //~500k normal after optimizing TickDownStatusEffects to reduce PieceTableEntry checks
 
         //220 ish seconds for depth 6 normal
-        for (int i = 0; i <= 4; i++) 
+        for (int i = 0; i <= 3; i++) 
         {
             DateTime currentTime = DateTime.UtcNow;
             long unixTime = ((DateTimeOffset)currentTime).ToUnixTimeMilliseconds();

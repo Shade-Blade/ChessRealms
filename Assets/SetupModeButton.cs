@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class SetupModeButton : MonoBehaviour
 {
-    public BoardScript bs;
+    public BattleBoardScript bs;
 
     public SpriteRenderer backSprite;
     public TMPro.TMP_InputField setupModeTypeField;

@@ -365,7 +365,7 @@ Enforcer,7,R2F,,EnemyOnCapture,TRUE,,Criminals,2
 Smuggler,4,"(1,2)",,Sneaky|EnemyOnCapture,TRUE,,Criminals,2
 Mercenary,3.5,R3cB3,,NeutralOnCapture,TRUE,,Criminals,2
 Outlaw,3,R3,,FireCapture|EnemyOnCapture,TRUE,,Criminals,2
-WarpWeaver,5,"W(0,2)oR",,,TRUE,,,4
+WarpWeaver,5,"W(0,2)oR",,,TRUE,,Teleporters,4
 WarpMage,7.5,"a(0,2)a(1,2)a(2,2)(0,2)(1,2)(2,2)",,,TRUE,,Teleporters,3
 Mirrorer,8,aR2aB2R2B2,,Reflecter,TRUE,,Teleporters,3
 Recaller,6,"FWfha(0,3)fa(1,3)fa(2,3)fa(3,3)fha(0,2)fa(2,2)fa(1,2)",,,TRUE,,Teleporters,3

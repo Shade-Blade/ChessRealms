@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class ResetButtonCustom : MonoBehaviour
 {
-    public BoardScript bs;
+    public BattleBoardScript bs;
     public Piece.PieceType[] army;
     public Board.PlayerModifier pm;
     public Board.EnemyModifier em;

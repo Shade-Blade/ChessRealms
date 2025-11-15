@@ -1,0 +1,198 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class SetupBoardScript : BoardScript
+{
+    public override void Start()
+    {
+        MakeBoard();
+        setupMoves = true;
+    }
+
+    public override void MakeBoard()
+    {
+        squares = new List<SquareScript>();
+
+        board = new Board();
+        board.Setup(new Piece.PieceType[] {Piece.PieceType.King, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, new Piece.PieceType[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, Board.PlayerModifier.None, Board.EnemyModifier.NoKing);
+
+        for (int i = 0; i < 16; i++)
+        {
+            int subX = i % 8;
+            int subY = i / 8;
+
+            GameObject go = Instantiate(squareTemplate, squareHolder.transform);
+            go.name = "Square " + subX + " " + subY;
+            SquareScript sc = go.GetComponent<SquareScript>();
+            sc.bs = this;
+            squares.Add(sc);
+
+            sc.Setup(subX, subY, board.GetSquareAtCoordinate(subX, subY));
+            sc.transform.position = GetSpritePositionFromCoordinates(subX, subY, 0);
+        }
+
+        for (int i = 0; i < 48; i++)
+        {
+            board.globalData.squares[i + 16] = new Square(Square.SquareType.Hole);
+        }
+
+        //make pieces
+        pieces = new List<PieceScript>();
+        for (int i = 0; i < 64; i++)
+        {
+            pieces.Add(null);
+        }
+        FixBoardBasedOnPosition();
+    }
+
+    public override void FixBoardBasedOnPosition()
+    {
+        //To fix wack bugs I should just refresh the entire piece list anyway?
+        for (int i = 0; i < pieces.Count; i++)
+        {
+            if (pieces[i] != null)
+            {
+                Destroy(pieces[i].gameObject);
+            }
+            pieces[i] = null;
+        }
+
+        //fix the pieces to match the board state
+        for (int i = 0; i < 16; i++)
+        {
+            //also fix squares
+            squares[i].sq = board.globalData.squares[i];
+            squares[i].ResetSquareColor();
+
+            bool needRecreate = false;
+
+            int checkX = i % 8;
+            int checkY = i / 8;
+
+            //Create a new piece
+            //if (board.pieces[i] != 0 && pieces[i] == null)
+            if (board.pieces[i] != 0)
+            {
+                needRecreate = true;
+            }
+
+            /*
+            //Destroy a piece that is on an empty
+            if (board.pieces[i] == 0 && pieces[i] != null)
+            {
+                Destroy(pieces[i].gameObject);
+                pieces[i] = null;
+            }
+
+            //Wrong coordinates = just move it back to where it should be?
+            if (pieces[i] != null && (pieces[i].x != checkX || pieces[i].y != checkY))
+            {
+                //needRecreate = true;
+                pieces[i].SetPosition(checkX, checkY);
+            }
+
+            //Wrong type = setup again?
+            if (pieces[i] != null && pieces[i].piece != board.pieces[i])
+            {
+                pieces[i].Setup(board.pieces[i], checkX, checkY);
+            }
+            */
+
+            if (needRecreate)
+            {
+                if (pieces[i] != null)
+                {
+                    Destroy(pieces[i].gameObject);
+                    pieces[i] = null;
+                }
+
+                GameObject go = Instantiate(pieceTemplate, pieceHolder.transform);
+                go.name = "Piece " + i % 8 + " " + i / 8;
+                PieceScript ps = go.GetComponent<PieceScript>();
+                ps.bs = this;
+                pieces[i] = ps;
+                ps.Setup(board.pieces[i], checkX, checkY);
+            }
+
+            //reset color anyway
+            if (pieces[i] != null)
+            {
+                pieces[i].ResetColor();
+            }
+        }
+
+        //find weird pieces
+        HashSet<GameObject> pieceSet = new HashSet<GameObject>();
+        for (int i = 0; i < pieces.Count; i++)
+        {
+            if (pieces[i] != null)
+            {
+                pieceSet.Add(pieces[i].gameObject);
+            }
+        }
+
+        PieceScript[] psList = pieceHolder.GetComponentsInChildren<PieceScript>();
+        for (int i = 0; i < psList.Length; i++)
+        {
+            if (!pieceSet.Contains(psList[i].gameObject))
+            {
+                Destroy(psList[i].gameObject);
+            }
+        }
+
+        for (int i = 0; i < 16; i++)
+        {
+            if (board.pieces[i] == 0 || ((GlobalPieceManager.GetPieceTableEntry(board.pieces[i]).piecePropertyB & Piece.PiecePropertyB.Giant) != 0 && (Piece.GetPieceSpecialData(board.pieces[i]) != 0)))
+            {
+                MainManager.Instance.playerData.army[i] = 0;
+                continue;
+            }
+            MainManager.Instance.playerData.army[i] = Piece.GetPieceType(board.pieces[i]);
+        }
+    }
+
+    public override void TrySetupMove(PieceScript ps, int x, int y, int newX, int newY)
+    {
+        if (x < 0 || x > 7 || newX < 0 || newX > 7)
+        {
+            return;
+        }
+
+        if (y < 0 || y > 1 || newY < 0 || newY > 7)
+        {
+            return;
+        }
+
+        if (x == newX && y == newY)
+        {
+            return;
+        }
+
+        uint move = Move.PackMove((byte)x, (byte)y, (byte)newX, (byte)newY);
+        TrySetupMove(ps, move);
+    }
+
+    public override void TrySetupMove(PieceScript ps, uint move)
+    {
+        if (Board.IsSetupMoveLegal(ref board, move))
+        {
+            /*
+            if (!whiteIsAI)
+            {
+                Debug.Log("Apply " + Move.ConvertToString(move));
+            }
+            */
+            Debug.Log("Apply " + Move.ConvertToString(move));
+
+            board.MakeSetupMove(move);
+
+            ResetSelected();
+
+            FixBoardBasedOnPosition();
+        }
+
+        ResetSelected();
+        FixBoardBasedOnPosition();
+    }
+}

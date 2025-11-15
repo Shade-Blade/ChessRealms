@@ -11,6 +11,12 @@ public class SetupPieceScript : PieceScript
         base.Start();
 
         homePos = transform.position;
+
+        //Debug
+        if (piece != 0)
+        {
+            Setup(piece);
+        }
     }
 
     public override void ForceDeselect()
@@ -99,7 +105,7 @@ public class SetupPieceScript : PieceScript
                 return;
             }
 
-            if (bs.hoverX < 0 || bs.hoverX > 7)
+            if (bs.hoverY < 0 || bs.hoverY > 7)
             {
                 return;
             }
