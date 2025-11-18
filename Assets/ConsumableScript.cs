@@ -10,18 +10,27 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
     public SpriteRenderer backSprite;
     public BoxCollider bc;
 
-    public BattleBoardScript bs;
+    public BoardScript bs;
 
     public DraggableObject dob;
     public SelectableObject seb;
 
     public Move.ConsumableMoveType cmt;
 
+    public int consumableIndex = -1;
+    public ConsumablePanelScript cps;
+    public TrashCanScript trashCan;
+
     public virtual void Start()
     {
         homePos = transform.position;
         dob = GetComponent<DraggableObject>();
         dob.canDrag = true;
+
+        //bad architecture?
+        //But I don't really know of a better way
+        cps = FindObjectOfType<ConsumablePanelScript>();
+        trashCan = FindObjectOfType<TrashCanScript>();
     }
 
     public void Setup(Move.ConsumableMoveType cmt)
@@ -44,6 +53,7 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
 
     public virtual void ForceDeselect()
     {
+        Debug.Log("Force unselect");
         seb.ForceDeselect();
         dob.isDragged = false;
         ResetPosition();
@@ -59,9 +69,12 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
     public void OnDeselect()
     {
         backSprite.color = new Color(1, 1, 1, 1);
-        if (bs.selectedPiece == null || bs.selectedPiece == this)
+        if (bs.selectedConsumable == null || bs.selectedConsumable == this)
         {
-            bs.ResetSelected(false);
+            if (bs.selectedPiece == null)
+            {
+                bs.ResetSelected(false);
+            }
         }
     }
 
@@ -76,34 +89,77 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
     public void OnDragStay()
     {
         (bs.hoverX, bs.hoverY) = bs.GetCoordinatesFromPosition(transform.position);
+
+        if (trashCan != null && consumableIndex >= 0)
+        {
+            trashCan.SetActive();
+        }
+        if (cps != null)
+        {
+            if (cps.QueryPosition(transform.position) != -1)
+            {
+                cps.slots[cps.QueryPosition(transform.position)].SetHighlight();
+                return;
+            }
+        }
+
+        if (trashCan != null && consumableIndex >= 0)
+        {
+            if (trashCan.QueryPosition(transform.position))
+            {
+                trashCan.SetHighlight();
+            }
+        }
+
+        if (bs is BattleBoardScript bbs && bbs.animating && seb.selected)
+        {
+            ForceDeselect();
+        }
     }
     public virtual void OnDragStop()
     {
-        //Setup mode
-        if (bs.setupMoves)
+        if (cps.QueryPosition(transform.position) != -1)
         {
-            //Consumable moves are not allowed in setup mode
-            ResetPosition();
-            return;
-        }
-
-
-        //debug: lets you play as black
-        //bs.TryMove(this, Piece.GetPieceAlignment(piece), x, y, bs.hoverX, bs.hoverY);
-
-        if (bs.hoverX < 0 || bs.hoverX > 7)
+            //Consumable panel rearranging
+            cps.TryPlaceConsumable(this, cps.QueryPosition(transform.position));
+        } else if (trashCan.QueryPosition(transform.position) && consumableIndex != -1)
         {
-            ResetPosition();
-            return;
-        }
-
-        if (bs.hoverX < 0 || bs.hoverX > 7)
+            //Trash can
+            cps.TryDeleteConsumable(this);
+            bs.ResetSelected();
+        } else
         {
-            ResetPosition();
-            return;
-        }
+            if (bs == null)
+            {
+                return;
+            }
 
-        bs.TryConsumableMove(this, (byte)bs.hoverX, (byte)bs.hoverY);
+            //Setup mode
+            if (bs.setupMoves)
+            {
+                //Consumable moves are not allowed in setup mode
+                ResetPosition();
+                return;
+            }
+
+            if (bs.hoverX < 0 || bs.hoverX > 7)
+            {
+                ResetPosition();
+                return;
+            }
+
+            if (bs.hoverY < 0 || bs.hoverY > 7)
+            {
+                ResetPosition();
+                return;
+            }
+
+            if (bs is BattleBoardScript bbs)
+            {
+                bbs.TryConsumableMove(this, consumableIndex, (byte)bs.hoverX, (byte)bs.hoverY);
+            }
+        }
         ResetPosition();
+        cps.FixInventory();
     }
 }

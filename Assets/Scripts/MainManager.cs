@@ -17,7 +17,7 @@ public class PlayerData
     {
         army = new Piece.PieceType[16];
 
-        consumables = new Move.ConsumableMoveType[4];
+        consumables = new Move.ConsumableMoveType[8];
 
         army[0] = Piece.PieceType.King;
     }
@@ -106,7 +106,7 @@ public class MainManager : MonoBehaviour
         //~500k normal after optimizing TickDownStatusEffects to reduce PieceTableEntry checks
 
         //220 ish seconds for depth 6 normal
-        for (int i = 0; i <= 3; i++) 
+        for (int i = 0; i <= 5; i++) 
         {
             DateTime currentTime = DateTime.UtcNow;
             long unixTime = ((DateTimeOffset)currentTime).ToUnixTimeMilliseconds();

@@ -25,6 +25,7 @@ public class BoardScript : MonoBehaviour
     public Board board;
 
     public PieceScript selectedPiece;
+    public ConsumableScript selectedConsumable;
 
     public bool setupMoves = false;
 
@@ -185,7 +186,12 @@ public class BoardScript : MonoBehaviour
         {
             selectedPiece.ForceDeselect();
         }
+        if (selectedConsumable != null && forceDeselect)
+        {
+            selectedConsumable.ForceDeselect();
+        }
         selectedPiece = null;
+        selectedConsumable = null;
     }
 
     public virtual void TrySetupMove(PieceScript ps, int x, int y, int newX, int newY)
@@ -209,6 +215,11 @@ public class BoardScript : MonoBehaviour
         TrySetupMove(ps, move);
     }
 
+    public virtual bool IsSetupMoveLegal(PieceScript ps, uint move)
+    {
+        return Board.IsSetupMoveLegal(ref board, move);
+    }
+
     public virtual void TrySetupMove(PieceScript ps, uint move)
     {
         if (Board.IsSetupMoveLegal(ref board, move))
@@ -225,7 +236,7 @@ public class BoardScript : MonoBehaviour
 
             board.MakeSetupMove(move);
 
-            ResetSelected();
+            ResetSelected(true);
 
             FixBoardBasedOnPosition();
         }

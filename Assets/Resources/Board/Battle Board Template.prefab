@@ -1,0 +1,348 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2207565944866987871
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2773344295184077948}
+  - component: {fileID: 6497305939322784878}
+  m_Layer: 0
+  m_Name: Battle Board Template
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2773344295184077948
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2207565944866987871}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2539850082718239108}
+  - {fileID: 7532486154679174723}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6497305939322784878
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2207565944866987871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fb4231618eb291449f570ed1cef12a2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  squareTemplate: {fileID: 2766149324201673735, guid: 812c53cd20389ea4cbe30ffa178981b9, type: 3}
+  pieceTemplate: {fileID: 7872257274312544191, guid: 1f3f75d5a605199468bd014c49004afc, type: 3}
+  squareHolder: {fileID: 2255433947139563736}
+  pieceHolder: {fileID: 8347418581554678011}
+  squares: []
+  pieces: []
+  hoverX: 0
+  hoverY: 0
+  board:
+    blackToMove: 0
+    ply: 0
+    bonusPly: 0
+    turn: 0
+    globalData:
+      squares:
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      - type: 0
+      playerModifier: 0
+      enemyModifier: 0
+      whitePerPlayerInfo:
+        startPieceValueSumX2: 0
+        startPieceCount: 0
+      blackPerPlayerInfo:
+        startPieceValueSumX2: 0
+        startPieceCount: 0
+      noLastMoveHash: 0
+      whiteHighestValuedPieceValue: 0
+      whiteHighestValuePiece: 0
+      blackHighestValuedPieceValue: 0
+      blackHighestValuePiece: 0
+      mbtpassive:
+        tableElements: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        btType: 0
+      mbtpassiveInverse:
+        tableElements: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        btType: 0
+      mbtactive:
+        tableElements: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        btType: 0
+      mbtactiveInverse:
+        tableElements: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+        btType: 0
+      bitboard_square_hole: 0
+      bitboard_square_fire: 0
+      bitboard_square_windUp: 0
+      bitboard_square_windDown: 0
+      bitboard_square_windLeft: 0
+      bitboard_square_windRight: 0
+      bitboard_square_bright: 0
+      bitboard_square_promotion: 0
+      bitboard_square_cursed: 0
+      bitboard_crystalWhite: 0
+      bitboard_crystalBlack: 0
+      bitboard_pieces: 0
+      bitboard_piecesWhite: 0
+      bitboard_piecesBlack: 0
+      bitboard_piecesNeutral: 0
+      bitboard_piecesCrystal: 0
+      bitboard_piecesMirrored: 0
+      bitboard_piecesWhiteAdjacent: 0
+      bitboard_piecesBlackAdjacent: 0
+      bitboard_piecesWhiteAdjacent1: 0
+      bitboard_piecesBlackAdjacent1: 0
+      bitboard_piecesWhiteAdjacent2: 0
+      bitboard_piecesBlackAdjacent2: 0
+      bitboard_piecesWhiteAdjacent4: 0
+      bitboard_piecesBlackAdjacent4: 0
+      bitboard_piecesWhiteAdjacent8: 0
+      bitboard_piecesBlackAdjacent8: 0
+      bitboard_pawnsWhite: 0
+      bitboard_pawnsBlack: 0
+      bitboard_kingWhite: 0
+      bitboard_kingBlack: 0
+      bitboard_roughWhite: 0
+      bitboard_roughBlack: 0
+      bitboard_waterWhite: 0
+      bitboard_waterBlack: 0
+      bitboard_immuneRelayerWhite: 0
+      bitboard_immuneRelayerBlack: 0
+      bitboard_immuneWhite: 0
+      bitboard_immuneBlack: 0
+      bitboard_bansheeWhite: 0
+      bitboard_bansheeBlack: 0
+      bitboard_attractorWhite: 0
+      bitboard_attractorBlack: 0
+      bitboard_immobilizerWhite: 0
+      bitboard_immobilizerBlack: 0
+      bitboard_repulserWhite: 0
+      bitboard_repulserBlack: 0
+      bitboard_harpyWhite: 0
+      bitboard_harpyBlack: 0
+      bitboard_hagWhite: 0
+      bitboard_hagBlack: 0
+      bitboard_slothWhite: 0
+      bitboard_slothBlack: 0
+      bitboard_watchTowerWhite: 0
+      bitboard_watchTowerBlack: 0
+      bitboard_fanWhite: 0
+      bitboard_fanBlack: 0
+      bitboard_hangedWhite: 0
+      bitboard_hangedBlack: 0
+      bitboard_virgoWhite: 0
+      bitboard_virgoBlack: 0
+      arcanaMoonOutdated: 0
+      bitboard_tarotMoonWhite: 0
+      bitboard_tarotMoonBlack: 0
+      bitboard_tarotMoonIllusionWhite: 0
+      bitboard_tarotMoonIllusionBlack: 0
+      bitboard_zombieWhite: 0
+      bitboard_zombieBlack: 0
+      bitboard_abominationWhite: 0
+      bitboard_abominationBlack: 0
+      bitboard_clockworksnapperWhite: 0
+      bitboard_clockworksnapperBlack: 0
+      bitboard_bladebeastWhite: 0
+      bitboard_bladebeastBlack: 0
+      bitboard_warpWeaverWhite: 0
+      bitboard_warpWeaverBlack: 0
+      bitboard_metalFoxWhite: 0
+      bitboard_metalFoxBlack: 0
+      bitboard_megacannonWhite: 0
+      bitboard_megacannonBlack: 0
+      bitboard_momentumWhite: 0
+      bitboard_momentumBlack: 0
+    pieces: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    whitePerPlayerInfo:
+      canCastle: 0
+      lastMove: 0
+      lastPieceMoved: 0
+      lastPieceMovedType: 0
+      lastPieceMovedLocation: 0
+      pieceValueSumX2: 0
+      pieceCount: 0
+      piecesLost: 0
+      capturedLastTurn: 0
+    blackPerPlayerInfo:
+      canCastle: 0
+      lastMove: 0
+      lastPieceMoved: 0
+      lastPieceMovedType: 0
+      lastPieceMovedLocation: 0
+      pieceValueSumX2: 0
+      pieceCount: 0
+      piecesLost: 0
+      capturedLastTurn: 0
+  selectedPiece: {fileID: 0}
+  setupMoves: 0
+  moveTrailTemplate: {fileID: 307889686730510020, guid: 70cccbf0364c71a409b503d96349d450, type: 3}
+  moveParticleTemplate: {fileID: 2675936083115365684, guid: 865cf15c53a7695428b135c52ba71f8f, type: 3}
+  moveList: 
+  lastMoveTrail: {fileID: 0}
+  enemyMoveList: 
+  illegalMoveTrail: {fileID: 0}
+  checkMoveTrail: {fileID: 0}
+  extraMoveTrails: []
+  animating: 0
+  lastMovedPiece: {fileID: 0}
+  animationSpeed: 36
+  whiteIsAI: 0
+  blackIsAI: 1
+  controlZoneHighlight: 0
+  gameOver: 0
+  drawError: 0
+  winnerPA: 0
+  thinkingText: {fileID: 0}
+  turnText: {fileID: 0}
+  scoreText: {fileID: 0}
+  pieceInfoText: {fileID: 0}
+  moveThinkTime: 1
+  moveDelayValue: 0.05
+  moveDelay: 0
+  historyList: []
+  historyIndex: 0
+  difficulty: 2
+  awaitingMove: 0
+  errorMove: 0
+--- !u!1 &2255433947139563736
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2539850082718239108}
+  m_Layer: 0
+  m_Name: square holder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2539850082718239108
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2255433947139563736}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2773344295184077948}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &8347418581554678011
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7532486154679174723}
+  m_Layer: 0
+  m_Name: piece holder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7532486154679174723
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8347418581554678011}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2773344295184077948}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

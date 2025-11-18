@@ -10,13 +10,16 @@ public class SetupModeButton : MonoBehaviour
     public SpriteRenderer backSprite;
     public TMPro.TMP_InputField setupModeTypeField;
     public Piece.PieceType oldType;
-    public SetupPieceScript sps;
+    public List<SetupPieceScript> sps;
     public int alignment;
     int pastAlignment;
 
     public void Start()
     {
-        sps.Setup(0);
+        for (int i = 0; i < sps.Count; i++)
+        {
+            sps[i].Setup(0);
+        }
     }
 
     public void OnMouseDown()
@@ -40,7 +43,10 @@ public class SetupModeButton : MonoBehaviour
 
         if (newType != oldType || pastAlignment != alignment)
         {
-            sps.Setup(Piece.SetPieceType(newType, Piece.SetPieceAlignment((Piece.PieceAlignment)alignment, 0)));
+            for (int i = 0; i < sps.Count; i++)
+            {
+                sps[i].Setup(Piece.SetPieceType(newType, Piece.SetPieceAlignment((Piece.PieceAlignment)alignment, 0)));
+            }
             oldType = newType;
         }
         pastAlignment = alignment;

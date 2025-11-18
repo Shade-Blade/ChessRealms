@@ -183,7 +183,7 @@ AirWisp,0.5,mfWmfF,,PassivePush,TRUE,AirElemental,Elemental,3
 FireWisp,2.5,fWfF,,FireCapture,FALSE,FireElemental,Elemental,2
 EarthWisp,1.5,fhW,,ShiftImmune,TRUE,EarthElemental,Elemental,3
 WaterWisp,2,fF,,Cylindrical,TRUE,WaterElemental,Elemental,3
-VoidWisp,1.5,"FhWb(0,3)",,Sneaky|PassivePull,TRUE,VoidElemental,Elemental,3
+VoidWisp,1.5,"fFfhWb(0,3)",,Sneaky|PassivePull,TRUE,VoidElemental,Elemental,3
 LightWisp,1.5,WmfB3,,Reflecter|EnchantImmune|RelayImmune,TRUE,LightElemental,Elemental,3
 Vulture,4.5,"(1,2)m(1,2)2+",,,FALSE,,Birds,1.5
 Falcon,3.5,"F(2,2)m(2,2)2+",,,FALSE,,Birds,1.5
@@ -248,7 +248,7 @@ LensRook,7,R,,LensRook,TRUE,,Mirror,2.5
 ReflectionBishop,4.5,B,,Reflecter,TRUE,,Mirror,2.5
 MirrorKnight,3.5,"(1,2)",,MirrorTeleportSwap,TRUE,,Mirror,2.5
 MirrorPawn,1.5,mifR2=mfWcfF,,MirrorTeleportSwap,TRUE,MirrorQueen,Mirror,2.5
-Pincer,2.5,BW,,,TRUE,,Electro,2.5
+Pincer,2.5,mBmW,,,TRUE,,Electro,2.5
 Bolter,5.5,BR3,,,TRUE,,Electro,2.5
 Shocker,6,R2F,,,TRUE,,Electro,2.5
 Magnet,6.5,bhWF,,PassivePullStrong,TRUE,,Electro,4

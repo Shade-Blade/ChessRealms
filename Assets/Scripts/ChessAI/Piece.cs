@@ -857,6 +857,8 @@ public static class Piece
         ReverseMomentum = 1uL << 38,
         BounceMomentum = 1uL << 39,
 
+        AnyMomentum = Momentum | ReverseMomentum | BounceMomentum,
+
         TandemMover = 1uL << 40,
         TandemMoverDiag = 1uL << 41,
         TandemMoverOrtho = 1uL << 42,
@@ -1021,6 +1023,7 @@ public static class Piece
     }
     public static uint SetPieceAlignment(PieceAlignment pa, uint pieceInfo)
     {
+        //return ((pieceInfo & 0x3fffffff) + ((uint)pa << 30));
         return MainManager.BitFilterSet(pieceInfo, (uint)pa, 30, 31);
     }
 

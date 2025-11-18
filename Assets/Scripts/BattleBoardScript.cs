@@ -56,6 +56,15 @@ public class BattleBoardScript : BoardScript
     public bool awaitingMove = false;
     public bool errorMove = false;
 
+    public static BattleBoardScript CreateBoard(Piece.PieceType[] army, Board.PlayerModifier pm, Board.EnemyModifier em)
+    {
+        GameObject go = Instantiate(Resources.Load<GameObject>("Board/BattleBoardTemplate"));
+        BattleBoardScript bbs = go.GetComponent<BattleBoardScript>();
+
+        bbs.ResetBoard(MainManager.Instance.playerData.army, army, pm, em);
+        return bbs;
+    }
+
     public override void Start()
     {
         setupMoves = false;
@@ -286,6 +295,7 @@ public class BattleBoardScript : BoardScript
         }
 
         selectedPiece = null;
+        selectedConsumable = cs;
     }
     public override void SelectPiece(PieceScript piece)
     {
@@ -297,6 +307,7 @@ public class BattleBoardScript : BoardScript
         {
             //It isn't a piece that has legal moves
 
+            selectedConsumable = null;
             selectedPiece = piece;
             return;
         }
@@ -517,7 +528,12 @@ public class BattleBoardScript : BoardScript
         {
             selectedPiece.ForceDeselect();
         }
+        if (selectedConsumable != null && forceDeselect)
+        {
+            selectedConsumable.ForceDeselect();
+        }
         selectedPiece = null;
+        selectedConsumable = null;
     }
     public void SetControlZoneHighlight()
     {
@@ -534,15 +550,26 @@ public class BattleBoardScript : BoardScript
         }
     }
 
-    public void TryConsumableMove(ConsumableScript cs, int x, int y)
+    public void TryConsumableMove(ConsumableScript cs, int index, int x, int y)
     {
         uint move = Move.EncodeConsumableMove(cs.cmt, x, y);
 
         Debug.Log(Move.ConvertToString(move));
 
+        if (gameOver || board.blackToMove)
+        {
+            return;
+        }
+
         if (Board.IsConsumableMoveLegal(ref board, move))
         {
             Debug.Log("Apply " + Move.ConvertToString(move));
+
+            //Consume the consumable
+            if (index >= 0)
+            {
+                MainManager.Instance.playerData.consumables[index] = Move.ConsumableMoveType.None;
+            }
 
             List<BoardUpdateMetadata> boardUpdateMetadata = new List<BoardUpdateMetadata>();
 
@@ -558,7 +585,7 @@ public class BattleBoardScript : BoardScript
             historyIndex++;
             RegenerateMoveList();
             chessAI.history.Add(chessAI.HashFromScratch(ref board));
-            ResetSelected();
+            ResetSelected(true);
 
             if (lastMoveTrail != null)
             {
@@ -789,6 +816,11 @@ public class BattleBoardScript : BoardScript
 
     public override void TryMove(PieceScript ps, Piece.PieceAlignment pa, int x, int y, int newX, int newY)
     {
+        if (gameOver)
+        {
+            return;
+        }
+
         //No
         if (animating)
         {
@@ -874,6 +906,8 @@ public class BattleBoardScript : BoardScript
             List<BoardUpdateMetadata> boardUpdateMetadata = new List<BoardUpdateMetadata>();
 
             board.ApplyMove(move, boardUpdateMetadata);
+            //Debug.Log(chessAI.HashFromScratch(board));
+
             awaitingMove = false;
             chessAI.moveFound = false;
             while (historyList.Count > historyIndex + 1)
@@ -883,8 +917,13 @@ public class BattleBoardScript : BoardScript
             historyList.Add(new Board(board));
             historyIndex++;
             RegenerateMoveList();
+            if (chessAI.history.Contains(chessAI.HashFromScratch(ref board)))
+            {
+                Debug.Log("Repeat position?");
+            }
             chessAI.history.Add(chessAI.HashFromScratch(ref board));
-            ResetSelected();
+
+            ResetSelected(true);
 
             if (lastMoveTrail != null)
             {
@@ -1125,8 +1164,12 @@ public class BattleBoardScript : BoardScript
         historyList.Add(new Board(board));
         historyIndex++;
         RegenerateMoveList();
+        if (chessAI.history.Contains(chessAI.HashFromScratch(ref board)))
+        {
+            Debug.Log("Repeat position?");
+        }
         chessAI.history.Add(chessAI.HashFromScratch(ref board));
-        ResetSelected();
+        ResetSelected(true);
 
         if (lastMoveTrail != null)
         {
@@ -1254,6 +1297,26 @@ public class BattleBoardScript : BoardScript
             Debug.Log("White stalemated");
             gameOver = true;
         }
+    }
+
+    public void DoubleUndo()
+    {
+        if (historyIndex <= 1)
+        {
+            return;
+        }
+
+        gameOver = false;
+        drawError = false;
+        historyIndex -= 2;
+        board.CopyOverwrite(historyList[historyIndex]);
+        //Destroy the future history
+        chessAI.history.Remove(chessAI.HashFromScratch(historyList[historyIndex + 1]));
+        chessAI.history.Remove(chessAI.HashFromScratch(historyList[historyIndex + 2]));
+        DestroyLastMovedTrail();    //it is annoying to get the correct trail so I'll just destroy it 
+        RegenerateMoveList();
+        ResetSelected();
+        FixBoardBasedOnPosition();
     }
 
     public void Undo()
@@ -1909,7 +1972,7 @@ public class BattleBoardScript : BoardScript
 
                 //Events that apply to the last moved piece need to be handled in a special way (because it might move on top of a piece to capture but there are events that apply to it vs the piece that was there before)
                 //The events that apply to the last moved that aren't handled by the last moved bool should end up in this case
-                if (pieceActive == null && lastMovedPiece.x == fx && lastMovedPiece.y == fy)
+                if (pieceActive == null && lastMovedPiece != null && lastMovedPiece.x == fx && lastMovedPiece.y == fy)
                 {
                     pieceActive = lastMovedPiece;
                 }

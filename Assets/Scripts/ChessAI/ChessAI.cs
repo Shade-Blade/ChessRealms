@@ -196,6 +196,10 @@ public class ChessAI
         //Extra thing for the board cache
         moveHashes = new ulong[32];
 
+        UnityEngine.Random.State s = UnityEngine.Random.state;
+        //UnityEngine.Random.InitState(12345);
+        //problem: currently randomization of the AI is done using hash values so this would make it deterministic?
+
         //32 bit depth?
         for (int i = 0; i < zobristHashes.Length; i++)
         {
@@ -233,6 +237,8 @@ public class ChessAI
 
             zobristSupplemental[i] = newRandom;
         }
+
+        UnityEngine.Random.state = s;
     }
     /*
     public void MoveBoardCacheTableInit()
@@ -423,6 +429,10 @@ public class ChessAI
         value += passedPawns;
 
         float endgameKingCloseness = EvaluateEndgameKingCloseness(ref b, endgameValue);
+
+        float endgameKingOvertaken = EvaluateEndgameKingOvertaken(ref b, endgameValue);
+        value += endgameKingOvertaken;
+
         //hacky setup
         //the side that's winning in the endgame wants the kings to be close, the other side wants to run away
         //Should encourage the winning side to get closer to a checkmating situation
@@ -1166,6 +1176,97 @@ public class ChessAI
         //Debug.Log(distance);
         return (1.0f + extraDelta);
     }
+    public float EvaluateEndgameKingOvertaken(ref Board b, float endgameValue)
+    {
+        ulong whiteKingBitboard = b.globalData.bitboard_kingWhite;
+        ulong blackKingBitboard = b.globalData.bitboard_kingWhite;
+
+        ulong afilebitboard = 0x0101010101010101;
+
+        float output = 0;
+
+        //Similar logic to GetPassedPawns but it tracks kings
+
+
+        while (whiteKingBitboard != 0)
+        {
+            int index = MainManager.PopBitboardLSB1(whiteKingBitboard, out whiteKingBitboard);
+
+            //The file ahead of you
+            //unlike pawns the king can sidestep so stuff being in the side files is less of a problem
+
+            ulong newBitboard = afilebitboard << index + 8;
+
+            int rank = ((index & 56) >> 3);
+
+            if ((b.globalData.bitboard_piecesBlack & newBitboard) == 0)
+            {
+                if (endgameValue >= 0.5f || rank > 3)
+                {
+                    output += rank * rank * 0.01f;
+                }
+            }
+
+            if ((index & 7) != 0)
+            {
+                newBitboard |= afilebitboard << index + 7;
+            }
+            if ((index & 7) != 7)
+            {
+                newBitboard |= afilebitboard << index + 9;
+            }
+
+            //Debug.Log("Pawn at " + (index & 7) + " " + ((index & 56) >> 3));
+            //MainManager.PrintBitboard(newBitboard);
+
+            if ((b.globalData.bitboard_piecesBlack & newBitboard) == 0)
+            {
+                if (endgameValue >= 0.5f || rank > 3)
+                {
+                    output += rank * rank * 0.01f;
+                }
+            }
+        }
+        while (blackKingBitboard != 0)
+        {
+            int index = MainManager.PopBitboardLSB1(blackKingBitboard, out blackKingBitboard);
+
+            int rank = 7 - ((index & 56) >> 3);
+
+            //The file below
+            ulong newBitboard = afilebitboard >> (64 - index);
+
+            if ((b.globalData.bitboard_piecesWhite & newBitboard) == 0)
+            {
+                if (endgameValue >= 0.5f || rank > 3)
+                {
+                    output -= rank * rank * 0.01f;
+                }
+            }
+
+            if ((index & 7) != 7)
+            {
+                newBitboard |= afilebitboard >> (63 - index);
+            }
+            if ((index & 7) != 0)
+            {
+                newBitboard |= afilebitboard >> (65 - index);
+            }
+
+            //Debug.Log("Pawn at " + (index & 7) + " " + ((index & 56) >> 3));
+            //MainManager.PrintBitboard(newBitboard);
+
+            if ((b.globalData.bitboard_piecesWhite & newBitboard) == 0)
+            {
+                if (endgameValue >= 0.5f || rank > 3)
+                {
+                    output -= rank * rank * 0.01f;
+                }
+            }
+        }
+
+        return output;
+    }
 
     /*
     public uint GetBestMove(ref Board b)
@@ -1438,12 +1539,10 @@ public class ChessAI
             long unixTimeEnd = ((DateTimeOffset)currentTime).ToUnixTimeMilliseconds();
             dt = (unixTimeEnd - unixTime);
             
-            /*
             if (!float.IsNaN(bestEvaluation))
             {
                 Debug.Log("Bestmove = " + (Move.ConvertToString(bestMove)) + " Eval = " + TranslateEval(bestEvaluation) + " Search took " + ((unixTimeEnd - unixTime) / 1000d) + " seconds for " + (nodesSearched + nodesTransposed + quiNodeSearched) + " positions at depth + " + i + " = " + "(" + ((nodesSearched + nodesTransposed + quiNodeSearched) / ((unixTimeEnd - unixTime) / 1000d)) + " nodes/sec)");
             }
-            */
 
             if (!float.IsNaN(bestEvaluation) && bestMove != 0)
             {
@@ -1742,7 +1841,9 @@ public class ChessAI
         {
             bestMove = zte.move;
             //Root node is given by killerMoves == null
-            if (zte.depth >= depth && !history.Contains(boardOldHash) && killerMoves != null)
+            //zte.move != 0 is a bug, add a second condition to fix?
+            //Victory scores are probably not going to change by depth so can be used no matter what depth there is?
+            if (((zte.depth >= depth && killerMoves != null) || (zte.score < BLACK_VICTORY / 2 || zte.score > WHITE_VICTORY / 2)) && !history.Contains(boardOldHash) && zte.move != 0)
             {
                 //Exact number: can use immediately
                 if (zte.flags == ZTableEntry.BOUND_EXACT)
@@ -1928,10 +2029,10 @@ public class ChessAI
             }
         }
 
-        //force the best move to be searched first
+        //force the ztable best move to be searched first?
         if (bestMove != 0 && scoreDict.ContainsKey(bestMove))
         {
-            scoreDict[bestMove] = 50000;
+            scoreDict[bestMove] += 50000;
         }
 
         int FloatCompare(float a, float b)
@@ -1971,6 +2072,13 @@ public class ChessAI
         }
         */
         //MoveBoardCacheEntry mbce;
+
+        //failsafe
+        //In most cases the first move searched should be good
+        if (bestMove == 0)
+        {
+            bestMove = moves[0];
+        }
 
         for (int i = 0; i < moves.Count; i++)
         {
@@ -2262,6 +2370,7 @@ public class ChessAI
                 return score;
             } else
             {
+                Debug.Log(multPenalty);
                 //Big penalty now to stop infinite loops
                 if (score > 0)
                 {
@@ -2297,10 +2406,11 @@ public class ChessAI
         //Try to find it in the Z table
         ZTableEntry zte = GetZTableEntry(boardOldHash);
 
-        float repetitionPenalty = 0f;
-        if (!history.Contains(boardOldHash))
+        //depth 0 q search acts on the current board so it shows up in the history (But it is not a repeat position)
+        float repetitionPenalty = 1f;
+        if (history.Contains(boardOldHash) && killerMoves != null)
         {
-            repetitionPenalty = 1;
+            repetitionPenalty = 0;
         }
 
         uint bestMove = 0;
@@ -2411,7 +2521,7 @@ public class ChessAI
 
         for (int i = 0; i < moves.Count; i++)
         {
-            scoreDict[moves[i]] = QMoveScore(ref b, ref copy, boardOldHash, moves[i], qdepth > 0);
+            scoreDict[moves[i]] = QMoveScore(ref b, ref copy, boardOldHash, moves[i], qdepth > 2);
 
             //If you see a KING CAPTURE you can just stop immediately
             if (scoreDict[moves[i]] == KING_CAPTURE)
@@ -2421,6 +2531,20 @@ public class ChessAI
                 //SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, bestMove, KING_CAPTURE));
                 return (moves[i], KING_CAPTURE);
             }
+
+            //killer moves
+            //note that legit captures get a +1000 so no check for that
+            if (killerMoves != null && killerMoves.Contains(Move.RemoveNonLocation(moves[i])))
+            {
+                //A small ish bonus
+                scoreDict[moves[i]] += 25;
+            }
+        }
+
+        //force the ztable best move to be searched first?
+        if (bestMove != 0 && scoreDict.ContainsKey(bestMove))
+        {
+            scoreDict[bestMove] += 50000;
         }
 
         //inefficient but important to have?
@@ -2494,7 +2618,7 @@ public class ChessAI
             //int txy = Move.GetToX(moves[i]) + Move.GetToY(moves[i]) * 8;
             //int fxy = Move.GetFromX(moves[i]) + Move.GetFromY(moves[i]) * 8;
 
-            if (qdepth > 5)
+            if (qdepth > 2)
             {
                 //only legit captures get in
                 if (scoreDict[moves[i]] > 1000)    // || ((txy & 7) == x && (txy >> 3) == y) && b.pieces[txy] != 0 && Piece.GetPieceAlignment(b.pieces[txy]) != Piece.GetPieceAlignment(b.pieces[fxy]))

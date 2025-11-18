@@ -15,26 +15,11 @@ public struct PieceTableCacheEntry
     public Piece.PieceType type;
     public PieceTableEntry pte;
 
-    public PieceTableEntry GetFromCacheEntry(uint piece)
+    public PieceTableCacheEntry(uint piece, PieceType type, PieceTableEntry pte)
     {
-        if (this.piece == piece)
-        {
-            return pte;
-        }
-
         this.piece = piece;
-
-        Piece.PieceType pt = Piece.GetPieceType(piece);
-        if (pt == type)
-        {
-            return pte;
-        }
-        else
-        {
-            type = pt;
-            pte = GlobalPieceManager.GetPieceTableEntry(pt);
-            return pte;
-        }
+        this.type = type;
+        this.pte = pte;
     }
 
     /*
@@ -46,6 +31,22 @@ public struct PieceTableCacheEntry
     }
     */
 }
+
+//is it worth caching the other piece attributes?
+//no
+/*
+public struct PieceAlignmentCacheEntry
+{
+    public uint piece;  //if check fails: check type (if type check passes: change piece num) (if type check fails: refresh)
+    public Piece.PieceAlignment pa;
+
+    public PieceAlignmentCacheEntry(uint piece, Piece.PieceAlignment pa)
+    {
+        this.piece = piece;
+        this.pa = pa;
+    }
+}
+*/
 
 //Data that remains static over the course of the game
 //Being space efficient with this is not very important?
@@ -64,6 +65,7 @@ public class BoardGlobalData
     public bool noLastMoveHash;
 
     public PieceTableCacheEntry[] pteCache;
+    //public PieceAlignmentCacheEntry[] paCache;
 
     //scratch data
     //to not have to allocate a bunch of move bit tables and creating a lot of garbage
@@ -89,6 +91,9 @@ public class BoardGlobalData
     public ulong bitboard_square_bright;
     public ulong bitboard_square_promotion;
     public ulong bitboard_square_cursed;
+    public ulong bitboard_square_water;
+    public ulong bitboard_square_rough;
+    public ulong bitboard_square_normal;
 
     public ulong bitboard_crystalWhite;
     public ulong bitboard_crystalBlack;
@@ -194,10 +199,55 @@ public class BoardGlobalData
 
     public PieceTableEntry GetPieceTableEntryFromCache(int xy, uint piece)
     {
+        //No cache layer
+        //~81 ms
         //return GlobalPieceManager.GetPieceTableEntry(piece);
 
-        return pteCache[xy].GetFromCacheEntry(piece);
+        //Cache layer
+        //~50 ms (this array access is slow somehow?)
+        //return pteCache[xy].GetFromCacheEntry(piece);
+
+        //Removing the struct method call
+        //~15 ms!!
+        //Wow
+        PieceTableCacheEntry ptce = pteCache[xy];
+        //
+        if (ptce.piece == piece)
+        {
+            return ptce.pte;
+        }
+
+        Piece.PieceType pt = Piece.GetPieceType(piece);
+        if (ptce.type == pt)
+        {
+            pteCache[xy].piece = piece;
+            return ptce.pte;
+        }
+
+        PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pt);
+        pteCache[xy] = new PieceTableCacheEntry(piece, pt, pte);
+        return pte;
     }
+
+    /*
+    public Piece.PieceAlignment GetPieceAlignmentFromCache(int xy, uint piece)
+    {
+        //No cache layer = 15 ms
+
+        //With cache layer = ?
+
+        PieceAlignmentCacheEntry pace = paCache[xy];
+        //
+        if (pace.piece == piece)
+        {
+            return pace.pa;
+        }
+
+        Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
+        paCache[xy] = new PieceAlignmentCacheEntry(piece, pa);
+        return pa;
+    }
+    */
 }
 
 [Serializable]
@@ -1680,6 +1730,8 @@ public class Board
         globalData.bitboard_square_bright = 0;
         globalData.bitboard_square_promotion = 0;
         globalData.bitboard_square_cursed = 0;
+        globalData.bitboard_square_rough = 0;
+        globalData.bitboard_square_normal = 0;
         for (int i = 0; i < 64; i++)
         {
             ulong bitIndex = 1uL << i;
@@ -1711,6 +1763,15 @@ public class Board
                     break;
                 case Square.SquareType.Cursed:
                     globalData.bitboard_square_cursed |= bitIndex;
+                    break;
+                case Square.SquareType.Water:
+                    globalData.bitboard_square_water |= bitIndex;
+                    break;
+                case Square.SquareType.Rough:
+                    globalData.bitboard_square_rough |= bitIndex;
+                    break;
+                case Square.SquareType.Normal:
+                    globalData.bitboard_square_normal |= bitIndex;
                     break;
             }
         }
@@ -1746,7 +1807,7 @@ public class Board
     }
     public static int CoordinateConvert(int x, int y)
     {
-        return y * 8 + x;
+        return (y << 3) + x;
     }
     public static (int, int) CoordinateConvertInverse(int index)
     {
@@ -1756,7 +1817,8 @@ public class Board
 
     public uint GetPieceAtCoordinate(int x, int y)
     {
-        return pieces[CoordinateConvert(x, y)];
+        return pieces[x + (y << 3)];
+        //return pieces[CoordinateConvert(x, y)];
     }
     public void SetPieceAtCoordinate(int x, int y, uint set)
     {
@@ -1768,12 +1830,14 @@ public class Board
         }
         */
 
-        pieces[CoordinateConvert(x, y)] = set;
+        //pieces[CoordinateConvert(x, y)] = set;
+        pieces[x + (y << 3)] = set;
     }
 
     public Square GetSquareAtCoordinate(int x, int y)
     {
-        return globalData.squares[CoordinateConvert(x, y)];
+        return globalData.squares[x + (y << 3)];
+        //return globalData.squares[CoordinateConvert(x, y)];
     }
 
     public byte GetMissingPieces(bool isBlack)
@@ -1975,6 +2039,12 @@ public class Board
         {
             return PieceAlignment.White;
         }
+
+        //Currently removed because it is too easy?
+        //Or at least the AI is not good enough to look far enough ahead to stop you
+        //Some of those endgames might be hard to stop anyway (opposition)
+        //But in theory one side can optimally stop your king
+        //Idea: maybe I can encourage the AI to maintain opposition if the king would run past?
 
         //Overtaken victory
         int ylevel = 7;
@@ -2821,7 +2891,7 @@ public class Board
 
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.StatusApply));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.StatusApply, true));
                             }
                             //pieceChange = true;
                         }
@@ -2831,7 +2901,7 @@ public class Board
 
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.StatusApply));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(tx, ty, oldPiece, BoardUpdateMetadata.BoardUpdateType.StatusApply, true));
                             }
                             //pieceChange = true;
                         }
@@ -3999,12 +4069,12 @@ public class Board
                         if (opa == PieceAlignment.White)
                         {
                             whitePerPlayerInfo.pieceValueSumX2 += (short)(leechCount * pteLeech.pieceValueX2);
-                            whitePerPlayerInfo.pieceCount += (byte)(leechCount - 1);
+                            whitePerPlayerInfo.pieceCount += (byte)(leechCount);
                         }
                         if (opa == PieceAlignment.Black)
                         {
                             blackPerPlayerInfo.pieceValueSumX2 += (short)(leechCount * pteLeech.pieceValueX2);
-                            blackPerPlayerInfo.pieceCount += (byte)(leechCount - 1);
+                            blackPerPlayerInfo.pieceCount += (byte)(leechCount);
                         }
 
                         //lose 1 charge
@@ -5337,7 +5407,7 @@ public class Board
                             pieces[x + i + ((y + j) << 3)] = Piece.SetPieceType(PieceType.Rock, Piece.SetPieceAlignment(PieceAlignment.Neutral, 0));
                             if (boardUpdateMetadata != null)
                             {
-                                boardUpdateMetadata.Add(new BoardUpdateMetadata(x, y, pieces[x + i + ((y + j) << 3)], BoardUpdateMetadata.BoardUpdateType.Spawn));
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(x + i, y + j, pieces[x + i + ((y + j) << 3)], BoardUpdateMetadata.BoardUpdateType.Spawn));
                             }
                         }
                     }
@@ -7127,11 +7197,19 @@ public class Board
         int yLevel = 7;
 
         Piece.PieceAlignment targetAlignment = PieceAlignment.White;
+
+        ulong toSearch = MoveGeneratorInfoEntry.BITBOARD_PATTERN_RANK1;
         if (black)
         {
             targetAlignment = PieceAlignment.Black;
             yLevel = 0;
+            toSearch &= globalData.bitboard_piecesBlack;
+        } else
+        {
+            toSearch <<= 56;
+            toSearch &= globalData.bitboard_piecesWhite;
         }
+
 
         /*
         ulong checkBitboard = (targetAlignment == PieceAlignment.White ? globalData.bitboard_piecesWhite : globalData.bitboard_piecesBlack) & (MoveGeneratorInfoEntry.BITBOARD_PATTERN_RANK1 << (yLevel << 3));
@@ -7175,6 +7253,7 @@ public class Board
         }
         */
 
+        /*
         for (int i = 0; i < 8; i++)
         {
             uint piece = pieces[i + yLevel * 8];
@@ -7208,6 +7287,44 @@ public class Board
                 }
             }
         }
+        */
+
+        while (toSearch != 0)
+        {
+            int i = MainManager.PopBitboardLSB1(toSearch, out toSearch);
+
+            uint piece = pieces[i];
+            if (piece != 0 && Piece.GetPieceAlignment(piece) == targetAlignment)
+            {
+                Piece.PieceType pt = Piece.GetPieceType(piece);
+                PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pt);
+
+                if (pte.promotionType != PieceType.Null)
+                {
+                    pieces[i] = Piece.SetPieceType(pte.promotionType, piece);
+                    if (boardUpdateMetadata != null)
+                    {
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i, yLevel, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                    }
+
+                    if ((pte.piecePropertyB & PiecePropertyB.Giant) != 0)
+                    {
+                        PlaceGiant(pieces[i], i, yLevel);
+                    }
+
+                    PieceTableEntry pteB = GlobalPieceManager.GetPieceTableEntry(pte.promotionType);
+
+                    if (black)
+                    {
+                        blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                    }
+                    else
+                    {
+                        whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                    }
+                }
+            }
+        }
     }
 
     //This is the bottleneck function (The slowest part of ApplyMove?)
@@ -7232,8 +7349,9 @@ public class Board
         while (piecesToCheck != 0)
         {
             int i = MainManager.PopBitboardLSB1(piecesToCheck, out piecesToCheck);
+            uint piece = pieces[i];
 
-            if (pieces[i] == 0)
+            if (piece == 0)
             {
                 continue;
             }
@@ -7243,34 +7361,37 @@ public class Board
             }
 
             PieceTableEntry pte = null;
-            Piece.PieceType pt = Piece.GetPieceType(pieces[i]);
+            Piece.PieceType pt = Piece.GetPieceType(piece);
 
-            //PieceTableEntry pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]); //GlobalPieceManager.GetPieceTableEntry(pieces[i]);
-            //PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pieces[i]);
+            //PieceTableEntry pte = globalData.GetPieceTableEntryFromCache(i, piece); //GlobalPieceManager.GetPieceTableEntry(piece);
+            //PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(piece);
             if (pt == PieceType.SludgeTrail)  //survives for 2 ply (1 ply from being spawned, 1 to block black for 1 turn)
             {
-                if (Piece.GetPieceSpecialData(pieces[i]) == 0)
+                if (Piece.GetPieceSpecialData(piece) == 0)
                 {
-                    pieces[i] = Piece.SetPieceSpecialData(1, pieces[i]);
+                    pieces[i] = Piece.SetPieceSpecialData(1, piece);
                 } else
                 {
                     if (boardUpdateMetadata != null)
                     {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.Capture));
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, piece, BoardUpdateMetadata.BoardUpdateType.Capture));
                     }
                     pieces[i] = 0;
                 }
                 continue;
             }
 
+            //assume the piece table build fixes this?
+            /*
             if (Piece.GetPieceAlignment(pieces[i]) != pa)
             {
                 continue;
             }
+            */
 
-            if (Piece.GetPieceModifier(pieces[i]) == PieceModifier.HalfShielded)
+            if (Piece.GetPieceModifier(piece) == PieceModifier.HalfShielded)
             {
-                pieces[i] = Piece.SetPieceModifier(0, pieces[i]);
+                pieces[i] = Piece.SetPieceModifier(0, piece);
             }
 
 
@@ -7281,7 +7402,7 @@ public class Board
             {
                 if (pte == null)
                 {
-                    pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                    pte = globalData.GetPieceTableEntryFromCache(i, piece);
                 }
                 if ((pte.piecePropertyB & PiecePropertyB.DaySwapper) != 0)
                 {
@@ -7300,7 +7421,7 @@ public class Board
                         boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
                     }
 
-                    pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
+                    pieces[i] = Piece.SetPieceType(pteB.type, piece);
                 }
                 if ((pte.piecePropertyB & PiecePropertyB.DaySwapperB) != 0)
                 {
@@ -7319,7 +7440,7 @@ public class Board
                         boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
                     }
 
-                    pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
+                    pieces[i] = Piece.SetPieceType(pteB.type, piece);
                 }
             }
             */
@@ -7329,7 +7450,7 @@ public class Board
             {
                 if (pte == null)
                 {
-                    pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                    pte = globalData.GetPieceTableEntryFromCache(i, piece);
                 }
                 if ((pte.piecePropertyB & PiecePropertyB.Fading) != 0)
                 {
@@ -7575,7 +7696,7 @@ public class Board
                     break;
             }
 
-            byte psed = Piece.GetPieceStatusDuration(pieces[i]);
+            byte psed = Piece.GetPieceStatusDuration(piece);
             if (psed == 0)
             {
                 continue;
@@ -7583,11 +7704,11 @@ public class Board
 
             if (black && (i >= 2 && i <= 5) && immuneZone)
             {
-                pieces[i] = Piece.SetPieceStatusEffect(0, Piece.SetPieceStatusDuration(0, pieces[i]));
+                pieces[i] = Piece.SetPieceStatusEffect(0, Piece.SetPieceStatusDuration(0, piece));
                 continue;
             }
 
-            Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(pieces[i]);
+            Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(piece);
 
             psed--;
             if (psed == 0)
@@ -7598,7 +7719,7 @@ public class Board
                 {
                     if (pte == null)
                     {
-                        pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                        pte = globalData.GetPieceTableEntryFromCache(i, piece);
                     }
                     if (!black)
                     {
@@ -7615,7 +7736,7 @@ public class Board
 
                     if (boardUpdateMetadata != null)
                     {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.Capture));
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, piece, BoardUpdateMetadata.BoardUpdateType.Capture));
                     }
 
                     DeletePieceAtCoordinate(i & 7, i >> 3, pte, pa, boardUpdateMetadata);
@@ -7623,16 +7744,16 @@ public class Board
                     continue;
                 }
 
-                pieces[i] = Piece.SetPieceStatusEffect(0, pieces[i]);
+                pieces[i] = Piece.SetPieceStatusEffect(0, piece);
             }
-            pieces[i] = Piece.SetPieceStatusDuration(psed, pieces[i]);
+            pieces[i] = Piece.SetPieceStatusDuration(psed, piece);
 
             switch (pse)
             {
                 case PieceStatusEffect.Light:
                     if (pte == null)
                     {
-                        pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                        pte = globalData.GetPieceTableEntryFromCache(i, piece);
                     }
                     if ((pte.piecePropertyB & PiecePropertyB.TrueShiftImmune) != 0)
                     {
@@ -7643,7 +7764,7 @@ public class Board
                         //i -= 8
                         if (i - 8 >= 0 && pieces[i - 8] == 0)
                         {
-                            pieces[i - 8] = pieces[i];
+                            pieces[i - 8] = piece;
                             pieces[i] = 0;
                             globalData.bitboard_piecesBlack |= (1uL << (i - 8));
                             processedSquares |= (1uL << (i - 8));
@@ -7659,7 +7780,7 @@ public class Board
                         //i += 8
                         if (i + 8 < 64 && pieces[i + 8] == 0)
                         {
-                            pieces[i + 8] = pieces[i];
+                            pieces[i + 8] = piece;
                             pieces[i] = 0;
                             globalData.bitboard_piecesWhite |= (1uL << (i + 8));
                             processedSquares |= (1uL << (i + 8));
@@ -7674,7 +7795,7 @@ public class Board
                 case PieceStatusEffect.Heavy:
                     if (pte == null)
                     {
-                        pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                        pte = globalData.GetPieceTableEntryFromCache(i, piece);
                     }
                     if ((pte.piecePropertyB & PiecePropertyB.TrueShiftImmune) != 0)
                     {
@@ -7686,7 +7807,7 @@ public class Board
                         //i += 8
                         if (i + 8 < 64 && pieces[i + 8] == 0)
                         {
-                            pieces[i + 8] = pieces[i];
+                            pieces[i + 8] = piece;
                             pieces[i] = 0;
                             globalData.bitboard_piecesBlack |= (1uL << (i + 8));
                             processedSquares |= (1uL << (i + 8));
@@ -7702,7 +7823,7 @@ public class Board
                         //i -= 8
                         if (i - 8 >= 0 && pieces[i - 8] == 0)
                         {
-                            pieces[i - 8] = pieces[i];
+                            pieces[i - 8] = piece;
                             pieces[i] = 0;
                             globalData.bitboard_piecesWhite |= (1uL << (i - 8));
                             processedSquares |= (1uL << (i - 8));
@@ -8654,13 +8775,16 @@ public class Board
             squaresToSearch = (whitePieces) & ~processedSquares;
         }
 
+        //skip searching normals
+        squaresToSearch &= ~globalData.bitboard_square_normal;
+
         while (squaresToSearch != 0)
         {
             int index = MainManager.PopBitboardLSB1(squaresToSearch, out squaresToSearch);
 
             ulong bitIndex = 1uL << index;
 
-            if (pieces[index] == 0 || globalData.squares[index].type == Square.SquareType.Normal || (bitIndex & processedSquares) != 0)
+            if (pieces[index] == 0 || (bitIndex & processedSquares) != 0)
             {
                 continue;
             }

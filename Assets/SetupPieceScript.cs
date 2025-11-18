@@ -19,6 +19,22 @@ public class SetupPieceScript : PieceScript
         }
     }
 
+    public override void OnSelect()
+    {
+        canDelete = false;
+
+        backSprite.color = Piece.GetPieceColor(Piece.GetPieceAlignment(piece));
+        backSprite.color = new Color(1 - backSprite.color.r, backSprite.color.g, backSprite.color.b, 1);
+
+        bs.SelectPiece(this);
+        isSelected = true;
+    }
+
+    public override void OnDragStay()
+    {
+        (bs.hoverX, bs.hoverY) = bs.GetCoordinatesFromPosition(transform.position);
+    }
+
     public override void ForceDeselect()
     {
         seb.ForceDeselect();

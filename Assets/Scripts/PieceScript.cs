@@ -22,8 +22,13 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     public bool isGiant;
     public BoxCollider bc;
 
+    public TrashCanScript trashCan;
+    public bool canDelete;
+
     public virtual void Start()
     {
+        trashCan = FindObjectOfType<TrashCanScript>();
+
         dob = GetComponent<DraggableObject>();
         dob.canDrag = true;
     }
@@ -122,8 +127,19 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         bc.enabled = bs.CanSelectPieces() && text.enabled; //Become intangible while animating
     }
 
-    public void OnSelect()
+    public virtual void OnSelect()
     {
+        if (bs.setupMoves)
+        {
+            if (x < 0 || x > 7 || y < 0 || y > 7)
+            {
+                canDelete = false;
+            } else
+            {
+                canDelete = bs.IsSetupMoveLegal(this, Move.PackMove((byte)x, (byte)y, 15, 15));
+            }
+        }
+
         backSprite.color = Piece.GetPieceColor(Piece.GetPieceAlignment(piece));
         backSprite.color = new Color(1 - backSprite.color.r, backSprite.color.g, backSprite.color.b, 1);
 
@@ -149,9 +165,24 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     public void OnDragStart()
     {
     }
-    public void OnDragStay()
+    public virtual void OnDragStay()
     {
         (bs.hoverX, bs.hoverY) = bs.GetCoordinatesFromPosition(transform.position);            
+        if (trashCan != null && bs.setupMoves)
+        {
+            trashCan.SetActive();
+            if (!canDelete)
+            {
+                trashCan.SetForbidden();
+            }
+            if (trashCan.QueryPosition(transform.position))
+            {
+                if (canDelete)
+                {
+                    trashCan.SetHighlight();
+                }
+            }
+        }
     }
     public virtual void OnDragStop()
     {
@@ -161,27 +192,15 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             //don't treat adjustments as moves
             if (!(x == bs.hoverX && y == bs.hoverY))
             {
-                if (bs is SetupBoardScript sbs)
+                if ((bs is SetupBoardScript && bs.hoverX >= 0 && bs.hoverX <= 7 && bs.hoverY >= 0 && bs.hoverY <= 1) || (!(bs is SetupBoardScript) && bs.hoverX >= 0 && bs.hoverX <= 7 && bs.hoverY >= 0 && bs.hoverY <= 7))
                 {
-                    if (bs.hoverX < 0 || bs.hoverX > 7 || bs.hoverY < 0 || bs.hoverY > 1)
-                    {
-                        bs.TrySetupMove(this, Move.PackMove((byte)x, (byte)y, 15, 15));
-                    }
-                    else
-                    {
-                        bs.TrySetupMove(this, x, y, bs.hoverX, bs.hoverY);
-                    }
-                }
-                else
+                    bs.TrySetupMove(this, x, y, bs.hoverX, bs.hoverY);
+                } else if (trashCan != null && trashCan.QueryPosition(transform.position))
                 {
-                    if (bs.hoverX < 0 || bs.hoverX > 7 || bs.hoverY < 0 || bs.hoverY > 7)
-                    {
-                        bs.TrySetupMove(this, Move.PackMove((byte)x, (byte)y, 15, 15));
-                    }
-                    else
-                    {
-                        bs.TrySetupMove(this, x, y, bs.hoverX, bs.hoverY);
-                    }
+                    bs.TrySetupMove(this, Move.PackMove((byte)x, (byte)y, 15, 15));
+                } else
+                {
+                    transform.position = BoardScript.GetSpritePositionFromCoordinates(x, y, -0.5f);
                 }
             } else
             {

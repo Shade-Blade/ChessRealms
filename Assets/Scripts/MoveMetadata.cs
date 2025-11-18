@@ -136,6 +136,7 @@ public class MoveMetadata
         MoveMetadata subNode = node;
 
         output.Insert(0, subNode);
+        /*
         int lastDeltaX = 0;
         int lastDeltaY = 0;
         //try to use Dir
@@ -176,6 +177,7 @@ public class MoveMetadata
                 lastDeltaY = 1;
                 break;
         }
+        */
 
         if (node.pathTags.Count == 0)
         {
