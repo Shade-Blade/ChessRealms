@@ -118,9 +118,11 @@ public class BoardGlobalData
     public ulong bitboard_piecesWhiteAdjacent8;
     public ulong bitboard_piecesBlackAdjacent8;
 
+    public ulong bitboard_pawns;
     public ulong bitboard_pawnsWhite;
     public ulong bitboard_pawnsBlack;
 
+    public ulong bitboard_king;
     public ulong bitboard_kingWhite;
     public ulong bitboard_kingBlack;
 
@@ -140,6 +142,7 @@ public class BoardGlobalData
 
     //A bunch of piece specific bitboards :/
     //Well at least holding all of these in memory is faster than manually checking proximity every time
+    //These are all auras
     public ulong bitboard_bansheeWhite;
     public ulong bitboard_bansheeBlack;
     public ulong bitboard_attractorWhite;
@@ -169,7 +172,7 @@ public class BoardGlobalData
     public ulong bitboard_tarotMoonBlack;
     public ulong bitboard_tarotMoonIllusionWhite;
     public ulong bitboard_tarotMoonIllusionBlack;
-
+    
     public ulong bitboard_zombieWhite;
     public ulong bitboard_zombieBlack;
     public ulong bitboard_abominationWhite;
@@ -186,6 +189,12 @@ public class BoardGlobalData
     public ulong bitboard_megacannonBlack;
     public ulong bitboard_momentumWhite;
     public ulong bitboard_momentumBlack;
+
+    public ulong bitboard_sludgeTrail;
+    public ulong bitboard_daySwapper;
+    public ulong bitboard_seasonSwapper;
+    public ulong bitboard_egg;
+    public ulong bitboard_EOTPieces;
 
     public BoardGlobalData()
     {
@@ -2360,7 +2369,7 @@ public class Board
                         ulong moonBitboard = 0;
                         if (globalData.arcanaMoonOutdated)
                         {
-                            MoveGeneratorInfoEntry.FixArcanaMoon(this);
+                            MoveGenerator.FixArcanaMoon(this);
                         }
                         if (opa == PieceAlignment.White)
                         {
@@ -5807,7 +5816,7 @@ public class Board
     {
         if (globalData.arcanaMoonOutdated)
         {
-            MoveGeneratorInfoEntry.FixArcanaMoon(this);
+            MoveGenerator.FixArcanaMoon(this);
         }
         //Note: the capture check reduces point score by one of them
         //This is why I made Moon Illusion the same value as Arcana Moon (it doesn't increase when it spawns stuff)
@@ -6399,13 +6408,7 @@ public class Board
 
     public void RunTurnEnd(bool black, bool bonusMove, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
-        //note: piece bitboards will be out of date as this is after ApplyMove
-
-        //info required to fix stuff
-        //Inefficient
-        //How much of a save is it to make ApplyMove fix the bitboards in itself?
-        //It would be a lot of conditionals to place stuff and fix the bitboards
-        MoveGeneratorInfoEntry.GeneratePieceBitboards(this, true);
+        MoveGenerator.GeneratePieceBitboardsPostTurn(this);
 
         ApplyAutoMovers(!black, boardUpdateMetadata);
         ApplyPromotion(black, boardUpdateMetadata);
@@ -7198,7 +7201,7 @@ public class Board
 
         Piece.PieceAlignment targetAlignment = PieceAlignment.White;
 
-        ulong toSearch = MoveGeneratorInfoEntry.BITBOARD_PATTERN_RANK1;
+        ulong toSearch = MoveGenerator.BITBOARD_PATTERN_RANK1;
         if (black)
         {
             targetAlignment = PieceAlignment.Black;
@@ -7351,21 +7354,24 @@ public class Board
             int i = MainManager.PopBitboardLSB1(piecesToCheck, out piecesToCheck);
             uint piece = pieces[i];
 
+            ulong bitIndex = 1uL << i;
+
             if (piece == 0)
             {
                 continue;
             }
-            if (((1uL << (i)) & processedSquares) != 0)
+            if ((bitIndex & processedSquares) != 0)
             {
                 continue;
             }
 
             PieceTableEntry pte = null;
-            Piece.PieceType pt = Piece.GetPieceType(piece);
+            Piece.PieceType pt;// = Piece.GetPieceType(piece);
 
             //PieceTableEntry pte = globalData.GetPieceTableEntryFromCache(i, piece); //GlobalPieceManager.GetPieceTableEntry(piece);
             //PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(piece);
-            if (pt == PieceType.SludgeTrail)  //survives for 2 ply (1 ply from being spawned, 1 to block black for 1 turn)
+            if ((bitIndex & globalData.bitboard_sludgeTrail) != 0)
+            //if (pt == PieceType.SludgeTrail)  //survives for 2 ply (1 ply from being spawned, 1 to block black for 1 turn)
             {
                 if (Piece.GetPieceSpecialData(piece) == 0)
                 {
@@ -7389,318 +7395,270 @@ public class Board
             }
             */
 
+            /*
             if (Piece.GetPieceModifier(piece) == PieceModifier.HalfShielded)
             {
                 pieces[i] = Piece.SetPieceModifier(0, piece);
             }
+            */
 
+            if ((piece & 0x3C0000) == 0x240000)
+            {
+                pieces[i] = Piece.SetPieceModifier(0, piece);
+            }
 
             PieceTableEntry pteB;
 
-            /*
-            if (bonusPly == 0)
-            {
-                if (pte == null)
-                {
-                    pte = globalData.GetPieceTableEntryFromCache(i, piece);
-                }
-                if ((pte.piecePropertyB & PiecePropertyB.DaySwapper) != 0)
-                {
-                    pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt + 1));
-                    if (!black)
-                    {
-                        blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
-                    }
-                    else
-                    {
-                        whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
-                    }
-
-                    if (boardUpdateMetadata != null)
-                    {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                    }
-
-                    pieces[i] = Piece.SetPieceType(pteB.type, piece);
-                }
-                if ((pte.piecePropertyB & PiecePropertyB.DaySwapperB) != 0)
-                {
-                    pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt - 1));
-                    if (!black)
-                    {
-                        blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
-                    }
-                    else
-                    {
-                        whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
-                    }
-
-                    if (boardUpdateMetadata != null)
-                    {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pteB.type, BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                    }
-
-                    pieces[i] = Piece.SetPieceType(pteB.type, piece);
-                }
-            }
-            */
-
-            /*
-            if (turn >= 10)
-            {
-                if (pte == null)
-                {
-                    pte = globalData.GetPieceTableEntryFromCache(i, piece);
-                }
-                if ((pte.piecePropertyB & PiecePropertyB.Fading) != 0)
-                {
-                    if (boardUpdateMetadata != null)
-                    {
-                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pt, BoardUpdateMetadata.BoardUpdateType.Capture));
-                    }
-
-                    DeletePieceAtCoordinate(i & 7, i >> 3, pte, pa, boardUpdateMetadata);
-                    continue;
-                }
-            }
-            */
-
             ulong checkBitboard = 0;
-            switch (pt) {
-                case PieceType.SummerQueen:
-                case PieceType.SummerRook:
-                case PieceType.SpringKnight:
-                case PieceType.SummerPawn:
-                case PieceType.SpringPawn:
-                    if (turn != 0 && bonusPly == 0 && turn % 5 == 0)
-                    {
-                        if (pte == null)
+            if ((bitIndex & globalData.bitboard_EOTPieces) != 0)
+            {
+                pt = Piece.GetPieceType(piece);
+
+                switch (pt)
+                {
+                    case PieceType.SummerQueen:
+                    case PieceType.SummerRook:
+                    case PieceType.SpringKnight:
+                    case PieceType.SummerPawn:
+                    case PieceType.SpringPawn:
+                        if (turn != 0 && bonusPly == 0 && turn % 5 == 0)
                         {
-                            pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                            if (pte == null)
+                            {
+                                pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                            }
+                            pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt + 1));
+                            if (!black)
+                            {
+                                blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+                            else
+                            {
+                                whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+
+                            if (boardUpdateMetadata != null)
+                            {
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            }
+
+                            pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
                         }
-                        pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt + 1));
+                        break;
+                    case PieceType.WinterQueen:
+                    case PieceType.WinterBishop:
+                    case PieceType.FallKnight:
+                    case PieceType.WinterPawn:
+                    case PieceType.FallPawn:
+                        if (turn != 0 && bonusPly == 0 && turn % 5 == 0)
+                        {
+                            if (pte == null)
+                            {
+                                pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                            }
+                            pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt - 1));
+                            if (!black)
+                            {
+                                blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+                            else
+                            {
+                                whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+
+                            pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
+                            if (boardUpdateMetadata != null)
+                            {
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            }
+                        }
+                        break;
+                    case PieceType.DayQueen:
+                    case PieceType.DayBishop:
+                    case PieceType.DayPawn:
+                        if (bonusPly == 0)
+                        {
+                            if (pte == null)
+                            {
+                                pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                            }
+                            pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt + 1));
+                            if (!black)
+                            {
+                                blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+                            else
+                            {
+                                whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+
+                            pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
+                            if (boardUpdateMetadata != null)
+                            {
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            }
+                        }
+                        break;
+                    case PieceType.NightQueen:
+                    case PieceType.NightKnight:
+                    case PieceType.NightPawn:
+                        if (bonusPly == 0)
+                        {
+                            if (pte == null)
+                            {
+                                pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                            }
+                            pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt - 1));
+                            if (!black)
+                            {
+                                blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+                            else
+                            {
+                                whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+
+                            pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
+                            if (boardUpdateMetadata != null)
+                            {
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            }
+                        }
+                        break;
+                    case PieceType.FlameEgg:
+                        //File free of enemies
                         if (!black)
                         {
-                            blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            checkBitboard = globalData.bitboard_piecesWhite;
                         }
                         else
                         {
-                            whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            checkBitboard = globalData.bitboard_piecesBlack;
                         }
 
-                        if (boardUpdateMetadata != null)
+                        if (((MoveGenerator.BITBOARD_PATTERN_AFILE << (i & 7)) & checkBitboard) == 0)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            if (pte == null)
+                            {
+                                pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                            }
+                            pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt + 1));
+                            if (!black)
+                            {
+                                blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+                            else
+                            {
+                                whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+                            pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
+                            if (boardUpdateMetadata != null)
+                            {
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            }
                         }
-
-                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
-                    }
-                    break;
-                case PieceType.WinterQueen:
-                case PieceType.WinterBishop:
-                case PieceType.FallKnight:
-                case PieceType.WinterPawn:
-                case PieceType.FallPawn:
-                    if (turn != 0 && bonusPly == 0 && turn % 5 == 0)
-                    {
-                        if (pte == null)
-                        {
-                            pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
-                        }
-                        pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt - 1));
+                        break;
+                    case PieceType.WaveEgg:
+                        bool waveCheck = true;
                         if (!black)
                         {
-                            blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            waveCheck = ((1uL << i) & (globalData.bitboard_piecesBlackAdjacent1 | globalData.bitboard_piecesBlackAdjacent2 | globalData.bitboard_piecesBlackAdjacent4 | globalData.bitboard_piecesBlackAdjacent8)) == 0;
                         }
                         else
                         {
-                            whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            waveCheck = ((1uL << i) & (globalData.bitboard_piecesWhiteAdjacent1 | globalData.bitboard_piecesWhiteAdjacent2 | globalData.bitboard_piecesWhiteAdjacent4 | globalData.bitboard_piecesWhiteAdjacent8)) == 0;
                         }
 
-                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
-                        if (boardUpdateMetadata != null)
+                        if (waveCheck)
                         {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            if (pte == null)
+                            {
+                                pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                            }
+                            pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt + 1));
+                            if (!black)
+                            {
+                                blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+                            else
+                            {
+                                whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+                            pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
+                            if (boardUpdateMetadata != null)
+                            {
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            }
                         }
-                    }
-                    break;
-                case PieceType.DayQueen:
-                case PieceType.DayBishop:
-                case PieceType.DayPawn:
-                    if (bonusPly == 0)
-                    {
-                        if (pte == null)
-                        {
-                            pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
-                        }
-                        pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt + 1));
+                        break;
+                    case PieceType.RockEgg:
+                        bool rockCheck = true;
                         if (!black)
                         {
-                            blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            rockCheck = ((1uL << i) & ((globalData.bitboard_piecesBlackAdjacent8) | (globalData.bitboard_piecesWhiteAdjacent8 | globalData.bitboard_piecesWhiteAdjacent4 | globalData.bitboard_piecesWhiteAdjacent2))) != 0;
                         }
                         else
                         {
-                            whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            rockCheck = ((1uL << i) & ((globalData.bitboard_piecesWhiteAdjacent8) | (globalData.bitboard_piecesBlackAdjacent8 | globalData.bitboard_piecesBlackAdjacent4 | globalData.bitboard_piecesBlackAdjacent2))) != 0;
                         }
 
-                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
-                        if (boardUpdateMetadata != null)
-                        {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                        }
-                    }
-                    break;
-                case PieceType.NightQueen:
-                case PieceType.NightKnight:
-                case PieceType.NightPawn:
-                    if (bonusPly == 0)
-                    {
-                        if (pte == null)
-                        {
-                            pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
-                        }
-                        pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt - 1));
+                        /*
                         if (!black)
                         {
-                            blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            checkBitboard = globalData.bitboard_piecesBlack;
                         }
                         else
                         {
-                            whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            checkBitboard = globalData.bitboard_piecesWhite;
                         }
+                        //would overlap with self
+                        checkBitboard &= ~(1uL << i);
+                        */
 
-                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
-                        if (boardUpdateMetadata != null)
-                        {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                        }
-                    }
-                    break;
-                case PieceType.FlameEgg:
-                    //File free of enemies
-                    if (!black)
-                    {
-                        checkBitboard = globalData.bitboard_piecesWhite;
-                    } else
-                    {
-                        checkBitboard = globalData.bitboard_piecesBlack;
-                    }
+                        //Old condition: empty row
+                        //Hard to get which isn't very fitting
+                        //Instead I'll make it 8 neighbors
+                        //look at all those shift arrows :P
 
-                    if (((MoveGeneratorInfoEntry.BITBOARD_PATTERN_AFILE << (i & 7)) & checkBitboard) == 0)
-                    {
-                        if (pte == null)
-                        {
-                            pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
-                        }
-                        pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt + 1));
-                        if (!black)
-                        {
-                            blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
-                        }
-                        else
-                        {
-                            whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
-                        }
-                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
-                        if (boardUpdateMetadata != null)
-                        {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                        }
-                    }
-                    break;
-                case PieceType.WaveEgg:
-                    bool waveCheck = true;
-                    if (!black)
-                    {
-                        waveCheck = ((1uL << i) & (globalData.bitboard_piecesBlackAdjacent1 | globalData.bitboard_piecesBlackAdjacent2 | globalData.bitboard_piecesBlackAdjacent4 | globalData.bitboard_piecesBlackAdjacent8)) == 0;
-                    }
-                    else
-                    {
-                        waveCheck = ((1uL << i) & (globalData.bitboard_piecesWhiteAdjacent1 | globalData.bitboard_piecesWhiteAdjacent2 | globalData.bitboard_piecesWhiteAdjacent4 | globalData.bitboard_piecesWhiteAdjacent8)) == 0;
-                    }
+                        //if (((MoveGeneratorInfoEntry.BITBOARD_PATTERN_RANK1 << ((i >> 3) << 3)) & checkBitboard) == 0)
 
-                    if (waveCheck)
-                    {
-                        if (pte == null)
+                        if (rockCheck)
                         {
-                            pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                            if (pte == null)
+                            {
+                                pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
+                            }
+                            pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt + 1));
+                            if (!black)
+                            {
+                                blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+                            else
+                            {
+                                whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
+                            }
+                            pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
+                            if (boardUpdateMetadata != null)
+                            {
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
+                            }
                         }
-                        pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt + 1));
-                        if (!black)
-                        {
-                            blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
-                        }
-                        else
-                        {
-                            whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
-                        }
-                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
-                        if (boardUpdateMetadata != null)
-                        {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                        }
-                    }
-                    break;
-                case PieceType.RockEgg:
-                    bool rockCheck = true;
-                    if (!black)
-                    {
-                        rockCheck = ((1uL << i) & ((globalData.bitboard_piecesBlackAdjacent8) | (globalData.bitboard_piecesWhiteAdjacent8 | globalData.bitboard_piecesWhiteAdjacent4 | globalData.bitboard_piecesWhiteAdjacent2))) != 0;
-                    }
-                    else
-                    {
-                        rockCheck = ((1uL << i) & ((globalData.bitboard_piecesWhiteAdjacent8) | (globalData.bitboard_piecesBlackAdjacent8 | globalData.bitboard_piecesBlackAdjacent4 | globalData.bitboard_piecesBlackAdjacent2))) != 0;
-                    }
+                        break;
+                }
+            }
 
-                    /*
-                    if (!black)
-                    {
-                        checkBitboard = globalData.bitboard_piecesBlack;
-                    }
-                    else
-                    {
-                        checkBitboard = globalData.bitboard_piecesWhite;
-                    }
-                    //would overlap with self
-                    checkBitboard &= ~(1uL << i);
-                    */
-
-                    //Old condition: empty row
-                    //Hard to get which isn't very fitting
-                    //Instead I'll make it 8 neighbors
-                    //look at all those shift arrows :P
-
-                    //if (((MoveGeneratorInfoEntry.BITBOARD_PATTERN_RANK1 << ((i >> 3) << 3)) & checkBitboard) == 0)
-
-                    if (rockCheck)
-                    {
-                        if (pte == null)
-                        {
-                            pte = globalData.GetPieceTableEntryFromCache(i, pieces[i]);
-                        }
-                        pteB = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)(pt + 1));
-                        if (!black)
-                        {
-                            blackPerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
-                        }
-                        else
-                        {
-                            whitePerPlayerInfo.pieceValueSumX2 += (short)(pteB.pieceValueX2 - pte.pieceValueX2);
-                        }
-                        pieces[i] = Piece.SetPieceType(pteB.type, pieces[i]);
-                        if (boardUpdateMetadata != null)
-                        {
-                            boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.TypeChange));
-                        }
-                    }
-                    break;
+            if ((piece & 0x3C000000) == 0)
+            {
+                continue;
             }
 
             byte psed = Piece.GetPieceStatusDuration(piece);
+            /*
             if (psed == 0)
             {
                 continue;
             }
+            */
 
             if (black && (i >= 2 && i <= 5) && immuneZone)
             {
@@ -7715,7 +7673,7 @@ public class Board
             {
 
                 //Rip
-                if (pse == PieceStatusEffect.Poisoned || pse == PieceStatusEffect.Sparked || pse == PieceStatusEffect.Bloodlust)
+                if (pse <= PieceStatusEffect.Poisoned)
                 {
                     if (pte == null)
                     {
@@ -8776,7 +8734,8 @@ public class Board
         }
 
         //skip searching normals
-        squaresToSearch &= ~globalData.bitboard_square_normal;
+        //But the fan aura is not normal
+        squaresToSearch &= (~globalData.bitboard_square_normal & ~fanBitboard);
 
         while (squaresToSearch != 0)
         {
@@ -9765,7 +9724,7 @@ public class Board
     public static bool PositionIsStalemate(ref Board b)
     {
         List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+        MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
 
         for (int i = 0; i < moves.Count; i++)
         {
@@ -9823,7 +9782,7 @@ public class Board
     public static bool IsKingCapturePossible(ref Board b)
     {
         List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+        MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
 
         return IsKingCapturePossible(ref b, moves);
     }
@@ -9857,7 +9816,7 @@ public class Board
     public static uint FindKingCaptureMove(ref Board b)
     {
         List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+        MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
 
         Board copy = new Board();
         for (int i = 0; i < moves.Count; i++)
@@ -9894,7 +9853,7 @@ public class Board
     {
         List<uint> moves = new List<uint>();
         Dictionary<uint, MoveMetadata> moveDict = new Dictionary<uint, MoveMetadata>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, moveDict);
+        MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, moveDict);
 
         Board copy = new Board();
         for (int i = 0; i < moves.Count; i++)
@@ -9919,8 +9878,11 @@ public class Board
             return 1;
         }
 
-        List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+        //Faster to pre populate the capacity
+        //Because less resizes required?
+        //Test is inconsistent for some reason though?
+        List<uint> moves = new List<uint>(30);
+        MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
 
         Board copy = new Board();
         for (int i = 0; i < moves.Count; i++)
@@ -10254,51 +10216,140 @@ public static class Move
 
     public static uint MakeSetupCreateMove(Piece.PieceType type, Piece.PieceAlignment pa, byte toX, byte toY)
     {
-        uint m = Move.PackMove(15, 15, toX, toY, 0, 0);
+        uint m = Move.PackMove((byte)15, (byte)15, toX, toY, 0, 0);
         m = MainManager.BitFilterSet(m, (uint)type, 16, 24);
         m = MainManager.BitFilterSet(m, (uint)pa, 25, 26);
         //Debug.Log(MainManager.BitFilter(m, 16, 24));
         return m;
     }
 
-    public static uint PackMove(byte fromX, byte fromY, byte toX, byte toY, Dir dir, SpecialType specialType)
+    public static uint PackMove(int fromX, int fromY, int toX, int toY, Dir dir, SpecialType specialType)
     {
-        uint output = 0;
+        //uint output = 0;
 
+        /*
         output += (uint)((fromX) & (0x0000000f));
         output += (uint)(((fromY) & (0x0000000f)) << 4);
         output += (uint)(((toX) & (0x0000000f)) << 8);
         output += (uint)(((toY) & (0x0000000f)) << 12);
         output += (((uint)dir & 0x000000ff) << 16);
         output += ((uint)specialType << 24);
+        */
+
+        /*
+        output += (uint)((fromX));
+        output += (uint)(((fromY)) << 4);
+        output += (uint)(((toX)) << 8);
+        output += (uint)(((toY)) << 12);
+        output += (((uint)dir)<< 16);
+        output += ((uint)specialType << 24);
 
         return output;
+        */
+        return (uint)(fromX) + (uint)(((fromY)) << 4) + (uint)(((toX)) << 8) + (uint)(((toY)) << 12) + (((uint)dir) << 16) + ((uint)specialType << 24);
+    }
+    public static uint PackMove(byte fromX, byte fromY, byte toX, byte toY, Dir dir, SpecialType specialType)
+    {
+        //uint output = 0;
+
+        /*
+        output += (uint)((fromX) & (0x0000000f));
+        output += (uint)(((fromY) & (0x0000000f)) << 4);
+        output += (uint)(((toX) & (0x0000000f)) << 8);
+        output += (uint)(((toY) & (0x0000000f)) << 12);
+        output += (((uint)dir & 0x000000ff) << 16);
+        output += ((uint)specialType << 24);
+        */
+
+        /*
+        output += (uint)((fromX));
+        output += (uint)(((fromY)) << 4);
+        output += (uint)(((toX)) << 8);
+        output += (uint)(((toY)) << 12);
+        output += (((uint)dir)<< 16);
+        output += ((uint)specialType << 24);
+
+        return output;
+        */
+        return (uint)(fromX) + (uint)(((fromY)) << 4) + (uint)(((toX)) << 8) + (uint)(((toY)) << 12) + (((uint)dir) << 16) + ((uint)specialType << 24);
     }
     public static uint PackMove(byte fromX, byte fromY, byte toX, byte toY, SpecialType specialType)
     {
+        /*
         uint output = 0;
+        */
 
+        /*
         output += (uint)((fromX) & (0x0000000f));
         output += (uint)(((fromY) & (0x0000000f)) << 4);
         output += (uint)(((toX) & (0x0000000f)) << 8);
         output += (uint)(((toY) & (0x0000000f)) << 12);
         //output += (((uint)dir & 0x000000ff) << 16);
         output += ((uint)specialType << 24);
+        */
+
+        /*
+        output += (uint)((fromX));
+        output += (uint)(((fromY)) << 4);
+        output += (uint)(((toX)) << 8);
+        output += (uint)(((toY)) << 12);
+        //output += (((uint)dir) << 16);
+        output += ((uint)specialType << 24);
+        */
+
+        //return output;
+        return (uint)(fromX) + (uint)(((fromY)) << 4) + (uint)(((toX)) << 8) + (uint)(((toY)) << 12) + ((uint)specialType << 24);
+    }
+    public static uint PackMove(int fromX, int fromY, int toX, int toY)
+    {
+        //uint output = 0;
+
+        /*
+        output += (uint)((fromX) & (0x0000000f));
+        output += (uint)(((fromY) & (0x0000000f)) << 4);
+        output += (uint)(((toX) & (0x0000000f)) << 8);
+        output += (uint)(((toY) & (0x0000000f)) << 12);
+        output += (((uint)dir & 0x000000ff) << 16);
+        output += ((uint)specialType << 24);
+        */
+
+        /*
+        output += (uint)((fromX));
+        output += (uint)(((fromY)) << 4);
+        output += (uint)(((toX)) << 8);
+        output += (uint)(((toY)) << 12);
+        output += (((uint)dir)<< 16);
+        output += ((uint)specialType << 24);
 
         return output;
+        */
+        return (uint)(fromX) + (uint)(((fromY)) << 4) + (uint)(((toX)) << 8) + (uint)(((toY)) << 12);
     }
     public static uint PackMove(byte fromX, byte fromY, byte toX, byte toY)
     {
-        uint output = 0;
+        //uint output = 0;
 
+        /*
         output += (uint)((fromX) & (0x0000000f));
         output += (uint)(((fromY) & (0x0000000f)) << 4);
         output += (uint)(((toX) & (0x0000000f)) << 8);
         output += (uint)(((toY) & (0x0000000f)) << 12);
         //output += (((uint)dir & 0x000000ff) << 16);
         //output += ((uint)specialType << 24);
+        */
+
+        /*
+        output += (uint)((fromX));
+        output += (uint)(((fromY)) << 4);
+        output += (uint)(((toX)) << 8);
+        output += (uint)(((toY)) << 12);
+        //output += (((uint)dir) << 16);
+        //output += ((uint)specialType << 24);
 
         return output;
+        */
+
+        return (uint)(fromX) + (uint)(((fromY)) << 4) + (uint)(((toX)) << 8) + (uint)(((toY)) << 12);
     }
 
     public static (int, int) DirToDelta(Dir d)
@@ -10451,12 +10502,12 @@ public static class Move
         tempY += y;
 
         //Target must be empty and legal
-        if (tempX < 0 || tempX > 7 || tempY < 0 || tempY > 7)
+        if ((((tempX | tempY) & -8) != 0))
         {
             return false;
         }
 
-        return b.GetPieceAtCoordinate(tempX, tempY) == 0;
+        return b.pieces[tempX + (tempY << 3)] == 0;
     }
     public static bool PullLegal(ref Board b, int x, int y, Dir dir)
     {
@@ -10471,25 +10522,78 @@ public static class Move
         tempY += y;
 
         //Target must be empty and legal
-        if (tempX < 0 || tempX > 7 || tempY < 0 || tempY > 7)
+        if ((((tempX | tempY) & -8) != 0))
         {
             return false;
         }
 
-        return b.GetPieceAtCoordinate(tempX, tempY) == 0;
+        return b.pieces[tempX + (tempY << 3)] == 0;
     }
 
     //This requires all these extra arguments because some move types need extra checks
     //The enemy capture version uses the check invincible thing
     public static bool SpecialMoveCanMoveOntoAlly(SpecialType st, ref Board b, int x, int y, int tx, int ty, Dir dir)
     {
+        //optimize stuff by blacklisting every non (move onto ally) move early?
+        switch (st)
+        {
+            case SpecialType.Normal:
+            case SpecialType.MoveOnly:
+            case SpecialType.CaptureOnly:
+            case SpecialType.FlyingMoveOnly:
+            case SpecialType.ChargeMove:
+            case SpecialType.ChargeMoveReset:
+            case SpecialType.SelfMove:
+            case SpecialType.Castling:
+            case SpecialType.Convert:
+            case SpecialType.ConvertCaptureOnly:
+            case SpecialType.ConvertPawn:
+            case SpecialType.Spawn:
+            case SpecialType.FireCapture:
+            case SpecialType.FireCaptureOnly:
+            case SpecialType.LongLeaper:
+            case SpecialType.LongLeaperCaptureOnly:
+            case SpecialType.PullMove:
+            case SpecialType.AdvancerPush:
+            case SpecialType.Advancer:
+            case SpecialType.Withdrawer:
+            case SpecialType.AdvancerWithdrawer:
+            case SpecialType.WrathCapturer:
+            case SpecialType.FlankingCapturer:
+            case SpecialType.PoisonFlankingAdvancer:
+            case SpecialType.MorphIntoTarget:
+            case SpecialType.SlipMove:
+            case SpecialType.PlantMove:
+            case SpecialType.GliderMove:
+            case SpecialType.CoastMove:
+            case SpecialType.ShadowMove:
+            case SpecialType.InflictFreeze:
+            case SpecialType.InflictFreezeCaptureOnly:
+            case SpecialType.Inflict:
+            case SpecialType.InflictCaptureOnly:
+            case SpecialType.InflictShift:
+            case SpecialType.InflictShiftCaptureOnly:
+            case SpecialType.DepositAlly:
+            case SpecialType.DepositAllyPlantMove:
+            case SpecialType.EnemyAbility:
+            case SpecialType.EmptyAbility:
+            case SpecialType.AimEnemy:
+                return false;
+            case SpecialType.AimOccupied:   //whitelist instead :)
+            case SpecialType.AimAny:
+                return true;
+        }
+
+
         PieceTableEntry opte = b.globalData.GetPieceTableEntryFromCache((x + (y << 3)), b.GetPieceAtCoordinate(x, y)); //GlobalPieceManager.GetPieceTableEntry(b.GetPieceAtCoordinate(x, y));
 
         //Whatever the real move is you can premove it no matter what
+        /*
         if (st == SpecialType.AimAny || st == SpecialType.AimOccupied)
         {
             return true;
         }
+        */
 
         //I'll just ban this unconditionally
         PieceTableEntry pte = b.globalData.GetPieceTableEntryFromCache((tx + (ty << 3)), b.GetPieceAtCoordinate(tx, ty)); //GlobalPieceManager.GetPieceTableEntry(b.GetPieceAtCoordinate(tx, ty));
@@ -10642,7 +10746,7 @@ public static class Move
             case SpecialType.WrathCapturer:
                 return true;
             case SpecialType.ConvertPawn:
-                return GlobalPieceManager.GetPieceTableEntry(b.pieces[x + y * 8]).promotionType != 0;
+                return b.globalData.GetPieceTableEntryFromCache(x + (y << 3), b.pieces[x + (y << 3)]).promotionType != 0;
             case SpecialType.RangedPull:
                 return PullLegal(ref b, x, y, dir);
             case SpecialType.RangedPush:
@@ -10871,8 +10975,9 @@ public static class Move
                 return (x * flipValue, y * flipValue);
             case PieceAlignment.Black:
                 return (-x * flipValue, -y * flipValue);
-            case PieceAlignment.Neutral:
-                return (y * flipValue, -x * flipValue);
+            //unused, neutrals generate using the mover's alignment so this isn't even used
+            //case PieceAlignment.Neutral:
+                //return (y * flipValue, -x * flipValue);
         }
 
         return (x, y);

@@ -85,13 +85,13 @@ public class MoveMetadata
         }
     }
 
-    public static uint MakePathTag(MoveGeneratorInfoEntry.MoveGeneratorAtom mga, int index)
+    public static uint MakePathTag(MoveGeneratorInfoEntry.MoveGeneratorAtom mga, uint index)
     {
-        return (uint)(((int)mga << 16) + index);
+        return (((uint)mga << 16) + index);
     }
-    public static uint MakePathTag(MoveGeneratorInfoEntry.MoveGeneratorAtom mga, int index, int indexB)
+    public static uint MakePathTag(MoveGeneratorInfoEntry.MoveGeneratorAtom mga, uint index, uint indexB)
     {
-        return (uint)(((int)mga << 16) + (index << 8) + indexB);
+        return (((uint)mga << 16) + (index << 8) + indexB);
     }
 
     public static string PathTagToString(uint pathTag)

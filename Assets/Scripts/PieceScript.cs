@@ -136,7 +136,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                 canDelete = false;
             } else
             {
-                canDelete = bs.IsSetupMoveLegal(this, Move.PackMove((byte)x, (byte)y, 15, 15));
+                canDelete = bs.IsSetupMoveLegal(this, Move.PackMove(x, y, 15, 15));
             }
         }
 
@@ -197,7 +197,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                     bs.TrySetupMove(this, x, y, bs.hoverX, bs.hoverY);
                 } else if (trashCan != null && trashCan.QueryPosition(transform.position))
                 {
-                    bs.TrySetupMove(this, Move.PackMove((byte)x, (byte)y, 15, 15));
+                    bs.TrySetupMove(this, Move.PackMove(x, y, 15, 15));
                 } else
                 {
                     transform.position = BoardScript.GetSpritePositionFromCoordinates(x, y, -0.5f);

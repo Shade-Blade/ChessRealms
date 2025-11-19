@@ -103,7 +103,11 @@ public class BattleBoardScript : BoardScript
         {
             case -1:
             case 0:
+                moveThinkTime = 1;
+                break;
             case 1:
+                moveThinkTime = 2;
+                break;
             case 2:
                 moveThinkTime = 4;
                 break;
@@ -1139,7 +1143,7 @@ public class BattleBoardScript : BoardScript
         //lastmove for AI
         Dictionary<uint, MoveMetadata> moveDict = new Dictionary<uint, MoveMetadata>();
         List<uint> moveList = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moveList, ref board, PieceAlignment.Black, moveDict);
+        MoveGenerator.GenerateMovesForPlayer(moveList, ref board, PieceAlignment.Black, moveDict);
 
         List<MoveMetadata> moveTrail = null;
         List<BoardUpdateMetadata> boardUpdateMetadata = new List<BoardUpdateMetadata>();
@@ -1299,6 +1303,27 @@ public class BattleBoardScript : BoardScript
         }
     }
 
+    public void UndoReset()
+    {
+        if (historyIndex == 0)
+        {
+            return;
+        }
+
+        gameOver = false;
+        drawError = false;
+        historyIndex = 0;
+        board.CopyOverwrite(historyList[0]);
+        //Destroy the future history
+        chessAI.history = new HashSet<ulong>
+        {
+            chessAI.HashFromScratch(historyList[0])
+        };
+        DestroyLastMovedTrail();    //it is annoying to get the correct trail so I'll just destroy it 
+        RegenerateMoveList();
+        ResetSelected();
+        FixBoardBasedOnPosition();
+    }
     public void DoubleUndo()
     {
         if (historyIndex <= 1)
@@ -2053,7 +2078,7 @@ public class BattleBoardScript : BoardScript
 
         moveList = new List<uint>();
         moveMetadata = new Dictionary<uint, MoveMetadata>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moveList, ref board, board.blackToMove ? PieceAlignment.Black : PieceAlignment.White, moveMetadata);
+        MoveGenerator.GenerateMovesForPlayer(moveList, ref board, board.blackToMove ? PieceAlignment.Black : PieceAlignment.White, moveMetadata);
         //MoveGeneratorInfoEntry.GenerateMovesForPlayer(moveList, ref board, PieceAlignment.White);
 
         board.globalData.mbtactiveInverse.MakeInverse(board.globalData.mbtactive);
@@ -2079,7 +2104,7 @@ public class BattleBoardScript : BoardScript
 
         enemyMoveList = new List<uint>();
         enemyMoveMetadata = new Dictionary<uint, MoveMetadata>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(enemyMoveList, ref board, !board.blackToMove ? PieceAlignment.Black : PieceAlignment.White, enemyMoveMetadata);
+        MoveGenerator.GenerateMovesForPlayer(enemyMoveList, ref board, !board.blackToMove ? PieceAlignment.Black : PieceAlignment.White, enemyMoveMetadata);
         //MoveGeneratorInfoEntry.GenerateMovesForPlayer(enemyMoveList, ref board, PieceAlignment.Black);
 
         board.globalData.mbtactiveInverse.MakeInverse(board.globalData.mbtactive);

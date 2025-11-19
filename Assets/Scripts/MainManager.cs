@@ -105,6 +105,8 @@ public class MainManager : MonoBehaviour
 
         //~500k normal after optimizing TickDownStatusEffects to reduce PieceTableEntry checks
 
+        //Now 680k ish with more random small optimizations
+
         //220 ish seconds for depth 6 normal
         for (int i = 0; i <= 5; i++) 
         {
@@ -726,6 +728,26 @@ public class MainManager : MonoBehaviour
         bitFilter = ~bitFilter;
 
         set <<= startBit;
+
+        return (target & bitFilter) + set;
+    }
+    public static uint BitFilterSetB(uint target, uint set, int startBit, int endBit)
+    {
+        //unfortunately there's not a magic intrinsic that does the opposite of bit field extract above :(
+
+        //Make a bit filter and then cut all the wrong bits
+        uint endBitFilter = 1u << endBit;
+
+        //Set all lower bits
+        endBitFilter = endBitFilter + (endBitFilter - 1);
+
+        uint startBitFilter = (1u << startBit) - 1;
+
+        uint bitFilter = endBitFilter - startBitFilter;
+
+        bitFilter = ~bitFilter;
+
+        //set <<= startBit;
 
         return (target & bitFilter) + set;
     }

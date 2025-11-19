@@ -372,9 +372,9 @@ Recaller,6,"FWfha(0,3)fa(1,3)fa(2,3)fa(3,3)fha(0,2)fa(2,2)fa(1,2)",,,TRUE,,Telep
 Harlequin,3,"(0,2)(1,2)(2,2)",,SwapCapture,FALSE,,Teleporters,1.5
 Jester,4,Q,,SwapCapture,FALSE,,Teleporters,1.5
 Dancer,0.5,WF,,SwapCapture,FALSE,Jester,Teleporters,1.5
-Penguin,3,"Wfc(0,2)c(2,2)",,InflictFreeze|WaterImmune,TRUE,,Icy,3
+Penguin,3,"oWfc(0,2)c(2,2)",,InflictFreeze|WaterImmune,TRUE,,Icy,3
 IceElemental,2.5,"v(0,2)h(1,2)FvW",,InflictFreeze|WaterImmune,TRUE,,Icy,3
-EmperorPenguin,8,"WFcB2=cR2=c(1,2)",,InflictFreeze|WaterImmune,TRUE,,Icy,3
+EmperorPenguin,8,"oWoFcB2=cR2=c(1,2)",,InflictFreeze|WaterImmune,TRUE,,Icy,3
 SnowBomb,4,WF,,IceExplode|WaterImmune,TRUE,,Icy,3.5
 SnowQueen,11,"B3hR3(1,2)",,InflictFreeze|FreezeCapturer|WaterImmune,TRUE,,Icy,3
 Snowman,1,fF,,InflictFreeze|FreezeCapturer|WaterImmune,TRUE,SnowQueen,Icy,3

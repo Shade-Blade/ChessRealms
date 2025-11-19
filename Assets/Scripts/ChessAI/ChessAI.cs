@@ -70,6 +70,7 @@ public class ChessAI
     public HashSet<ulong> history;
 
     public Dictionary<int, Board> boardCache;
+    public Dictionary<int, List<uint>> moveListCache;
 
     public MoveBoardCacheEntry[] moveBoardCache;
 
@@ -101,6 +102,7 @@ public class ChessAI
     {
         Debug.Log("AI init");
         boardCache = new Dictionary<int, Board>();
+        moveListCache = new Dictionary<int, List<uint>>();
         history = new HashSet<ulong>();
         ZobristTableInit();
         //MoveBoardCacheTableInit();
@@ -134,21 +136,21 @@ public class ChessAI
                 openingDeviation = 0.05f;
                 randomDeviation = 0.1f;
                 blunderDeviation = 1f;
-                maxDepth = 4;   //pretty fast
+                maxDepth = 5;   //pretty fast
                 break;
             case 2:
                 valueMult = 1;
                 openingDeviation = 0.05f;
                 randomDeviation = 0.05f;
                 blunderDeviation = 0f;
-                maxDepth = 8;  //this is impossible to get without running this on a supercomputer probably :P
+                maxDepth = 20;  //basically infinite
                 break;
             case 3:
                 valueMult = 1;
                 openingDeviation = 0.04f;
                 randomDeviation = 0.04f;
                 blunderDeviation = 0f;
-                maxDepth = 16;  //this is impossible to get without running this on a supercomputer probably :P
+                maxDepth = 40;  //yeah you aren't getting this
                 break;
         }
 
@@ -1395,6 +1397,30 @@ public class ChessAI
         }
         return boardCache[turn];
     }
+    public List<uint> GetMoveListFromHistoryCache(int turn)
+    {
+        if (!moveListCache.ContainsKey(turn))
+        {
+            moveListCache[turn] = new List<uint>(30);
+            return moveListCache[turn];
+        }
+        moveListCache[turn].Clear();
+        return moveListCache[turn];
+    }
+    public void ClearOldCacheEntries(int lastTurn)
+    {
+        for (int i = 0; i < lastTurn; i++)
+        {
+            if (boardCache.ContainsKey(i))
+            {
+                boardCache.Remove(i);
+            }
+            if (moveListCache.ContainsKey(i))
+            {
+                moveListCache.Remove(i);
+            }
+        }
+    }
 
     public void TryPrintBestLine()
     {
@@ -1421,10 +1447,11 @@ public class ChessAI
     //Just choose whatever makes number go up (while still being legal)
     public void NaiveAI()
     {
+        ClearOldCacheEntries(board.ply);
         Board b = board;
 
-        List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+        List<uint> moves = GetMoveListFromHistoryCache(b.ply); //new List<uint>(30);
+        MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
 
         float bestEvaluation = WHITE_VICTORY;
         uint bestMove = 0;
@@ -1454,14 +1481,15 @@ public class ChessAI
     //Random choice of moves
     public void RandomAI()
     {
+        ClearOldCacheEntries(board.ply);
         Board b = board;
 
-        List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+        List<uint> moves = GetMoveListFromHistoryCache(b.ply); //new List<uint>(30);
+        MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
 
         uint bestMove = 0;
 
-        List<uint> shuffledMoves = new List<uint>();
+        List<uint> shuffledMoves = new List<uint>(moves.Count);
         while (moves.Count > 0)
         {
             uint newMove = moves[UnityEngine.Random.Range(0, moves.Count)];
@@ -1487,6 +1515,8 @@ public class ChessAI
 
     public void AlphaBetaAI(object o)
     {
+        ClearOldCacheEntries(board.ply);
+
         //I can make this as big as I want now :)
         int maxDepth = this.maxDepth;
         currentDepth = 0;
@@ -1893,8 +1923,8 @@ public class ChessAI
         Board copy = GetBoardFromHistoryCache(b.ply); //new Board();
         copy.CopyOverwrite(b);
 
-        List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+        List<uint> moves = GetMoveListFromHistoryCache(b.ply); //new List<uint>(30);
+        MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
 
         //If you already won then just return that immediately
         PieceAlignment winner = b.GetVictoryCondition();
@@ -2075,7 +2105,7 @@ public class ChessAI
 
         //failsafe
         //In most cases the first move searched should be good
-        if (bestMove == 0)
+        if (bestMove == 0 && moves.Count > 0)
         {
             bestMove = moves[0];
         }
@@ -2462,8 +2492,8 @@ public class ChessAI
         Board copy = GetBoardFromHistoryCache(b.ply);
         copy.CopyOverwrite(b);
 
-        List<uint> moves = new List<uint>();
-        MoveGeneratorInfoEntry.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+        List<uint> moves = GetMoveListFromHistoryCache(b.ply); //new List<uint>(30);
+        MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
         boardOldHash = b.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref copy, boardOldHash);
 
         //Null move might actually better?
@@ -2610,7 +2640,7 @@ public class ChessAI
 
         //only consider the quiescence stuff that has a chance of getting seen
         //List<uint> moveSubset = moves.FindAll((e) => (scoreDict[e] > 0 || (Move.GetToX(e) == x && Move.GetToY(e) == y)));
-        List<uint> moveSubset = new List<uint>();
+        List<uint> moveSubset = new List<uint>(4);  //4 is the default after it starts at 0
 
         for (int i = 0; i < moves.Count; i++)
         {

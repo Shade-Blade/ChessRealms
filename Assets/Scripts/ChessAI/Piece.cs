@@ -20,7 +20,7 @@ public static class Piece
 
     //Actually more like 10 bits
     //I don't think my piece numbers are going to reach 1024
-    public enum PieceType : ushort
+    public enum PieceType : uint
     {
         Null = 0,
         Rock = 1,   //rock = neutral aligned Null   (I decided not to make it 0 because I don't want to deal with that headache)
@@ -569,40 +569,42 @@ public static class Piece
     }
 
     //2 bits = 4 possible
-    public enum PieceAlignment : byte
+    public enum PieceAlignment : uint
     {
+        //Not possible for a piece to have Null alignment because it doesn't fit
         Null = 255,
+
         White = 0,
-        Black,
-        Neutral,        //Neutral pieces have a lot of balance problems (What material value do they give? Zero? If it's zero then the AI will just sacrifice them willy nilly which might just be the best use case for them)
+        Black = 1 << 30,
+        Neutral = 2u << 30,        //Neutral pieces have a lot of balance problems (What material value do they give? Zero? If it's zero then the AI will just sacrifice them willy nilly which might just be the best use case for them)
             //This hypothesis is kind of wrong at least for the current AI: in practice the AI just ignores the neutral pieces most of the time
             //This is because moving your own pieces increases piece table values which gives a more immediate benefit from the AI's perspective
-        Crystal         //Crystal pieces have this problem a lot less as keeping them around you can use them for defense (you get positive value from them so just sacrificing them immediately isn't the best play)
+        Crystal = 3u << 30         //Crystal pieces have this problem a lot less as keeping them around you can use them for defense (you get positive value from them so just sacrificing them immediately isn't the best play)
     }
 
     //4 bits = 15 possible
     //Modifiers are infinite duration things
-    public enum PieceModifier : byte
+    public enum PieceModifier : uint
     {
         None,
-        Vengeful,      //DestroyCapturer   (Red)
-        Phoenix,       //Revenant power    (Orange)
+        Vengeful = 1 << 18,      //DestroyCapturer   (Red)
+        Phoenix = 2 << 18,       //Revenant power    (Orange)
 
-        Radiant,         //Spawn pawns like Revenant on capture (Yellow)
+        Radiant = 3 << 18,         //Spawn pawns like Revenant on capture (Yellow)
                             //Problem: needs limits so you can't clog the board with infinite pawns
 
-        Winged,         //Gets move only hop over anything in its ranged moves  (Green)
-        Spectral,       //Does not block ally pieces from moving through them   (Cyan)
-        Immune,         //Immune to enemy negative effects (= NoTerrain, StatusImmune, EnchantImmune)   (Blue)
+        Winged = 4 << 18,         //Gets move only hop over anything in its ranged moves  (Green)
+        Spectral = 5 << 18,       //Does not block ally pieces from moving through them   (Cyan)
+        Immune = 6 << 18,         //Immune to enemy negative effects (= NoTerrain, StatusImmune, EnchantImmune)   (Blue)
             //The balance problem and why I didn't implement this before is that there are a lot of cases where none of those three exist and then the modifier becomes useless)
             //It needs extra stuff to do?
             //  Now it is rook range 1 water (i.e. enemy can't capture)
-        Warped,         //You can swap move onto them (unlike spectral you can't pass through) (Purple)
+        Warped = 7 << 18,         //You can swap move onto them (unlike spectral you can't pass through) (Purple)
 
-        Shielded,       //If user ends turn when it is attacked: Shielded becomes Half Shielded (Gray)
-        HalfShielded,   //Half shielded is removed on enemy turn end (So a shielded king works properly, if it was removed on own turn end it would lead to stalemates where the shielded king is not capturable by the enemy but any move would remove the shield)
+        Shielded = 8 << 18,       //If user ends turn when it is attacked: Shielded becomes Half Shielded (Gray)
+        HalfShielded = 9 << 18,   //Half shielded is removed on enemy turn end (So a shielded king works properly, if it was removed on own turn end it would lead to stalemates where the shielded king is not capturable by the enemy but any move would remove the shield)
 
-        NoSpecial,      //Special thing for move copying pieces (Blocks all special moves)
+        NoSpecial = 10 << 18,      //Special thing for move copying pieces (Blocks all special moves)
 
         //?: on capture: spawn pawn like Revenant (Problem: why normal pawns? Pawn spawn may clog up your formation? If it is just the attacker's class pawnlike it would be somewhat unpredictable and unbalanced, if it was the victim's pawnlike that balance problem is removed but it causes weird stuff)
             //One point in favor is that this gives space for more piece spawners
@@ -628,18 +630,21 @@ public static class Piece
 
     //4 bits = 15 possible
     //Status effects have a temporary counter (3 bits) (decremented on enemy turn end?) (So poison for 1 turn is basically a weaker ranged capture)
-    public enum PieceStatusEffect : byte
+    public enum PieceStatusEffect : uint
     {
         None,
-        Frozen,    //can't move for X turns
-        Poisoned,   //die after X turns
-        Soaked,   //No capturing and no enemy targetting abilities (and generates no auras)
-        Bloodlust,  //Die in X turns, removed on capture, can only capture
-        Sparked, //Die in X turns, removed on move
-        Ghostly, //Enemy version of Spectral (enemy pieces can pass through)
-        Fragile,    //Acts as "destroy on capture"
-        Heavy,  //Falls down by 1 every turn
-        Light,  //Floats forward by 1 every turn
+
+        Bloodlust = 1 << 22,  //Die in X turns, removed on capture, can only capture
+        Sparked = 2 << 22, //Die in X turns, removed on move
+        Poisoned = 3 << 22,   //die after X turns
+        //Logic to speed up status effect checks is that every status effect at or before Poisoned destroys pieces on effect end
+
+        Frozen = 4 << 22,    //can't move for X turns
+        Soaked = 5 << 22,   //No capturing and no enemy targetting abilities (and generates no auras)
+        Ghostly = 6 << 22, //Enemy version of Spectral (enemy pieces can pass through)
+        Fragile = 7 << 22,    //Acts as "destroy on capture"
+        Heavy = 8 << 22,  //Falls down by 1 every turn
+        Light = 9 << 22,  //Floats forward by 1 every turn
 
         //Reserved 10
         //Reserved 11
@@ -874,7 +879,7 @@ public static class Piece
     }
 
     //how worth it is it to implement this?
-    public enum EnchancedMoveType
+    public enum EnhancedMoveType
     {
         None,
         PartialForcedMoves,
@@ -891,6 +896,31 @@ public static class Piece
         FearfulMover, //enhanced if you or enemy didn't capture last turn
         FarHalfMover,   //enhanced on enemy half of the board
         CloseHalfMover, //enhanced on ally half of the board
+    }
+    public enum BonusMoveType
+    {
+        None,
+        SlipMove,
+        PlantMove,
+        GliderMove,
+        CoastMove,
+        ShadowMove,
+    }
+    public enum ReplacerMoveType
+    {
+        None,
+        FireCapture,
+        WrathCapturer,
+        Push,
+        Pull,
+        SwapCapture,
+        ConvertCapture,
+        WeakConvertCapture,
+        FlankingCapture,
+        ConsumeAllies,
+        Inflict,
+        InflictFreeze,
+
     }
 
     public static uint PackPieceData(PieceType pt, byte pspd, PieceModifier pm, PieceStatusEffect pse, byte psed, PieceAlignment pa)
@@ -969,7 +999,7 @@ public static class Piece
     }
     public static uint SetPieceType(PieceType pt, uint pieceInfo)
     {
-        return MainManager.BitFilterSet(pieceInfo, (uint)pt, 0, 8);
+        return MainManager.BitFilterSetB(pieceInfo, (uint)pt, 0, 8);
     }
 
     //9 bits of special data
@@ -988,22 +1018,24 @@ public static class Piece
 
     public static PieceModifier GetPieceModifier(uint pieceInfo)
     {
-        return (PieceModifier)((pieceInfo & 0x3C0000) >> 18);
+        return (PieceModifier)((pieceInfo & 0x3C0000));
+        //return (PieceModifier)((pieceInfo & 0x3C0000) >> 18);
         //return (PieceModifier)(MainManager.BitFilter(pieceInfo, 18, 21));
     }
     public static uint SetPieceModifier(PieceModifier pm, uint pieceInfo)
     {
-        return MainManager.BitFilterSet(pieceInfo, (uint)pm, 18, 21);
+        return MainManager.BitFilterSetB(pieceInfo, (uint)pm, 18, 21);
     }
 
     public static PieceStatusEffect GetPieceStatusEffect(uint pieceInfo)
     {
-        return (PieceStatusEffect)((pieceInfo & 0x3C00000) >> 22);
+        return (PieceStatusEffect)((pieceInfo & 0x3C00000));
+        //return (PieceStatusEffect)((pieceInfo & 0x3C00000) >> 22);
         //return (PieceStatusEffect)(MainManager.BitFilter(pieceInfo, 22, 25));
     }
     public static uint SetPieceStatusEffect(PieceStatusEffect pm, uint pieceInfo)
     {
-        return MainManager.BitFilterSet(pieceInfo, (uint)pm, 22, 25);
+        return MainManager.BitFilterSetB(pieceInfo, (uint)pm, 22, 25);
     }
 
     public static byte GetPieceStatusDuration(uint pieceInfo)
@@ -1018,13 +1050,14 @@ public static class Piece
 
     public static PieceAlignment GetPieceAlignment(uint pieceInfo)
     {
-        return (PieceAlignment)((pieceInfo & 0xc0000000) >> 30);
+        return (PieceAlignment)((pieceInfo & 0xc0000000));
+        //return (PieceAlignment)((pieceInfo & 0xc0000000) >> 30);
         //return (PieceAlignment)(MainManager.BitFilter(pieceInfo, 30, 31));
     }
     public static uint SetPieceAlignment(PieceAlignment pa, uint pieceInfo)
     {
         //return ((pieceInfo & 0x3fffffff) + ((uint)pa << 30));
-        return MainManager.BitFilterSet(pieceInfo, (uint)pa, 30, 31);
+        return MainManager.BitFilterSetB(pieceInfo, (uint)pa, 30, 31);
     }
 
     public static Color GetPieceColor(PieceAlignment pa)
