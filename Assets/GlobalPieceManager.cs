@@ -323,8 +323,8 @@ public sealed class PieceTableEntry
     public short pieceValueX2;
 
     //Some move generator data
-    public List<MoveGeneratorInfoEntry> moveInfo;
-    public List<MoveGeneratorInfoEntry> enhancedMoveInfo;
+    public MoveGeneratorInfoEntry[] moveInfo;
+    public MoveGeneratorInfoEntry[] enhancedMoveInfo;
 
     public Piece.EnhancedMoveType enhancedMoveType;
     public Piece.BonusMoveType bonusMoveType;
@@ -403,9 +403,16 @@ public sealed class PieceTableEntry
                 //Enum.TryParse(pieceFlags[i], out emt);
                 Piece.ReplacerMoveType rmt = ReplacerMoveType.None;
                 Enum.TryParse(pieceFlags[i], out rmt);
-                output.bonusMoveType = bmt;
+
+                if (bmt != BonusMoveType.None)
+                {
+                    output.bonusMoveType = bmt;
+                }
                 //output.enhancedMoveType = emt;
-                output.replacerMoveType = rmt;
+                if (rmt != ReplacerMoveType.None)
+                {
+                    output.replacerMoveType = rmt;
+                }
 
                 Piece.PieceProperty pp = Piece.PieceProperty.None;
                 Enum.TryParse(pieceFlags[i], out pp);
@@ -437,11 +444,25 @@ public sealed class PieceTableEntry
                             {
                                 if (SpecialMoveShouldBeFirst(mga))
                                 {
-                                    output.moveInfo.Insert(0, new MoveGeneratorInfoEntry(mga));
+                                    //output.moveInfo.Insert(0, new MoveGeneratorInfoEntry(mga));
+                                    //Remake the array I guess :P
+                                    MoveGeneratorInfoEntry[] newArray = new MoveGeneratorInfoEntry[output.moveInfo.Length + 1];
+                                    for (int na = 0; na < output.moveInfo.Length; na++)
+                                    {
+                                        newArray[na + 1] = output.moveInfo[na];
+                                    }
+                                    newArray[0] = new MoveGeneratorInfoEntry(mga);
                                 }
                                 else
                                 {
-                                    output.moveInfo.Add(new MoveGeneratorInfoEntry(mga));
+                                    //output.moveInfo.Add(new MoveGeneratorInfoEntry(mga));
+                                    //Remake the array I guess :P
+                                    MoveGeneratorInfoEntry[] newArray = new MoveGeneratorInfoEntry[output.moveInfo.Length + 1];
+                                    for (int na = 0; na < output.moveInfo.Length; na++)
+                                    {
+                                        newArray[na] = output.moveInfo[na];
+                                    }
+                                    newArray[newArray.Length - 1] = new MoveGeneratorInfoEntry(mga);
                                 }
                             }
                         }
@@ -479,7 +500,7 @@ public sealed class PieceTableEntry
                 forbidWinged = true;
                 break;
         }
-        for (int i = 0; i < output.moveInfo.Count; i++)
+        for (int i = 0; i < output.moveInfo.Length; i++)
         {
             if ((output.moveInfo[i].range > 1 || output.moveInfo[i].range == 0) && (output.moveInfo[i].modifier & MoveGeneratorPreModifier.i) == 0 && (output.moveInfo[i].atom < MoveGeneratorAtom.SpecialMoveDivider))
             {
@@ -494,7 +515,7 @@ public sealed class PieceTableEntry
                     break;
             }
         }
-        for (int i = 0; i < output.enhancedMoveInfo.Count; i++)
+        for (int i = 0; i < output.enhancedMoveInfo.Length; i++)
         {
             if ((output.enhancedMoveInfo[i].range > 1 || output.enhancedMoveInfo[i].range == 0) && (output.enhancedMoveInfo[i].modifier & MoveGeneratorPreModifier.i) == 0 && (output.enhancedMoveInfo[i].atom < MoveGeneratorAtom.SpecialMoveDivider))
             {
@@ -520,7 +541,7 @@ public sealed class PieceTableEntry
         }
 
         bool immobile = true;
-        for (int i = 0; i < output.moveInfo.Count; i++)
+        for (int i = 0; i < output.moveInfo.Length; i++)
         {
             if ((output.moveInfo[i].modifier & (MoveGeneratorPreModifier.c | MoveGeneratorPreModifier.a | MoveGeneratorPreModifier.n | MoveGeneratorPreModifier.e)) != 0)
             {
@@ -530,7 +551,7 @@ public sealed class PieceTableEntry
             //probably legal move
             immobile = false;
         }
-        for (int i = 0; i < output.enhancedMoveInfo.Count; i++)
+        for (int i = 0; i < output.enhancedMoveInfo.Length; i++)
         {
             if ((output.enhancedMoveInfo[i].modifier & (MoveGeneratorPreModifier.c | MoveGeneratorPreModifier.a | MoveGeneratorPreModifier.n | MoveGeneratorPreModifier.e)) != 0)
             {
@@ -727,7 +748,7 @@ public sealed class MoveGeneratorInfoEntry
         rangeType = mgie.rangeType;
     }
 
-    public static List<MoveGeneratorInfoEntry> ParseMovement(string movement)
+    public static MoveGeneratorInfoEntry[] ParseMovement(string movement)
     {
         int parseIndex = 0;
         List<MoveGeneratorInfoEntry> output = new List<MoveGeneratorInfoEntry>();
@@ -763,7 +784,7 @@ public sealed class MoveGeneratorInfoEntry
             }
         }
 
-        return output;
+        return output.ToArray();
     }
 
     public static (MoveGeneratorInfoEntry, int) ScanOneAtom(string movement, int startIndex)

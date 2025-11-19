@@ -106,9 +106,19 @@ public class MainManager : MonoBehaviour
         //~500k normal after optimizing TickDownStatusEffects to reduce PieceTableEntry checks
 
         //Now 680k ish with more random small optimizations
+        //Now 900k with more aggressive stuff to avoid updating piece bitboards as much
 
-        //220 ish seconds for depth 6 normal
-        for (int i = 0; i <= 5; i++) 
+        //134 ish seconds for depth 6 normal
+
+        //Note that this does not match normal perft test because the perft test does not check for checks
+        //1
+        //20
+        //400
+        //8902
+        //197742
+        //4896537
+
+        for (int i = 0; i <= 4; i++) 
         {
             DateTime currentTime = DateTime.UtcNow;
             long unixTime = ((DateTimeOffset)currentTime).ToUnixTimeMilliseconds();

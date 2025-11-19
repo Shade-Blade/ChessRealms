@@ -2178,7 +2178,7 @@ public class BattleBoardScript : BoardScript
             pieceInfoText.text += pte.type + "\n";
             pieceInfoText.text += "Value: " + (pte.pieceValueX2 / 2f) + "\n";
             pieceInfoText.text += "Move: ";
-            for (int i = 0; i < pte.moveInfo.Count; i++)
+            for (int i = 0; i < pte.moveInfo.Length; i++)
             {
                 MoveGeneratorInfoEntry mgie = pte.moveInfo[i];
                 if (mgie.atom > MoveGeneratorInfoEntry.MoveGeneratorAtom.SpecialMoveDivider)
@@ -2225,12 +2225,12 @@ public class BattleBoardScript : BoardScript
             }
             pieceInfoText.text += moveText + "\n";
             moveText = "";
-            if (pte.enhancedMoveInfo.Count > 0)
+            if (pte.enhancedMoveInfo.Length > 0)
             {
                 pieceInfoText.text += "Bonus Type: " + pte.enhancedMoveType + "\n";
 
                 pieceInfoText.text += "Bonus Move: ";
-                for (int i = 0; i < pte.enhancedMoveInfo.Count; i++)
+                for (int i = 0; i < pte.enhancedMoveInfo.Length; i++)
                 {
                     MoveGeneratorInfoEntry mgie = pte.enhancedMoveInfo[i];
                     if (mgie.atom > MoveGeneratorInfoEntry.MoveGeneratorAtom.SpecialMoveDivider)
