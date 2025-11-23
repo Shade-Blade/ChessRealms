@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.tvOS;
 using static Piece;
 
 public class BoardScript : MonoBehaviour
@@ -26,6 +25,7 @@ public class BoardScript : MonoBehaviour
 
     public PieceScript selectedPiece;
     public ConsumableScript selectedConsumable;
+    public BadgeScript selectedBadge;
 
     public bool setupMoves = false;
 
@@ -153,7 +153,15 @@ public class BoardScript : MonoBehaviour
         }
 
         selectedPiece = null;
+        selectedBadge = null;
     }
+    public virtual void SelectBadge(BadgeScript bs)
+    {
+        selectedPiece = null;
+        selectedConsumable = null;
+        selectedBadge = bs;
+    }
+
     public virtual void SelectPiece(PieceScript piece)
     {
         ResetSelected(false);
@@ -190,8 +198,13 @@ public class BoardScript : MonoBehaviour
         {
             selectedConsumable.ForceDeselect();
         }
+        if (selectedBadge != null && forceDeselect)
+        {
+            selectedBadge.ForceDeselect();
+        }
         selectedPiece = null;
         selectedConsumable = null;
+        selectedBadge = null;
     }
 
     public virtual void TrySetupMove(PieceScript ps, int x, int y, int newX, int newY)
@@ -237,11 +250,11 @@ public class BoardScript : MonoBehaviour
             board.MakeSetupMove(move);
 
             ResetSelected(true);
-
             FixBoardBasedOnPosition();
+            return;
         }
 
-        ResetSelected();
+        ResetSelected(true);
         FixBoardBasedOnPosition();
     }
 

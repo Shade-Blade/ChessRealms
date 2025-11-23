@@ -229,6 +229,11 @@ ElephantCrusher
 ElephantCharger
 ElephantQueen
 ElephantBulwark
+RabbitQueen
+RabbitCourier
+RabbitDiplomat
+RabbitKnight
+Rabbit
 Blackguard
 Spy
 Infiltrator
@@ -369,6 +374,8 @@ WarpWeaver
 WarpMage
 Mirrorer
 Recaller
+Flipper
+Conductor
 Harlequin
 Jester
 Dancer

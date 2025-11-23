@@ -303,8 +303,8 @@ public static class ArmyGenerator
             uniqueTableB.Add(subArmy[i]);
         }
 
-        Debug.Log(debug);
-        Debug.Log(uniqueTableB.Count);
+        //Debug.Log(debug);
+        //Debug.Log(uniqueTableB.Count);
         //Debug.Log(cumulativeValueCount);
 
         subArmy.Sort((a, b) => (GiantScore(a) - GiantScore(b)));

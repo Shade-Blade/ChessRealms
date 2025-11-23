@@ -117,35 +117,35 @@ public class ChessAI
         this.difficulty = difficulty;
         switch (difficulty)
         {
-            case -1:
+            case 1:
                 valueMult = 0.8f;
                 openingDeviation = 0.2f;   //Opening value roughly shifts by +- this (bigger on turn 1)
                 randomDeviation = 0.5f;    //Value roughly shifts by +- this
                 blunderDeviation = 3f;
                 maxDepth = 2;   //very fast
                 break;
-            case 0:
+            case 2:
                 valueMult = 0.9f;
                 openingDeviation = 0.1f;   //Opening value roughly shifts by +- this (bigger on turn 1)
                 randomDeviation = 0.3f;    //Value roughly shifts by +- this
                 blunderDeviation = 2f;
                 maxDepth = 3;   //very fast
                 break;
-            case 1:
+            case 3:
                 valueMult = 1f;
                 openingDeviation = 0.05f;
                 randomDeviation = 0.1f;
                 blunderDeviation = 1f;
                 maxDepth = 5;   //pretty fast
                 break;
-            case 2:
+            case 4:
                 valueMult = 1;
                 openingDeviation = 0.05f;
                 randomDeviation = 0.05f;
                 blunderDeviation = 0f;
                 maxDepth = 20;  //basically infinite
                 break;
-            case 3:
+            case 5:
                 valueMult = 1;
                 openingDeviation = 0.04f;
                 randomDeviation = 0.04f;
@@ -186,6 +186,55 @@ public class ChessAI
         */
 
         moveFound = false;
+    }
+
+    public void SetDifficulty(int difficulty)
+    {
+        this.difficulty = difficulty;
+        switch (difficulty)
+        {
+            case 1: //0.5s
+                valueMult = 0.8f;
+                openingDeviation = 0.2f;   //Opening value roughly shifts by +- this (bigger on turn 1)
+                randomDeviation = 0.5f;    //Value roughly shifts by +- this
+                blunderDeviation = 3f;
+                maxDepth = 2;   //very fast
+                break;
+            case 2: //1s
+                valueMult = 0.9f;
+                openingDeviation = 0.1f;   //Opening value roughly shifts by +- this (bigger on turn 1)
+                randomDeviation = 0.3f;    //Value roughly shifts by +- this
+                blunderDeviation = 2f;
+                maxDepth = 3;   //very fast
+                break;
+            case 3: //2s
+                valueMult = 1f;
+                openingDeviation = 0.05f;
+                randomDeviation = 0.1f;
+                blunderDeviation = 1f;
+                maxDepth = 5;   //pretty fast
+                break;
+            case 4: //4s
+                valueMult = 1;
+                openingDeviation = 0.05f;
+                randomDeviation = 0.05f;
+                blunderDeviation = 0f;
+                maxDepth = 20;  //basically infinite
+                break;
+            case 5: //8s
+                valueMult = 1;
+                openingDeviation = 0.04f;
+                randomDeviation = 0.04f;
+                blunderDeviation = 0f;
+                maxDepth = 40;  //yeah you aren't getting this
+                break;
+        }
+
+        //clear the table so the other difficulty's data does not persist
+        for (int i = 0; i < zobristTable.Length; i++)
+        {
+            zobristTable[i] = new ZTableEntry();
+        }
     }
 
     public void ZobristTableInit()
@@ -644,6 +693,10 @@ public class ChessAI
                     value = 1.5f;
                 }
                 value *= Piece.GetPieceSpecialData(b.pieces[index]);
+                if (value > 6)
+                {
+                    value = 6;
+                }
                 output += value;
             }
             if ((pte.piecePropertyB & PiecePropertyB.ChargeByMoving) != 0)
@@ -654,6 +707,10 @@ public class ChessAI
                     value = 1.5f;
                 }
                 value *= Piece.GetPieceSpecialData(b.pieces[index]);
+                if (value > 6)
+                {
+                    value = 6;
+                }
                 output += value;
             }
         }
@@ -805,6 +862,10 @@ public class ChessAI
                     value = 1.5f;
                 }
                 value *= Piece.GetPieceSpecialData(b.pieces[index]);
+                if (value > 6)
+                {
+                    value = 6;
+                }
                 output -= value;
             }
             if ((pte.piecePropertyB & PiecePropertyB.ChargeByMoving) != 0)
@@ -815,6 +876,10 @@ public class ChessAI
                     value = 1.5f;
                 }
                 value *= Piece.GetPieceSpecialData(b.pieces[index]);
+                if (value > 6)
+                {
+                    value = 6;
+                }
                 output -= value;
             }
         }
@@ -2400,7 +2465,6 @@ public class ChessAI
                 return score;
             } else
             {
-                Debug.Log(multPenalty);
                 //Big penalty now to stop infinite loops
                 if (score > 0)
                 {

@@ -6,6 +6,9 @@ public class SetupBoardScript : BoardScript
 {
     public override void Start()
     {
+        BattleUIScript bus = FindObjectOfType<BattleUIScript>();
+        bus.SetBoard(this);
+
         MakeBoard();
         setupMoves = true;
     }
@@ -15,7 +18,14 @@ public class SetupBoardScript : BoardScript
         squares = new List<SquareScript>();
 
         board = new Board();
-        board.Setup(new Piece.PieceType[] {Piece.PieceType.King, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, new Piece.PieceType[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, Board.PlayerModifier.None, Board.EnemyModifier.NoKing);
+
+        Piece.PieceType[] oldArmy = new Piece.PieceType[16];
+
+        for (int i = 0; i < 16; i++)
+        {
+            oldArmy[i] = MainManager.Instance.playerData.army[i];
+        }
+        board.Setup(oldArmy, new Piece.PieceType[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, Board.PlayerModifier.None, Board.EnemyModifier.NoKing);
 
         for (int i = 0; i < 16; i++)
         {
@@ -44,6 +54,12 @@ public class SetupBoardScript : BoardScript
             pieces.Add(null);
         }
         FixBoardBasedOnPosition();
+    }
+
+    public override void SelectConsumable(ConsumableScript cs)
+    {
+        ResetSelected(false);
+        return;
     }
 
     public override void FixBoardBasedOnPosition()

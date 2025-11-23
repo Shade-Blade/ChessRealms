@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.tvOS;
+using UnityEngine.UIElements;
 using static Piece;
 
 public class BattleBoardScript : BoardScript
@@ -10,6 +10,8 @@ public class BattleBoardScript : BoardScript
 
     public GameObject moveTrailTemplate;
     public GameObject moveParticleTemplate;
+    public GameObject battleWinPanelTemplate;
+    public GameObject battleLosePanelTemplate;
 
     public List<uint> moveList;
     public Dictionary<uint, MoveMetadata> moveMetadata;
@@ -39,10 +41,10 @@ public class BattleBoardScript : BoardScript
     public bool drawError;
     public Piece.PieceAlignment winnerPA;
 
-    public TMPro.TextMeshPro thinkingText;
-    public TMPro.TextMeshPro turnText;
-    public TMPro.TextMeshPro scoreText;
-    public TMPro.TextMeshPro pieceInfoText;
+    public TMPro.TMP_Text thinkingText;
+    public TMPro.TMP_Text turnText;
+    public TMPro.TMP_Text scoreText;
+    public TMPro.TMP_Text pieceInfoText;
 
     public float moveThinkTime = 1f;
     public float moveDelayValue = 0.05f;
@@ -61,12 +63,21 @@ public class BattleBoardScript : BoardScript
         GameObject go = Instantiate(Resources.Load<GameObject>("Board/BattleBoardTemplate"));
         BattleBoardScript bbs = go.GetComponent<BattleBoardScript>();
 
+        bbs.MakeBoard();
+        bbs.InitializeAI();
         bbs.ResetBoard(MainManager.Instance.playerData.army, army, pm, em);
         return bbs;
     }
 
     public override void Start()
     {
+        BattleUIScript bus = FindObjectOfType<BattleUIScript>();
+        bus.SetBoard(this);
+        if (chessAI != null)
+        {
+            return;
+        }
+
         setupMoves = false;
         MakeBoard();
         InitializeAI();
@@ -102,6 +113,8 @@ public class BattleBoardScript : BoardScript
         switch (difficulty)
         {
             case -1:
+                moveThinkTime = 0.5f;
+                break;
             case 0:
                 moveThinkTime = 1;
                 break;
@@ -155,6 +168,7 @@ public class BattleBoardScript : BoardScript
     }
     public void ResetBoard(Piece.PieceType[] warmy, Piece.PieceType[] barmy, Board.PlayerModifier pm, Board.EnemyModifier em)
     {
+        Debug.Log("Make board");
         DestroyLastMovedTrail();
         whiteIsAI = false;  //so you can make your own move
         ResetSelected();
@@ -188,6 +202,29 @@ public class BattleBoardScript : BoardScript
                 break;
         }
         chessAI.InitAI(difficulty);
+    }
+
+    public void SetDifficulty(int difficulty)
+    {
+        switch (difficulty)
+        {
+            case -1:
+                moveThinkTime = 0.5f;
+                break;
+            case 0:
+                moveThinkTime = 1;
+                break;
+            case 1:
+                moveThinkTime = 2;
+                break;
+            case 2:
+                moveThinkTime = 4;
+                break;
+            case 3:
+                moveThinkTime = 8;
+                break;
+        }
+        chessAI.SetDifficulty(difficulty);
     }
 
     public override void MakeBoard()
@@ -310,7 +347,7 @@ public class BattleBoardScript : BoardScript
         if (piece is SetupPieceScript)
         {
             //It isn't a piece that has legal moves
-
+            selectedBadge = null;
             selectedConsumable = null;
             selectedPiece = piece;
             return;
@@ -536,8 +573,13 @@ public class BattleBoardScript : BoardScript
         {
             selectedConsumable.ForceDeselect();
         }
+        if (selectedBadge != null && forceDeselect)
+        {
+            selectedBadge.ForceDeselect();
+        }
         selectedPiece = null;
         selectedConsumable = null;
+        selectedBadge = null;
     }
     public void SetControlZoneHighlight()
     {
@@ -581,6 +623,11 @@ public class BattleBoardScript : BoardScript
 
             awaitingMove = false;
             chessAI.moveFound = false;
+            if (difficulty != MainManager.Instance.playerData.difficulty)
+            {
+                difficulty = MainManager.Instance.playerData.difficulty;
+                SetDifficulty(difficulty);
+            }
             while (historyList.Count > historyIndex + 1)
             {
                 historyList.RemoveAt(historyIndex + 1);
@@ -611,6 +658,14 @@ public class BattleBoardScript : BoardScript
                 checkMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
                 checkMoveTrail.Setup(Move.GetFromX(checkMove), Move.GetFromY(checkMove), moveTrailCheck);
                 checkMoveTrail.SetColorMoveCheck();
+                if (!checkCopy.blackToMove)
+                {
+                    checkMoveTrail.SetColorLight();
+                }
+                else
+                {
+                    checkMoveTrail.SetColorDark();
+                }
             }
 
             if (extraMoveTrails != null)
@@ -646,12 +701,14 @@ public class BattleBoardScript : BoardScript
                     winnerPA = PieceAlignment.White;
                     Debug.Log("White wins with special condition");
                     gameOver = true;
+                    WinBattle();
                 }
                 if (board.GetVictoryCondition() == PieceAlignment.Black)
                 {
                     winnerPA = PieceAlignment.Black;
                     Debug.Log("Black wins with special condition");
                     gameOver = true;
+                    LoseBattle();
                 }
                 return;
             }
@@ -664,18 +721,21 @@ public class BattleBoardScript : BoardScript
                     winnerPA = PieceAlignment.White;
                     Debug.Log("White wins with special condition");
                     gameOver = true;
+                    WinBattle();
                 }
                 if (board.GetKingCaptureWinner() == PieceAlignment.Black)
                 {
                     winnerPA = PieceAlignment.Black;
                     Debug.Log("Black wins with special condition");
                     gameOver = true;
+                    LoseBattle();
                 }
                 if (board.GetKingCaptureWinner() == PieceAlignment.Neutral)
                 {
                     winnerPA = PieceAlignment.Null;
                     Debug.Log("Draw with special condition");
                     gameOver = true;
+                    LoseBattle();
                 }
             }
 
@@ -689,6 +749,7 @@ public class BattleBoardScript : BoardScript
                     winnerPA = PieceAlignment.White;
                     Debug.Log("White win");
                     gameOver = true;
+                    WinBattle();
                 }
                 else if (stalemateAI)
                 {
@@ -696,6 +757,7 @@ public class BattleBoardScript : BoardScript
                     winnerPA = PieceAlignment.White;
                     Debug.Log("Draw (Black stalemated)");
                     gameOver = true;
+                    WinBattle();
                 }
             }
         }
@@ -719,6 +781,9 @@ public class BattleBoardScript : BoardScript
                     illegalMoveTrail.SetColorMoveIllegal();
                     illegalMoveTrail.Setup(Move.GetFromX(refMove), Move.GetFromY(refMove), illegalPath);
                     //Debug.Log("Make illegal path");
+
+                    //this doesn't trigger bonus move so this doesn't need a wacky check
+                    illegalMoveTrail.SetColorDark();
                 }
 
                 /*
@@ -782,6 +847,11 @@ public class BattleBoardScript : BoardScript
 
             awaitingMove = false;
             chessAI.moveFound = false;
+            if (difficulty != MainManager.Instance.playerData.difficulty)
+            {
+                difficulty = MainManager.Instance.playerData.difficulty;
+                SetDifficulty(difficulty);
+            }
             RegenerateMoveList();
             ResetSelected();
 
@@ -914,6 +984,11 @@ public class BattleBoardScript : BoardScript
 
             awaitingMove = false;
             chessAI.moveFound = false;
+            if (difficulty != MainManager.Instance.playerData.difficulty)
+            {
+                difficulty = MainManager.Instance.playerData.difficulty;
+                SetDifficulty(difficulty);
+            }
             while (historyList.Count > historyIndex + 1)
             {
                 historyList.RemoveAt(historyIndex + 1);
@@ -948,10 +1023,26 @@ public class BattleBoardScript : BoardScript
             {
                 Debug.LogError("Failsafe move trail");
                 lastMoveTrail.Setup(Move.GetFromX(move), Move.GetFromY(move), Move.GetToX(move), Move.GetToY(move));
+                if (board.blackToMove ^ (board.bonusPly != 0))
+                {
+                    lastMoveTrail.SetColorLight();
+                }
+                else
+                {
+                    lastMoveTrail.SetColorDark();
+                }
             }
             else
             {
                 lastMoveTrail.Setup(Move.GetFromX(move), Move.GetFromY(move), moveTrail);
+                if (board.blackToMove ^ (board.bonusPly != 0))
+                {
+                    lastMoveTrail.SetColorLight();
+                }
+                else
+                {
+                    lastMoveTrail.SetColorDark();
+                }
             }
 
             if (illegalMoveTrail != null)
@@ -970,6 +1061,14 @@ public class BattleBoardScript : BoardScript
                 checkMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
                 checkMoveTrail.Setup(Move.GetFromX(checkMove), Move.GetFromY(checkMove), moveTrailCheck);
                 checkMoveTrail.SetColorMoveCheck();
+                if (!checkCopy.blackToMove)
+                {
+                    checkMoveTrail.SetColorLight();
+                }
+                else
+                {
+                    checkMoveTrail.SetColorDark();
+                }
             }
 
             if (extraMoveTrails != null)
@@ -1005,12 +1104,14 @@ public class BattleBoardScript : BoardScript
                     winnerPA = PieceAlignment.White;
                     Debug.Log("White wins with special condition");
                     gameOver = true;
+                    WinBattle();
                 }
                 if (board.GetVictoryCondition() == PieceAlignment.Black)
                 {
                     winnerPA = PieceAlignment.Black;
                     Debug.Log("Black wins with special condition");
                     gameOver = true;
+                    LoseBattle();
                 }
                 return;
             }
@@ -1023,18 +1124,21 @@ public class BattleBoardScript : BoardScript
                     winnerPA = PieceAlignment.White;
                     Debug.Log("White wins with special condition");
                     gameOver = true;
+                    WinBattle();
                 }
                 if (board.GetKingCaptureWinner() == PieceAlignment.Black)
                 {
                     winnerPA = PieceAlignment.Black;
                     Debug.Log("Black wins with special condition");
                     gameOver = true;
+                    LoseBattle();
                 }
                 if (board.GetKingCaptureWinner() == PieceAlignment.Neutral)
                 {
                     winnerPA = PieceAlignment.Null;
                     Debug.Log("Draw with special condition");
                     gameOver = true;
+                    LoseBattle();
                 }
             }
 
@@ -1048,12 +1152,14 @@ public class BattleBoardScript : BoardScript
                     winnerPA = PieceAlignment.White;
                     Debug.Log("White win");
                     gameOver = true;
+                    WinBattle();
                 }
                 else if (stalemateAI)
                 {
-                    winnerPA = PieceAlignment.Null;
+                    winnerPA = PieceAlignment.White;
                     Debug.Log("Draw (Black stalemated)");
                     gameOver = true;
+                    WinBattle();
                 }
             }
         }
@@ -1085,6 +1191,18 @@ public class BattleBoardScript : BoardScript
             }
             illegalMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
             illegalMoveTrail.SetColorMoveIllegal();
+
+            //dumb way to check stuff but ehh
+            Board checkRefutationCopy = new Board(board);
+            checkRefutationCopy.ApplyMove(move);
+            if (!checkRefutationCopy.blackToMove)
+            {
+                illegalMoveTrail.SetColorLight();
+            }
+            else
+            {
+                illegalMoveTrail.SetColorDark();
+            }
             illegalMoveTrail.Setup(Move.GetFromX(refMove), Move.GetFromY(refMove), illegalPath);
 
             FixBoardBasedOnPosition();
@@ -1112,12 +1230,14 @@ public class BattleBoardScript : BoardScript
                 winnerPA = PieceAlignment.White;
                 Debug.Log("White win");
                 gameOver = true;
+                WinBattle();
             }
             else if (stalemateAI)
             {
                 winnerPA = PieceAlignment.White;
                 Debug.Log("Black stalemated");
                 gameOver = true;
+                WinBattle();
             }
             else
             {
@@ -1125,6 +1245,7 @@ public class BattleBoardScript : BoardScript
                 Debug.LogError("AI failed to move for some reason");
                 gameOver = true;
                 drawError = true;
+                LoseBattle();
             }
             return;
         }
@@ -1161,6 +1282,11 @@ public class BattleBoardScript : BoardScript
         board.ApplyMove(aiMove, boardUpdateMetadata);
         awaitingMove = false;
         chessAI.moveFound = false;
+        if (difficulty != MainManager.Instance.playerData.difficulty)
+        {
+            difficulty = MainManager.Instance.playerData.difficulty;
+            SetDifficulty(difficulty);
+        }
         while (historyList.Count > historyIndex + 1)
         {
             historyList.RemoveAt(historyIndex + 1);
@@ -1192,10 +1318,12 @@ public class BattleBoardScript : BoardScript
         {
             Debug.LogWarning("Failsafe move trail");
             lastMoveTrail.Setup(Move.GetFromX(aiMove), Move.GetFromY(aiMove), Move.GetToX(aiMove), Move.GetToY(aiMove));
+            lastMoveTrail.SetColorDark();
         }
         else
         {
             lastMoveTrail.Setup(Move.GetFromX(aiMove), Move.GetFromY(aiMove), moveTrail);
+            lastMoveTrail.SetColorDark();
         }
 
         if (illegalMoveTrail != null)
@@ -1214,6 +1342,14 @@ public class BattleBoardScript : BoardScript
             checkMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
             checkMoveTrail.Setup(Move.GetFromX(checkMoveB), Move.GetFromY(checkMoveB), moveTrailCheck);
             checkMoveTrail.SetColorMoveCheck();
+            if (!checkCopy.blackToMove)
+            {
+                checkMoveTrail.SetColorLight();
+            }
+            else
+            {
+                checkMoveTrail.SetColorDark();
+            }
         }
 
         if (extraMoveTrails != null)
@@ -1252,12 +1388,14 @@ public class BattleBoardScript : BoardScript
                 winnerPA = PieceAlignment.White;
                 Debug.Log("White wins with special condition");
                 gameOver = true;
+                WinBattle();
             }
             if (board.GetVictoryCondition() == PieceAlignment.Black)
             {
                 winnerPA = PieceAlignment.Black;
                 Debug.Log("Black wins with special condition");
                 gameOver = true;
+                LoseBattle();
             }
             return;
         }
@@ -1270,6 +1408,7 @@ public class BattleBoardScript : BoardScript
                 winnerPA = PieceAlignment.White;
                 Debug.Log("White wins with special condition");
                 gameOver = true;
+                WinBattle();
                 return;
             }
             if (board.GetKingCaptureWinner() == PieceAlignment.Black)
@@ -1277,6 +1416,7 @@ public class BattleBoardScript : BoardScript
                 winnerPA = PieceAlignment.Black;
                 Debug.Log("Black wins with special condition");
                 gameOver = true;
+                LoseBattle();
                 return;
             }
             if (board.GetKingCaptureWinner() == PieceAlignment.Neutral)
@@ -1284,6 +1424,7 @@ public class BattleBoardScript : BoardScript
                 winnerPA = PieceAlignment.Null;
                 Debug.Log("Draw with special condition");
                 gameOver = true;
+                LoseBattle();
                 return;
             }
         }
@@ -1293,6 +1434,7 @@ public class BattleBoardScript : BoardScript
             winnerPA = PieceAlignment.Black;
             Debug.Log("Black win");
             gameOver = true;
+            LoseBattle();
         }
         else if (stalemate)
         {
@@ -1300,6 +1442,7 @@ public class BattleBoardScript : BoardScript
             winnerPA = PieceAlignment.Black;
             Debug.Log("White stalemated");
             gameOver = true;
+            LoseBattle();
         }
     }
 
@@ -1478,6 +1621,15 @@ public class BattleBoardScript : BoardScript
                 Destroy(psList[i].gameObject);
             }
         }
+    }
+
+    public void WinBattle()
+    {
+        Instantiate(battleWinPanelTemplate, MainManager.Instance.canvas.transform);
+    }
+    public void LoseBattle()
+    {
+        Instantiate(battleLosePanelTemplate, MainManager.Instance.canvas.transform);
     }
 
     public IEnumerator AnimatePieceSpawn(uint piece, int ofx, int ofy, int otx, int oty)
@@ -2162,10 +2314,10 @@ public class BattleBoardScript : BoardScript
             thinkingText.text = "";
         }
 
-        turnText.text = "Turn " + (board.turn + (board.blackToMove ? 0.5f : 0)) + " <size=50%>" + (board.blackToMove ? "Black" : "White") + " to move</size>";
+        turnText.text = "Turn " + (board.turn + (board.blackToMove ? 0.5f : 0)) + "\n<size=50%>" + (board.blackToMove ? "Black" : "White") + " to move</size>";
         if (board.bonusPly > 0)
         {
-            turnText.text += "<size=50%> " + board.bonusPly + " bonus</size>";
+            turnText.text += "\n<size=50%> " + board.bonusPly + " bonus</size>";
         }
 
         pieceInfoText.text = "";
@@ -2375,6 +2527,7 @@ public class BattleBoardScript : BoardScript
                             winnerPA = PieceAlignment.White;
                             Debug.Log("White wins with special condition");
                             gameOver = true;
+                            WinBattle();
                         }
                         if (board.GetVictoryCondition() == PieceAlignment.Black)
                         {

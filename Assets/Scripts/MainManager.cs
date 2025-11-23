@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Burst.Intrinsics;
+using Unity.VisualScripting;
 using UnityEngine;
 using static Unity.Burst.Intrinsics.X86.Bmi1;
 using static Unity.Burst.Intrinsics.X86.Popcnt;
@@ -12,14 +13,41 @@ public class PlayerData
     public Piece.PieceType[] army;
 
     public Move.ConsumableMoveType[] consumables;
+    public Board.PlayerModifier[] badges;
+
+    public int difficulty;
+
+    public int coins;
+    public int realmsComplete;
+    public int battlesComplete;
+    public List<int> realmRouteChoices;
 
     public PlayerData()
     {
         army = new Piece.PieceType[16];
 
-        consumables = new Move.ConsumableMoveType[8];
+        consumables = new Move.ConsumableMoveType[4];
+        badges = new Board.PlayerModifier[4];
 
-        army[0] = Piece.PieceType.King;
+        difficulty = 4;
+
+        //the normal king position to start with
+        army[5] = Piece.PieceType.King;
+
+        coins = 0;
+        realmsComplete = 0;
+        battlesComplete = 0;
+        realmRouteChoices = new List<int>();
+    }
+
+    public Board.PlayerModifier GetPlayerModifier()
+    {
+        Board.PlayerModifier output = 0;
+        for (int i = 0; i < badges.Length; i++)
+        {
+            output |= badges[i];
+        }
+        return output;
     }
 } 
 
@@ -39,6 +67,8 @@ public class MainManager : MonoBehaviour
             return intInstance;
         }
     }
+
+    public Canvas canvas;
 
     public DraggableObject currentDragged;
     public SelectableObject currentSelected;
@@ -100,15 +130,16 @@ public class MainManager : MonoBehaviour
         //It is now 250k :((
         //Well at least I got depth 6 AI working?
         //But if it isn't possible to make that good enough then I guess I'll have to scrap this game
-        
+
         //optimization: now it is 350k again
 
         //~500k normal after optimizing TickDownStatusEffects to reduce PieceTableEntry checks
 
         //Now 680k ish with more random small optimizations
         //Now 900k with more aggressive stuff to avoid updating piece bitboards as much
+        //Now 1.2m with inlining annotations for tiny methods
 
-        //134 ish seconds for depth 6 normal
+        //90 ish seconds for depth 6 normal
 
         //Note that this does not match normal perft test because the perft test does not check for checks
         //1
@@ -117,8 +148,10 @@ public class MainManager : MonoBehaviour
         //8902
         //197742
         //4896537
+        //120882519
 
-        for (int i = 0; i <= 4; i++) 
+        /*
+        for (int i = 0; i <= 4; i++)
         {
             DateTime currentTime = DateTime.UtcNow;
             long unixTime = ((DateTimeOffset)currentTime).ToUnixTimeMilliseconds();
@@ -130,8 +163,13 @@ public class MainManager : MonoBehaviour
 
             currentTime = DateTime.UtcNow;
             long unixTimeEnd = ((DateTimeOffset)currentTime).ToUnixTimeMilliseconds();
-            Debug.Log("Perft took " + ((unixTimeEnd - unixTime)/ 1000d) + " seconds for " + perftResult + " positions at depth + " + i + " = " + "(" + (perftResult / ((unixTimeEnd - unixTime) / 1000d)) + " pos/sec) (" + (((unixTimeEnd - unixTime) / 1000d) / perftResult) + " s per pos)");
-        }
+            string output = ("Perft took " + ((unixTimeEnd - unixTime)/ 1000d) + " seconds for " + perftResult + " positions at depth + " + i + " = " + "(" + (perftResult / ((unixTimeEnd - unixTime) / 1000d)) + " pos/sec) (" + (((unixTimeEnd - unixTime) / 1000d) / perftResult) + " s per pos)");
+
+            //BattleBoardScript bbs = FindObjectOfType<BattleBoardScript>();
+            //bbs.thinkingText.text = output;
+            Debug.Log(output);
+        } 
+        */
     }
 
     // Update is called once per frame
@@ -401,6 +439,39 @@ public class MainManager : MonoBehaviour
         ulong twos = two8 ^ two6;
         ulong four = four1 ^ (two8 & two6);
         ulong eight = four1 & (two8 & two6);
+
+        return (ones, twos, four, eight);
+    }
+
+    //for completeness I'll add in the full 15 checker here
+    //Use this to compute row cardinality?
+    public static (ulong, ulong, ulong, ulong) BitboardCardinality(ulong x1, ulong x2, ulong x3, ulong x4, ulong x5, ulong x6, ulong x7, ulong x8, ulong x9, ulong x10, ulong x11, ulong x12, ulong x13, ulong x14, ulong x15)
+    {
+        ulong one1 = x1 ^ x2 ^ x3;
+        ulong one2 = x4 ^ x5 ^ x6;
+        ulong one3 = x7 ^ x8 ^ x9;
+        ulong one4 = x10 ^ x11 ^ x12;
+        ulong one5 = x13 ^ x14 ^ x15;
+        ulong one6 = one1 ^ one2 ^ one3;
+        ulong ones = one4 ^ one5 ^ one6;
+
+        ulong two1 = (x1 & x2) | (x3 & (x1 | x2));
+        ulong two2 = (x4 & x5) | (x6 & (x4 | x5));
+        ulong two3 = (x7 & x8) | (x9 & (x7 | x8));
+        ulong two4 = (x10 & x11) | (x12 & (x10 | x11));
+        ulong two5 = (x13 & x14) | (x15 & (x13 | x14));
+        ulong two6 = (one1 & one2) | (one3 & (one1 | one2));
+        ulong two7 = (one4 & one5) | (one6 & (one4 | one5));
+        ulong two8 = (two1 ^ two2 ^ two3);
+        ulong two9 = (two4 ^ two5 ^ two6);
+        ulong twos = (two7 ^ two8 ^ two9);
+
+        ulong four1 = (two1 & two2) | (two3 & (two1 | two2));
+        ulong four2 = (two4 & two5) | (two6 & (two4 | two5));
+        ulong four3 = (two7 & two8) | (two9 & (two7 | two8));
+
+        ulong four = four1 ^ four2 ^ four3;
+        ulong eight = (four1 & four2) | (four3 & (four1 | four2));
 
         return (ones, twos, four, eight);
     }

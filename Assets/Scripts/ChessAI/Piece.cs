@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 //Use ints
@@ -253,6 +254,11 @@ public static class Piece
         ElephantCharger,
         ElephantQueen,
         ElephantBulwark,
+        RabbitQueen,
+        RabbitCourier,
+        RabbitDiplomat,
+        RabbitKnight,
+        Rabbit,
         Blackguard,
         Spy,
         Infiltrator,
@@ -393,6 +399,8 @@ public static class Piece
         WarpMage,
         Mirrorer,
         Recaller,
+        Flipper,
+        Conductor,
         Harlequin,
         Jester,
         Dancer,
@@ -528,6 +536,7 @@ public static class Piece
         Undead,
         Monster,
         Lycanthropes,
+        Rabbit,
         Giant,
         Dark,
         Royalist,
@@ -552,7 +561,8 @@ public static class Piece
         ChargeMovers,
         ForcedMovers,
         Criminals,          //Has no realm of their own or their realm isn't recognized (Merge with Dark I guess?) (They don't play together as a single army very well)
-        Teleporters,
+        Troupe,             //No realm of their own because they don't work as an army (because not enough capture power)
+        Teleporters,        //No realm of their own because they teleport around
         Icy,
         Poison,
         StatusMages,
@@ -781,6 +791,8 @@ public static class Piece
         PassivePushStrongDiag = 1uL << 1,
         PassivePush = 1uL << 62,
         PassivePushStrong = 1uL << 63,
+
+        PassiveShift = PassivePull | PassivePushDiag | PassivePullStrong | PassivePushStrongDiag | PassivePush | PassivePushStrong
     }
 
     //You know what? I can make as many bits as I want for properties
@@ -870,9 +882,13 @@ public static class Piece
         EnemyTandemMover = 1uL << 43,
         EnemyTandemMoverOrtho = 1uL << 44,
 
+        AllTandemMovers = TandemMover | TandemMoverDiag | TandemMoverOrtho | EnemyTandemMover | EnemyTandemMoverOrtho | AnyTandemMover,
+
         HoneyExplode = 1uL << 45,
 
         NaturalWinged = 1uL << 46,
+        AnyTandemMover = 1uL << 47,
+        MorphImmune = 1uL << 48,
 
         TrueShiftImmune = ShiftImmune | Giant,
 
@@ -992,11 +1008,13 @@ public static class Piece
     //26-29 = status duration (4 bits)
     //30-31 = alignment (2 bits)
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static PieceType GetPieceType(uint pieceInfo)
     {
         return (PieceType)(pieceInfo & 0x1ff);
         //return (PieceType)(MainManager.BitFilter(pieceInfo, 0, 8));
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint SetPieceType(PieceType pt, uint pieceInfo)
     {
         return MainManager.BitFilterSetB(pieceInfo, (uint)pt, 0, 8);
@@ -1006,54 +1024,64 @@ public static class Piece
     //This is quite a lot
     //I enlarged it from 8 to 9 so I can fit a whole entire piece type into it :)
     //Currently uses 2 bits for giants
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort GetPieceSpecialData(uint pieceInfo)
     {
         return (ushort)((pieceInfo & 0x3fe00) >> 9);
         //return (ushort)(MainManager.BitFilter(pieceInfo, 9, 17));
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint SetPieceSpecialData(ushort psd, uint pieceInfo)
     {
         return MainManager.BitFilterSet(pieceInfo, psd, 9, 17);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static PieceModifier GetPieceModifier(uint pieceInfo)
     {
         return (PieceModifier)((pieceInfo & 0x3C0000));
         //return (PieceModifier)((pieceInfo & 0x3C0000) >> 18);
         //return (PieceModifier)(MainManager.BitFilter(pieceInfo, 18, 21));
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint SetPieceModifier(PieceModifier pm, uint pieceInfo)
     {
         return MainManager.BitFilterSetB(pieceInfo, (uint)pm, 18, 21);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static PieceStatusEffect GetPieceStatusEffect(uint pieceInfo)
     {
         return (PieceStatusEffect)((pieceInfo & 0x3C00000));
         //return (PieceStatusEffect)((pieceInfo & 0x3C00000) >> 22);
         //return (PieceStatusEffect)(MainManager.BitFilter(pieceInfo, 22, 25));
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint SetPieceStatusEffect(PieceStatusEffect pm, uint pieceInfo)
     {
         return MainManager.BitFilterSetB(pieceInfo, (uint)pm, 22, 25);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static byte GetPieceStatusDuration(uint pieceInfo)
     {
         return (byte)((pieceInfo & 0x3C000000) >> 26);
         //return (byte)(MainManager.BitFilter(pieceInfo, 26, 29));
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint SetPieceStatusDuration(byte psd, uint pieceInfo)
     {
         return MainManager.BitFilterSet(pieceInfo, psd, 26, 29);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static PieceAlignment GetPieceAlignment(uint pieceInfo)
     {
         return (PieceAlignment)((pieceInfo & 0xc0000000));
         //return (PieceAlignment)((pieceInfo & 0xc0000000) >> 30);
         //return (PieceAlignment)(MainManager.BitFilter(pieceInfo, 30, 31));
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint SetPieceAlignment(PieceAlignment pa, uint pieceInfo)
     {
         //return ((pieceInfo & 0x3fffffff) + ((uint)pa << 30));
@@ -1087,7 +1115,7 @@ public static class Piece
         Piece.PieceAlignment paA = Piece.GetPieceAlignment(attackerPiece);
 
         //PieceTableEntry pteA = GlobalPieceManager.GetPieceTableEntry(ptA);
-        //PieceTableEntry pteV = GlobalPieceManager.GetPieceTableEntry(ptV);
+        //PieceTableEntry pteV = GlobalPieceManager.GetPieceTableEntry(ptV);        
 
         //Voided can't capture
         if (Piece.GetPieceStatusEffect(attackerPiece) == PieceStatusEffect.Soaked)
@@ -1104,6 +1132,19 @@ public static class Piece
             {
                 return true;
             }
+        } else
+        {
+            //King attack only attacks kings
+            if (specialType == Move.SpecialType.KingAttack)
+            {
+                return true;
+            }
+        }
+
+        //Morph immune
+        if ((specialType == Move.SpecialType.MorphRabbit) && ((pteV.piecePropertyB & PiecePropertyB.MorphImmune) != 0))
+        {
+            return true;
         }
 
         //Fire immune
@@ -1164,7 +1205,6 @@ public static class Piece
         //Giants are not compatible with most stuff
         if (victimGiant)
         {
-            bool giantIncompatible = false;
             switch (specialType)
             {
                 //things that are fine
@@ -1204,20 +1244,14 @@ public static class Piece
                 case Move.SpecialType.AllySwap:
                 case Move.SpecialType.AnyoneSwap:
                 case Move.SpecialType.MorphIntoTarget:
-                    giantIncompatible = true;
-                    break;
-            }
-
-            if (giantIncompatible)
-            {
-                return true;
+                case Move.SpecialType.MorphRabbit:
+                    return true;
             }
         }
 
         //Shift immune
         if (((pteV.piecePropertyB & PiecePropertyB.ShiftImmune) != 0))
         {
-            bool sIncompatible = false;
             switch (specialType)
             {
                 //things that are fine
@@ -1253,13 +1287,7 @@ public static class Piece
                 case Move.SpecialType.RangedPushAllyOnly:
                 case Move.SpecialType.AllySwap:
                 case Move.SpecialType.AnyoneSwap:
-                    sIncompatible = true;
-                    break;
-            }
-
-            if (sIncompatible)
-            {
-                return true;
+                    return true;
             }
         }
 
@@ -1298,7 +1326,7 @@ public static class Piece
                 adjacentBitboard |= 1uL << ((x) + ((y + dy) << 3));
                 adjacentBitboard |= 1uL << ((x + dx) + ((y) << 3));
                 adjacentBitboard |= 1uL << ((x + dx) + ((y + dy) << 3));
-                adjacentBitboard = MainManager.SmearBitboard(1uL << (x + (y << 3)));
+                adjacentBitboard = MainManager.SmearBitboard(adjacentBitboard);
             }
 
             switch (paA)
@@ -1314,6 +1342,30 @@ public static class Piece
             enemy &= adjacentBitboard;
 
             if (enemy == 0)
+            {
+                return true;
+            }
+        }
+
+        if (ptV == PieceType.RabbitKnight)
+        {
+            ulong enemy = 0;
+            ulong rabbit = b.globalData.bitboard_rabbit;
+            ulong adjacentBitboard = MainManager.SmearBitboard(1uL << (x + (y << 3)));
+
+            switch (paA)
+            {
+                case PieceAlignment.White:
+                    enemy = b.globalData.bitboard_piecesWhite & ~rabbit;
+                    break;
+                case PieceAlignment.Black:
+                    enemy = b.globalData.bitboard_piecesBlack & ~rabbit;
+                    break;
+            }
+            enemy &= ~(1uL << (attackerX + (attackerY << 3)));
+            enemy &= adjacentBitboard;
+
+            if (enemy == 0 && (adjacentBitboard & rabbit & ~(1uL << (x + (y << 3)))) != 0)
             {
                 return true;
             }

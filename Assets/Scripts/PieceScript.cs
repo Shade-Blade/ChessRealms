@@ -121,10 +121,10 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         text.color = color;
     }
 
-    public void Update()
+    public virtual void Update()
     {
         dob.canDrag = bs.CanSelectPieces();
-        bc.enabled = bs.CanSelectPieces() && text.enabled; //Become intangible while animating
+        bc.enabled = bs.CanSelectPieces() && text.enabled; //Become intangible while animating (Also be intangible if you are the wrong part of a giant)
     }
 
     public virtual void OnSelect()
@@ -175,11 +175,24 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             {
                 trashCan.SetForbidden();
             }
-            if (trashCan.QueryPosition(transform.position))
+            if (isGiant)
             {
-                if (canDelete)
+                if (trashCan.QueryPosition(transform.position + new Vector3(BoardScript.SQUARE_SIZE / 2, BoardScript.SQUARE_SIZE / 2)))
                 {
-                    trashCan.SetHighlight();
+                    if (canDelete)
+                    {
+                        trashCan.SetHighlight();
+                    }
+                }
+            }
+            else
+            {
+                if (trashCan.QueryPosition(transform.position))
+                {
+                    if (canDelete)
+                    {
+                        trashCan.SetHighlight();
+                    }
                 }
             }
         }
@@ -195,7 +208,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                 if ((bs is SetupBoardScript && bs.hoverX >= 0 && bs.hoverX <= 7 && bs.hoverY >= 0 && bs.hoverY <= 1) || (!(bs is SetupBoardScript) && bs.hoverX >= 0 && bs.hoverX <= 7 && bs.hoverY >= 0 && bs.hoverY <= 7))
                 {
                     bs.TrySetupMove(this, x, y, bs.hoverX, bs.hoverY);
-                } else if (trashCan != null && trashCan.QueryPosition(transform.position))
+                } else if (trashCan != null && isGiant ? trashCan.QueryPosition(transform.position + new Vector3(BoardScript.SQUARE_SIZE / 2, BoardScript.SQUARE_SIZE / 2)) : trashCan.QueryPosition(transform.position))
                 {
                     bs.TrySetupMove(this, Move.PackMove(x, y, 15, 15));
                 } else
