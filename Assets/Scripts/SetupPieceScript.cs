@@ -157,12 +157,23 @@ public class SetupPieceScript : PieceScript, IShopItem
         {
             if (bs.hoverX < 0 || bs.hoverX > 7)
             {
+                ResetPosition();
                 return;
             }
 
             if (bs.hoverY < 0 || bs.hoverY > 7)
             {
+                ResetPosition();
                 return;
+            }
+
+            if (bs is SetupBoardScript)
+            {
+                if (bs.hoverY < 0 || bs.hoverY > 1)
+                {
+                    ResetPosition();
+                    return;
+                }
             }
 
             if (bs.TrySetupMove(this, Move.MakeSetupCreateMove(Piece.GetPieceType(piece), Piece.GetPieceAlignment(piece), (byte)bs.hoverX, (byte)bs.hoverY)))

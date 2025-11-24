@@ -74,7 +74,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.9, g: 0.9, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -141,7 +141,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 0eabe1fb7af7ffe4a8c2bb223750e2bc, type: 2}
+  - {fileID: 2100000, guid: 163e2635b68b32d4baa147bd2b10d75c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -186,14 +186,14 @@ MonoBehaviour:
   m_text: Piece Name
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6f10f5d5c961b364a87876ce9d8c6076, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: 0eabe1fb7af7ffe4a8c2bb223750e2bc, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 163e2635b68b32d4baa147bd2b10d75c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4294901760
+  m_fontColor: {r: 0, g: 0, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -367,3 +367,5 @@ MonoBehaviour:
   badgeIndex: -1
   cps: {fileID: 0}
   trashCan: {fileID: 0}
+  canInteract: 0
+  sis: {fileID: 0}

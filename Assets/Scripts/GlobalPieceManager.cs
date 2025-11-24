@@ -1064,6 +1064,9 @@ public sealed class MoveGeneratorInfoEntry
 [System.Serializable]
 public sealed class PieceClassEntry
 {
+    public int index;
+    public string name; //to do later: move this to a text only file
+
     public Piece.PieceType[] normalPieces;
     public Piece.PieceType[] extraPieces;
 
@@ -1089,7 +1092,7 @@ public sealed class PieceClassEntry
     {
         PieceClassEntry output = new PieceClassEntry();
 
-        if (tableRow.Length > 0)
+        if (tableRow.Length > 1)
         {
             Piece.PieceClass pc;
             Enum.TryParse(tableRow[1], out pc);
@@ -1101,21 +1104,33 @@ public sealed class PieceClassEntry
 
         if (tableRow.Length > 2)
         {
-            Climate c;
-            Enum.TryParse(tableRow[2], out c);
-            output.climate = c;
+            int tempIndex;
+            int.TryParse(tableRow[2], out tempIndex);
+            output.index = tempIndex;
         }
 
         if (tableRow.Length > 3)
         {
-            int t;
-            int.TryParse(tableRow[3], out t);
-            output.tier = t;
+            output.name = tableRow[3];
         }
 
         if (tableRow.Length > 4)
         {
-            string[] nearbyClasses = tableRow[4].Split("|");
+            Climate c;
+            Enum.TryParse(tableRow[4], out c);
+            output.climate = c;
+        }
+
+        if (tableRow.Length > 5)
+        {
+            int t;
+            int.TryParse(tableRow[5], out t);
+            output.tier = t;
+        }
+
+        if (tableRow.Length > 6)
+        {
+            string[] nearbyClasses = tableRow[6].Split("|");
 
             List<Piece.PieceClass> nearbyClassesList = new List<PieceClass>();
             for (int j = 0; j < nearbyClasses.Length; j++)
@@ -1138,15 +1153,20 @@ public sealed class PieceClassEntry
         {
             if (GlobalPieceManager.pieceTable[j] != null && GlobalPieceManager.pieceTable[j].pieceClass == i)
             {
+                //forbidden
+                if (GlobalPieceManager.pieceTable[j].type == PieceType.GeminiTwin || GlobalPieceManager.pieceTable[j].type == PieceType.MoonIllusion || GlobalPieceManager.pieceTable[j].type == PieceType.Rock)
+                {
+                    continue;
+                }
                 normalPieces.Add(GlobalPieceManager.pieceTable[j].type);
             }
         }
         output.normalPieces = normalPieces.ToArray();
 
-        if (tableRow.Length > 5)
+        if (tableRow.Length > 7)
         {
             List<Piece.PieceType> extraPiecesList = new List<PieceType>();
-            string[] extraPieces = tableRow[5].Split("|");
+            string[] extraPieces = tableRow[7].Split("|");
             for (int j = 0; j < extraPieces.Length; j++)
             {
                 Piece.PieceType pt = PieceType.Null;

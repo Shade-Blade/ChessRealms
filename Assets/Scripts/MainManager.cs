@@ -29,7 +29,8 @@ public class PlayerData
         consumables = new Move.ConsumableMoveType[4];
         badges = new Board.PlayerModifier[4];
 
-        difficulty = 4;
+        difficulty = 3;
+        coins = 5;
 
         //the normal king position to start with
         army[5] = Piece.PieceType.King;
@@ -40,6 +41,17 @@ public class PlayerData
         realmRouteChoices = new List<int>();
     }
 
+    public bool HasBadge(Board.PlayerModifier pm)
+    {
+        for (int i = 0; i < badges.Length; i++)
+        {
+            if ((badges[i] & pm) != 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
     public Board.PlayerModifier GetPlayerModifier()
     {
         Board.PlayerModifier output = 0;

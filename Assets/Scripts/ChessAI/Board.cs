@@ -9582,12 +9582,15 @@ public class Board
                     if (pieces[i] != 0 && Piece.GetPieceAlignment(pieces[i]) == PieceAlignment.White)
                     {
                         globalData.squares[i].type = Square.SquareType.Normal;
+                        //todo: better architectured way of doing this
+                        MainManager.Instance.playerData.coins += 2;
                     }
                     break;
                 case Square.SquareType.SilverTreasure:
                     if (pieces[i] != 0 && Piece.GetPieceAlignment(pieces[i]) == PieceAlignment.White)
                     {
                         globalData.squares[i].type = Square.SquareType.Normal;
+                        MainManager.Instance.playerData.coins += 4;
                     }
                     break;
                 case Square.SquareType.GoldTreasure:
@@ -9607,7 +9610,8 @@ public class Board
                 if (globalData.squares[i].type == Square.SquareType.GoldTreasure)
                 {
                     globalData.squares[i].type = Square.SquareType.Normal;
-                }                
+                    MainManager.Instance.playerData.coins += 6;
+                }
             }
         }
     }

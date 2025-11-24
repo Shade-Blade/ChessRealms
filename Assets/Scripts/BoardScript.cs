@@ -207,25 +207,25 @@ public class BoardScript : MonoBehaviour
         selectedBadge = null;
     }
 
-    public virtual void TrySetupMove(PieceScript ps, int x, int y, int newX, int newY)
+    public virtual bool TrySetupMove(PieceScript ps, int x, int y, int newX, int newY)
     {
         if (x < 0 || x > 7 || newX < 0 || newX > 7)
         {
-            return;
+            return false;
         }
 
         if (y < 0 || y > 7 || newY < 0 || newY > 7)
         {
-            return;
+            return false;
         }
 
         if (x == newX && y == newY)
         {
-            return;
+            return false;
         }
 
         uint move = Move.PackMove((byte)x, (byte)y, (byte)newX, (byte)newY);
-        TrySetupMove(ps, move);
+        return TrySetupMove(ps, move);
     }
 
     public virtual bool IsSetupMoveLegal(PieceScript ps, uint move)

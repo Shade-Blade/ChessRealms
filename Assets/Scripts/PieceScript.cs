@@ -175,6 +175,8 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             cost += 5;
         }
 
+        cost &= GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE;
+
         return cost;
     }
 

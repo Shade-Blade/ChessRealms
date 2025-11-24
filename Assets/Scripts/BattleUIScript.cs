@@ -26,6 +26,7 @@ public class BattleUIScript : MonoBehaviour
     public TMPro.TMP_Text scoreText;
     public TMPro.TMP_Text pieceText;
     public TMPro.TMP_Text moneyText;
+    public TMPro.TMP_Text valueText;
 
     public TMPro.TMP_InputField valueField;
     public TMPro.TMP_InputField typeField;
@@ -50,6 +51,7 @@ public class BattleUIScript : MonoBehaviour
             bbs.scoreText = scoreText;
             bbs.pieceInfoText = pieceText;
         }
+        valueText.text = "Value: " + ((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f);
     }
 
     public void Undo()
@@ -162,5 +164,6 @@ public class BattleUIScript : MonoBehaviour
     public void Update()
     {
         moneyText.text = "$" + MainManager.Instance.playerData.coins;
+        valueText.text = "Value: " + ((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f);
     }
 }

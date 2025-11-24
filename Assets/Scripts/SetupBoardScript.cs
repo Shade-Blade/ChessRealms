@@ -168,25 +168,25 @@ public class SetupBoardScript : BoardScript
         }
     }
 
-    public override void TrySetupMove(PieceScript ps, int x, int y, int newX, int newY)
+    public override bool TrySetupMove(PieceScript ps, int x, int y, int newX, int newY)
     {
         if (x < 0 || x > 7 || newX < 0 || newX > 7)
         {
-            return;
+            return false;
         }
 
         if (y < 0 || y > 1 || newY < 0 || newY > 7)
         {
-            return;
+            return false;
         }
 
         if (x == newX && y == newY)
         {
-            return;
+            return false;
         }
 
         uint move = Move.PackMove((byte)x, (byte)y, (byte)newX, (byte)newY);
-        TrySetupMove(ps, move);
+        return TrySetupMove(ps, move);
     }
 
     public override bool TrySetupMove(PieceScript ps, uint move)
@@ -199,7 +199,7 @@ public class SetupBoardScript : BoardScript
                 Debug.Log("Apply " + Move.ConvertToString(move));
             }
             */
-            Debug.Log("Apply " + Move.ConvertToString(move));
+            //Debug.Log("Apply " + Move.ConvertToString(move));
 
             board.MakeSetupMove(move);
 

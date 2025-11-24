@@ -15,24 +15,43 @@ public class OverworldScript : MonoBehaviour
     //public BoardScript bs;
     public GameObject mapNodeSubobject;
 
-    public GameObject realmMap;
-    public GameObject setupBoard;
+    public GameObject worldMap;
+
+    public RealmMapScript realmMap;
+
+    public SetupBoardScript setupBoard;
 
     public BattleUIScript bus;
 
-    public MapNodeScript ms;
+    public void Start()
+    {
+        //redundant?
+        bus.SetBoard(setupBoard);
+        realmMap.os = this;
+    }
 
     public void EnterNode(MapNodeScript ms)
     {
-        this.ms = ms;
-        setupBoard.SetActive(false);
-        realmMap.SetActive(false);
+        realmMap.current = ms;
+        realmMap.gameObject.SetActive(false);
 
         MainManager.Instance.currentSelected = null;
 
-        //currently all map nodes are battles
-        //bs = BattleBoardScript.CreateBoard(ms.army, MainManager.Instance.playerData.GetPlayerModifier(), ms.em);
-        mapNodeSubobject = BattleBoardScript.CreateBoard(ms.army, MainManager.Instance.playerData.GetPlayerModifier(), ms.em).gameObject;
+        switch (ms.nodeType)
+        {
+            case MapNodeScript.MapNodeType.Battle:
+            case MapNodeScript.MapNodeType.BossBattle:
+                setupBoard.gameObject.SetActive(false);
+                mapNodeSubobject = BattleBoardScript.CreateBoard(ms.army, MainManager.Instance.playerData.GetPlayerModifier(), ms.em).gameObject;
+                break;
+            case MapNodeScript.MapNodeType.Shop:
+                mapNodeSubobject = ShopScript.CreateShop(FindObjectOfType<SetupBoardScript>(), ms.pieceClass, 5, 3, 3).gameObject;
+                break;
+            case MapNodeScript.MapNodeType.FreePiece:
+                break;
+            case MapNodeScript.MapNodeType.Event:
+                break;
+        }
     }
 
     public void ReturnFromNode()
@@ -42,9 +61,11 @@ public class OverworldScript : MonoBehaviour
         {
             Destroy(mapNodeSubobject);
         }
-        ms = null;
-        realmMap.SetActive(true);
-        setupBoard.SetActive(true);
+        //currentPosition = null;
+        realmMap.gameObject.SetActive(true);
+        realmMap.CompleteNode();
+        setupBoard.gameObject.SetActive(true);
+        bus.SetBoard(setupBoard);
 
         MainManager.Instance.currentSelected = null;
 
