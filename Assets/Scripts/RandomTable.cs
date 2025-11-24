@@ -5,9 +5,10 @@ using UnityEngine;
 
 //random table that returns stuff
 [System.Serializable]
-public class RandomTable<T>
+public class RandomTable<T> : IRandomTableEntry<T>
 {
     List<IRandomTableEntry<T>> table;
+    public float weight;
 
     public IRandomTableEntry<T> this[int index]
     {
@@ -19,7 +20,13 @@ public class RandomTable<T>
     {
         table = p_table;
     }
+    /*
     public RandomTable(IRandomTableEntry<T>[] p_table)
+    {
+        table = new List<IRandomTableEntry<T>>(p_table);
+    }
+    */
+    public RandomTable(params IRandomTableEntry<T>[] p_table)
     {
         table = new List<IRandomTableEntry<T>>(p_table);
     }
@@ -134,6 +141,11 @@ public class RandomTable<T>
         }
 
         return output;
+    }
+
+    public float GetWeight()
+    {
+        return weight;
     }
 }
 

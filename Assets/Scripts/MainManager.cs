@@ -150,7 +150,7 @@ public class MainManager : MonoBehaviour
         //4896537
         //120882519
 
-        /*
+        
         for (int i = 0; i <= 4; i++)
         {
             DateTime currentTime = DateTime.UtcNow;
@@ -169,7 +169,6 @@ public class MainManager : MonoBehaviour
             //bbs.thinkingText.text = output;
             Debug.Log(output);
         } 
-        */
     }
 
     // Update is called once per frame

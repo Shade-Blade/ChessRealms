@@ -31,6 +31,8 @@ public sealed class GlobalPieceManager : MonoBehaviour
     //static for optimization?
     public static PieceTableEntry[] pieceTable;
 
+    public PieceClassEntry[] pieceClassTable;
+
     public float[] pieceSquareTableCenter;  //for most pieces
     public float[] pieceSquareTableCorner;   //for king
     public float[] pieceSquareTableTopCenter;   //for promotable things
@@ -64,6 +66,7 @@ public sealed class GlobalPieceManager : MonoBehaviour
     {
         intInstance = this;
         LoadPieceTable();
+        LoadPieceClassTable();
     }
     public void Start()
     {
@@ -171,6 +174,22 @@ public sealed class GlobalPieceManager : MonoBehaviour
 
             //Debug.Log((Piece.PieceType)i);
         }
+    }
+
+    public void LoadPieceClassTable()
+    {
+        string[][] rawTable = MainManager.CSVParse(Resources.Load<TextAsset>("Data/PieceClassInfo").text);
+
+        pieceClassTable = new PieceClassEntry[rawTable.Length - 2];
+        for (int i = 1; i < rawTable.Length - 1; i++)
+        {
+            pieceClassTable[i - 1] = PieceClassEntry.Parse((Piece.PieceClass)(i - 1), rawTable[i]);
+        }
+    }
+
+    public static PieceClassEntry GetPieceClassEntry(Piece.PieceClass pc)
+    {
+        return Instance.pieceClassTable[(int)pc];
     }
 
     public static PieceTableEntry GetPieceTableEntry(uint piece)
@@ -1039,5 +1058,110 @@ public sealed class MoveGeneratorInfoEntry
         }
 
         return false;
+    }
+}
+
+[System.Serializable]
+public sealed class PieceClassEntry
+{
+    public Piece.PieceType[] normalPieces;
+    public Piece.PieceType[] extraPieces;
+
+    public enum Climate
+    {
+        Temperate,
+        Forest,
+        Swamp,
+        Islands,
+        Savanna,
+        RockyHot,
+        Desert,
+        RockyCold,
+        Icy,
+    }
+
+    public Climate climate;
+    public int tier;
+
+    public Piece.PieceClass[] nearbyRealms;
+
+    internal static PieceClassEntry Parse(PieceClass i, string[] tableRow)
+    {
+        PieceClassEntry output = new PieceClassEntry();
+
+        if (tableRow.Length > 0)
+        {
+            Piece.PieceClass pc;
+            Enum.TryParse(tableRow[1], out pc);
+            if (pc != i)
+            {
+                Debug.LogWarning("Piece Class parse fail: see " + pc + " aka " + tableRow[1] + " when it should be " + i);
+            }
+        }
+
+        if (tableRow.Length > 2)
+        {
+            Climate c;
+            Enum.TryParse(tableRow[2], out c);
+            output.climate = c;
+        }
+
+        if (tableRow.Length > 3)
+        {
+            int t;
+            int.TryParse(tableRow[3], out t);
+            output.tier = t;
+        }
+
+        if (tableRow.Length > 4)
+        {
+            string[] nearbyClasses = tableRow[4].Split("|");
+
+            List<Piece.PieceClass> nearbyClassesList = new List<PieceClass>();
+            for (int j = 0; j < nearbyClasses.Length; j++)
+            {
+                Piece.PieceClass pc = PieceClass.None;
+                Enum.TryParse(nearbyClasses[j], out pc);
+                if (pc != PieceClass.None)
+                {
+                    nearbyClassesList.Add(pc);
+                } else if (nearbyClasses[j].Length > 0)
+                {
+                    Debug.LogWarning("Could not parse " + nearbyClasses[j] + " in parsing " + i);
+                }
+            }
+            output.nearbyRealms = nearbyClassesList.ToArray();
+        }
+
+        List<Piece.PieceType> normalPieces = new List<PieceType>();
+        for (int j = 0; j < GlobalPieceManager.pieceTable.Length; j++)
+        {
+            if (GlobalPieceManager.pieceTable[j] != null && GlobalPieceManager.pieceTable[j].pieceClass == i)
+            {
+                normalPieces.Add(GlobalPieceManager.pieceTable[j].type);
+            }
+        }
+        output.normalPieces = normalPieces.ToArray();
+
+        if (tableRow.Length > 5)
+        {
+            List<Piece.PieceType> extraPiecesList = new List<PieceType>();
+            string[] extraPieces = tableRow[5].Split("|");
+            for (int j = 0; j < extraPieces.Length; j++)
+            {
+                Piece.PieceType pt = PieceType.Null;
+                Enum.TryParse(extraPieces[j], out pt);
+                if (pt != PieceType.Null)
+                {
+                    extraPiecesList.Add(pt);
+                } else if (extraPieces[j].Length > 0)
+                {
+                    Debug.LogWarning("Could not parse " + extraPieces[j] + " in parsing " + i);
+                }
+            }
+            output.extraPieces = extraPiecesList.ToArray();
+        }
+
+        return output;
     }
 }

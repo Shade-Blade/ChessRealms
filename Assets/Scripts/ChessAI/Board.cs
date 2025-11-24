@@ -2550,7 +2550,7 @@ public class Board
                     //destroy capturer
 
                     bool wrathDestruction = false;
-                    if (!blackToMove && (globalData.enemyModifier & Board.EnemyModifier.Wrathful) != 0 && (globalData.whitePerPlayerInfo.startPieceCount - whitePerPlayerInfo.pieceCount) < 3)
+                    if (!blackToMove && (globalData.enemyModifier & Board.EnemyModifier.Wrathful) != 0 && (whitePerPlayerInfo.piecesLost) < 2)
                     {
                         wrathDestruction = true;
                     }

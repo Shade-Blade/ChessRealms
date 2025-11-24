@@ -489,6 +489,21 @@ public static class ArmyGenerator
 
     public static RandomTable<PieceTableEntry> GetPieceTable(Piece.PieceClass pc, int types, float targetTotal, float lowPieceBias, float lowComplexityBias)
     {
+        if (pc == PieceClass.None)
+        {
+            return GetPieceTableForClass(pc, types, targetTotal, lowPieceBias, lowComplexityBias);
+        }
+
+        RandomTable<PieceTableEntry> normalTable = GetPieceTable(GlobalPieceManager.GetPieceClassEntry(pc).normalPieces, types, targetTotal, lowPieceBias, lowComplexityBias);
+        RandomTable<PieceTableEntry> extraTable = GetPieceTable(GlobalPieceManager.GetPieceClassEntry(pc).extraPieces, Mathf.CeilToInt(types * 0.5f), targetTotal * 0.5f, lowPieceBias, lowComplexityBias);
+        normalTable.weight = 1;
+        extraTable.weight = 1 / 16f;    //about 1 per battle (but is higher because of failed hits in the normal table?)
+
+        RandomTable<PieceTableEntry> fusedTable = new RandomTable<PieceTableEntry>(normalTable, extraTable);
+        return fusedTable;
+    }
+    public static RandomTable<PieceTableEntry> GetPieceTableForClass(Piece.PieceClass pc, int types, float targetTotal, float lowPieceBias, float lowComplexityBias)
+    {
         if (types == 0)
         {
             types = 1;
@@ -542,7 +557,375 @@ public static class ArmyGenerator
             }
         }
 
-        RandomTable<PieceTableEntry> pieceTable = new RandomTable<PieceTableEntry>();
+        //wacky setup but C# complains about the parameterless constructor now because there is ambiguity
+        RandomTable<PieceTableEntry> pieceTable = new RandomTable<PieceTableEntry>(new List<PieceTableEntry>());
+
+        /*
+        List<IRandomTableEntry<PieceTableEntry>> pieceTableEntries = new List<IRandomTableEntry<PieceTableEntry>>();
+        for (int i = 0; i < piecePool.Count; i++)
+        {
+            if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 3f))    //Too much value concentration (In normal board of 39 this stops 13+ value pieces)
+            {
+                continue;
+            }
+            if ((piecePool[i].pieceValueX2 / 2f) < (targetTotal / 50f))    //Not enough value density (In a board of 50 this stops 0.5)
+            {
+                continue;
+            }
+            if ((piecePool[i].type == PieceType.GeminiTwin) || (piecePool[i].type == PieceType.MoonIllusion) || (piecePool[i].type == PieceType.King) || (piecePool[i].pieceValueX2 == 0))
+            {
+                continue;
+            }
+
+            float tableValue = Mathf.Min(1f / Mathf.Pow(piecePool[i].pieceValueX2, 1 + lowPieceBias), 1);
+            tableValue *= Mathf.Min(1f / Mathf.Pow(piecePool[i].complexityLevel + 1, 1 + lowComplexityBias), 1);
+
+            if ((piecePool[i].pieceProperty & Piece.PieceProperty.Giant) != 0)
+            {
+                tableValue *= 0.25f;
+            }
+
+            pieceTableEntries.Add(new RandomTableEntry<PieceTableEntry>(piecePool[i], tableValue));
+        }
+        */
+
+        //Filter out most entries
+        //Keep a minimum of 10
+        //Attempt to find 3 pawnlikes and 4 that are "high value"
+        List<PieceTableEntry> reducedPool = new List<PieceTableEntry>();
+        List<PieceTableEntry> subsetTable = new List<PieceTableEntry>();
+
+        for (int i = 0; i < piecePool.Count; i++)
+        {
+            if ((piecePool[i].promotionType != PieceType.Null) && !reducedPool.Contains(piecePool[i]))
+            {
+                subsetTable.Add(piecePool[i]);
+            }
+        }
+
+        for (int i = 0; i < pawnCount; i++)
+        {
+            if (subsetTable.Count == 0)
+            {
+                break;
+            }
+
+            int jA = UnityEngine.Random.Range(0, subsetTable.Count);
+
+            if (subsetTable.Count > 1)
+            {
+                int jB = UnityEngine.Random.Range(0, subsetTable.Count - 1);
+                if (jB >= jA)
+                {
+                    jB++;
+                }
+
+                float wA = GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias, lowComplexityBias + 1);
+                float wB = GetPieceTableEntryWeight(subsetTable[jB], lowPieceBias, lowComplexityBias + 1);
+                //Debug.Log((wA / (wA + wB)));
+                if (RandomGenerator.Get() < 0.2f + 0.6f * (wA / (wA + wB)))
+                {
+                    //Debug.Log(subsetTable[jA].type);
+                    reducedPool.Add(subsetTable[jA]);
+                    subsetTable.RemoveAt(jA);
+                }
+                else
+                {
+                    //Debug.Log(subsetTable[jB].type);
+                    reducedPool.Add(subsetTable[jB]);
+                    subsetTable.RemoveAt(jB);
+                }
+            }
+            else
+            {
+                //Debug.Log(subsetTable[jA].type);
+                reducedPool.Add(subsetTable[jA]);
+                subsetTable.RemoveAt(jA);
+            }
+        }
+
+        //Debug.Log("Upper limit = " + (targetTotal / 1.5f));
+        subsetTable = new List<PieceTableEntry>();
+        for (int i = 0; i < piecePool.Count; i++)
+        {
+            if ((piecePool[i].piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
+            {
+                if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 4f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 1.5f) && !reducedPool.Contains(piecePool[i]))
+                {
+                    subsetTable.Add(piecePool[i]);
+                }
+            }
+            else
+            {
+                if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 8f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 1.5f) && !reducedPool.Contains(piecePool[i]))
+                {
+                    subsetTable.Add(piecePool[i]);
+                }
+            }
+        }
+
+        for (int i = 0; i < maxCountB; i++)
+        {
+            if (subsetTable.Count == 0)
+            {
+                break;
+            }
+
+            int jA = UnityEngine.Random.Range(0, subsetTable.Count);
+
+            if (subsetTable.Count > 1)
+            {
+                int jB = UnityEngine.Random.Range(0, subsetTable.Count - 1);
+                if (jB >= jA)
+                {
+                    jB++;
+                }
+
+                float wA = GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias - 2, lowComplexityBias - 1);
+                float wB = GetPieceTableEntryWeight(subsetTable[jB], lowPieceBias - 2, lowComplexityBias - 1);
+                //Debug.Log((wA / (wA + wB)));
+                if (RandomGenerator.Get() < 0.2f + 0.6f * (wA / (wA + wB)))
+                {
+                    //Debug.Log(subsetTable[jA].type);
+                    reducedPool.Add(subsetTable[jA]);
+                    subsetTable.RemoveAt(jA);
+                }
+                else
+                {
+                    //Debug.Log(subsetTable[jB].type);
+                    reducedPool.Add(subsetTable[jB]);
+                    subsetTable.RemoveAt(jB);
+                }
+            }
+            else
+            {
+                //Debug.Log(subsetTable[jA].type);
+                reducedPool.Add(subsetTable[jA]);
+                subsetTable.RemoveAt(jA);
+            }
+        }
+
+        subsetTable = new List<PieceTableEntry>();
+        for (int i = 0; i < piecePool.Count; i++)
+        {
+            if ((piecePool[i].piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
+            {
+                if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 8f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 4f) && !reducedPool.Contains(piecePool[i]))
+                {
+                    subsetTable.Add(piecePool[i]);
+                }
+            }
+            else
+            {
+                if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 14f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 8f) && !reducedPool.Contains(piecePool[i]))
+                {
+                    subsetTable.Add(piecePool[i]);
+                }
+            }
+        }
+
+        if (maxCountB == 0 && subsetTable.Count == 0)
+        {
+            //add the higher limit stuff anyway
+            for (int i = 0; i < piecePool.Count; i++)
+            {
+                if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 8f) && (piecePool[i].pieceValueX2 / 2f) < (targetTotal / 2f) && !reducedPool.Contains(piecePool[i]))
+                {
+                    subsetTable.Add(piecePool[i]);
+                }
+            }
+        }
+
+        for (int i = 0; i < maxCount; i++)
+        {
+            if (subsetTable.Count == 0)
+            {
+                break;
+            }
+
+            int jA = UnityEngine.Random.Range(0, subsetTable.Count);
+
+            if (subsetTable.Count > 1)
+            {
+                int jB = UnityEngine.Random.Range(0, subsetTable.Count - 1);
+                if (jB >= jA)
+                {
+                    jB++;
+                }
+
+                float wA = GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias - 2, lowComplexityBias);
+                float wB = GetPieceTableEntryWeight(subsetTable[jB], lowPieceBias - 2, lowComplexityBias);
+                //Debug.Log((wA / (wA + wB)));
+                if (RandomGenerator.Get() < 0.2f + 0.6f * (wA / (wA + wB)))
+                {
+                    //Debug.Log(subsetTable[jA].type);
+                    reducedPool.Add(subsetTable[jA]);
+                    subsetTable.RemoveAt(jA);
+                }
+                else
+                {
+                    //Debug.Log(subsetTable[jB].type);
+                    reducedPool.Add(subsetTable[jB]);
+                    subsetTable.RemoveAt(jB);
+                }
+            }
+            else
+            {
+                //Debug.Log(subsetTable[jA].type);
+                reducedPool.Add(subsetTable[jA]);
+                subsetTable.RemoveAt(jA);
+            }
+        }
+
+        subsetTable = new List<PieceTableEntry>();
+        for (int i = 0; i < piecePool.Count; i++)
+        {
+            //Now just add anything
+            if (!reducedPool.Contains(piecePool[i]))
+            {
+                //enforce this still so you don't get forced into high value concentration
+                if ((piecePool[i].pieceValueX2 / 2f) <= Mathf.Max((targetTotal / 1.5f), 1.5f))
+                {
+                    subsetTable.Add(piecePool[i]);
+                }
+            }
+        }
+
+        if (reducedPool.Count == 0)
+        {
+            //failsafe: add lowest value piece pool piece
+            PieceTableEntry pteF = piecePool[0];
+            for (int i = 0; i < piecePool.Count; i++)
+            {
+                if (piecePool[i].pieceValueX2 < pteF.pieceValueX2)
+                {
+                    pteF = piecePool[i];
+                }
+            }
+            subsetTable.Add(pteF);
+        }
+
+        while (reducedPool.Count < types)
+        {
+            if (subsetTable.Count == 0)
+            {
+                break;
+            }
+
+            int jA = UnityEngine.Random.Range(0, subsetTable.Count);
+
+            if (subsetTable.Count > 1)
+            {
+                int jB = UnityEngine.Random.Range(0, subsetTable.Count - 1);
+                if (jB >= jA)
+                {
+                    jB++;
+                }
+
+                float wA = GetPieceTableEntryWeight(subsetTable[jA], lowPieceBias - 2, lowComplexityBias);
+                float wB = GetPieceTableEntryWeight(subsetTable[jB], lowPieceBias - 2, lowComplexityBias);
+                //Debug.Log((wA / (wA + wB)));
+                if (RandomGenerator.Get() < 0.2f + 0.6f * (wA / (wA + wB)))
+                {
+                    //Debug.Log(subsetTable[jA].type);
+                    reducedPool.Add(subsetTable[jA]);
+                    subsetTable.RemoveAt(jA);
+                }
+                else
+                {
+                    //Debug.Log(subsetTable[jB].type);
+                    reducedPool.Add(subsetTable[jB]);
+                    subsetTable.RemoveAt(jB);
+                }
+            }
+            else
+            {
+                //Debug.Log(subsetTable[jA].type);
+                reducedPool.Add(subsetTable[jA]);
+                subsetTable.RemoveAt(jA);
+            }
+        }
+
+
+        //build the table
+        List<IRandomTableEntry<PieceTableEntry>> reducedTable = new List<IRandomTableEntry<PieceTableEntry>>();
+
+        for (int i = 0; i < reducedPool.Count; i++)
+        {
+            float tableValue = GetPieceTableEntryWeight(reducedPool[i], lowPieceBias, lowComplexityBias);
+            reducedTable.Add(new RandomTableEntry<PieceTableEntry>(reducedPool[i], tableValue));
+        }
+
+        string debug = "";
+        for (int i = 0; i < reducedPool.Count; i++)
+        {
+            debug += reducedPool[i].type.ToString();
+            debug += " ";
+        }
+        Debug.Log(debug);
+
+        pieceTable = new RandomTable<PieceTableEntry>(reducedTable);
+        return pieceTable;
+    }
+    public static RandomTable<PieceTableEntry> GetPieceTable(Piece.PieceType[] pieceList, int types, float targetTotal, float lowPieceBias, float lowComplexityBias)
+    {
+        if (types == 0)
+        {
+            types = 1;
+        }
+        int pawnCount = Mathf.CeilToInt(types / 4f);
+        int maxCount = Mathf.CeilToInt(types / 6f);
+        int maxCountB = maxCount;
+
+        switch (types)
+        {
+            case 1:
+                pawnCount = 0;
+                maxCount = 1;
+                maxCountB = 0;
+                break;
+            case 2:
+            case 3:
+                pawnCount = 1;
+                maxCount = 1;
+                maxCountB = 0;
+                break;
+        }
+
+        List<PieceTableEntry> piecePool = new List<PieceTableEntry>();
+
+        for (int i = 0; i < pieceList.Length; i++)
+        {
+            if (GlobalPieceManager.GetPieceTableEntry(pieceList[i]) == null || pieceList[i] == Piece.PieceType.King || pieceList[i] == Piece.PieceType.Rock)
+            {
+                continue;
+            }
+            if (pieceList[i] == Piece.PieceType.GeminiTwin || pieceList[i] == Piece.PieceType.MoonIllusion)
+            {
+                continue;
+            }
+            if (GlobalPieceManager.GetPieceTableEntry(pieceList[i]).pieceValueX2 == 0)
+            {
+                continue;
+            }
+
+            //piece must be at least 1/36 the total to count
+            //Or at least 10 value
+            if (GlobalPieceManager.GetPieceTableEntry(pieceList[i]).pieceValueX2 <= 20 && GlobalPieceManager.GetPieceTableEntry(pieceList[i]).pieceValueX2 <= targetTotal / 18)
+            {
+                continue;
+            }
+
+            /*
+            if (pc == Piece.PieceClass.None || GlobalPieceManager.GetPieceTableEntry(pieceList[i]).pieceClass == pc)
+            {
+                piecePool.Add(GlobalPieceManager.GetPieceTableEntry(pieceList[i]));
+            }
+            */
+            piecePool.Add(GlobalPieceManager.GetPieceTableEntry(pieceList[i]));
+        }
+
+        RandomTable<PieceTableEntry> pieceTable = new RandomTable<PieceTableEntry>(new List<PieceTableEntry>());
         /*
         List<IRandomTableEntry<PieceTableEntry>> pieceTableEntries = new List<IRandomTableEntry<PieceTableEntry>>();
         for (int i = 0; i < piecePool.Count; i++)

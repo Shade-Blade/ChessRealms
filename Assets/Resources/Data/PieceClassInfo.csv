@@ -1,72 +1,72 @@
-Class,Environment / biome,Climate category,Nearby,Main color (s) (ground),Secondary colors,Extra Pieces
-None,n/a,,,,,
-Normal,Grasslands?,Temperate,"Knight, Bishop, Rook",? (green grass?),,"Guard, Amazon, Prince, Princess, Squirrel"
-Knight,Hilly,Temperate,Bishop,Lighter green,,"Pegasus, Triknight, TrojanHorse, Shielder, EliteMilitia, Militia, ChargeKnight, ChargePawn, RoseKnight"
-Bishop,Rocky plateau,Rocky,"Rook, Knight",Light reddish,,"Pontiff, Tribishop, Courtesan, Lobster, Monk, Arch, CornerlessBishop, Harlequin, Augur, Yeoman"
-Rook,Rocky valley,Rocky,,Gray,,"Stronghold, Birook, Marshall, Shrimp, EdgeRook, Bastion, Bunker, Capricorn"
-Amazons,Mountain forest?,Forest,"Ultimate, Gliders, Birds",Darker green,,"Leafling, Squirrel, Queen, Turret, RoyalGuard, RoyalCastle, RoyalRecruit, CenterQueen, Suprema, Empress, GhoulAmazon"
-Ultimate,Large growing structures,Temperate,Divine,Bright neon ish green,,"ArcanaWorld, Paladin, Amazon, ElephantQueen, MegaCannon, Dragon, MountainTurtle, OceanSerpent, TorchSpirit"
-Divine,Cloudy floating islands,Icy,"Ultimate, Icy",Blueish white,,"Empress, Suprema, RollerQueen, HoneybeeQueen, SlothQueen, GliderQueen, RelayQueen"
-Armored,Metal + limestone?,Rocky,Fire,Orangeish gray?,,"Scorpio, Cancer, ShieldSpirit, Rook, Vestal, Torcher, ElephantBulwark, SteelPuppet, SteelGolem"
-Explosive,Crater filled wasteland,Rocky,Fire,Dark reddish gray?,,"IceBomb, PoisonBomb, ArcanaMagician, SwitchTower, HoneyBomb, SoulCannon, VolcanoTower, MegaCannon, Cannon"
-Relay,Vine connected plants?,Temperate,Electro,Yellow + green,,"ArcanaWorld, ArcanaSun, Charity, Kindness, Envy, SwitchPaladin, Paladin"
-Swift,Flat lands,Temperate,"Quick, Rollers",White + blue,,"QuickHog, Fan, AirWisp, AirElemental, Roller, SwitchTower, SkipQueen, SkipRook, SkipBishop, RollerQueen, BounceBishop, GlassSpirit"
-Boat,Islands,Islands,Amoebas,Blue + sandy yellow,,"WaterWisp, WaterElemental, Smuggler, BottleSpirit, Pisces, Carrier, Cardinal, Crab, Watchtower, PufferfishQueen, PufferfishPawn, SplashMage, WaveEgg"
-Push,Rocky land with big boulders and big trees?,Temperate,SlowMovers,Dark cyan + dark blue,,"ArcanaPriestess, ArcanaEmperor, Archbishop, Aries, SwitchKnight, SkipGuard, SkipPawn"
-Sticky,Honey ish,Temperate,Honeybees,Honey gold + orange,,"Honeybee, HoneybeeLieutenant, FrontBishop, WaxQueen, WarpMage"
-Fire,Charred fire trees,Desert,Elemental,Black coal + orange red,,"FireWisp, FireElemental, Outlaw, Scorpio, TorchSpirit, ArcanaTemperance, Sagittarius, LavaGolem, SummerQueen, SummerRook, SummerPawn, FlameEgg"
-Enchanter,Spirally plants?,Forest,"Teleporters, Troupe",Dark purple,,"Jester, Harlequin, Dancer, ArcanaFool, Robber, Enforcer, Banshee, Sloth, Watchtower"
-DeadlySins,Rocky fiery wasteland,Rocky,"Ultimate, Fire, Warlike",Dark red,,"ArcanaDevil, ArcanaDeath, Robber, HornSpirit, PiercingCharge, MiniBomb, LavaGolem, SoulDevourer"
-HeavenlyVirtues,Cloudy normal land,Icy,"Ultimate, Divine",Light blue,,"ArcanaLovers, ArcanaHermit, ArcanaJustice, ArcanaJudgement, Virgo, Bishop, Priest, Traverser, LightElemental, WaterElemental"
-TarotMajor,Foggy land?,Temperate,"Zodiac, Elemental",Yellow + blue/purple??,,"AirWisp, FireWisp, WaterWisp, EarthWisp, Brook, Imitator, Virgo, Libra, TorchSpirit, CapSpirit"
-TarotMinor,n/a (?),Temperate,,?,,"AirWisp, FireWisp, WaterWisp, EarthWisp, AirElemental, FireElemental, WaterElemental, EarthElemental"
-Planets,Starry purple land? (Big hills for observatories?),Rocky,Zodiac,Purple + black + white highlights?,,"IceElemental, EarthElemental, Bomb, Magnet, ElectroPawn, IceGolem, ArcanaFortune, CapSpirit, TorchSpirit"
-Zodiac,Blueish cyan land?,Icy,Planets,Cyan blue + black + white highlights?,,"Pusher, Boat, Shrimp, ArcanaMoon, ArcanaStar, ArcanaSun, SwiftBishop, Venus, VolcanoTower"
-Elemental,4 elemental areas,Rocky,"Fire, GreatBeasts, Electro, Icy",Orange + blue,,"AceOfWands, AceOfSwords, AceOfPentacles, AceOfCups, Aquarius, ClockworkLeaper, ClockworkWalker, FlameObelisk"
-Birds,Tall cliffs and trees,Rocky,Gliders,Orange + white,,"AirElemental, AirWisp, Neptune, FeatherSpirit, ArcanaPriestess, Airship, Bat, Harpy, Hummingbird, FloatMage, GliderQueen, FlameEgg"
-Switchers,Black and white land,Forest,,Black + white,,"ClockworkTowerB,ClockworkTowerR, RelayRook, SwiftRook, WarRook, ElephantCrusher"
-Warlike,Spiky rockland,Rocky,Rook,Red,,"Wrath, Imp, HornSpirit, Dragoon, RelayQueen, SwiftQueen, Mars, ChargeBeast, SoulDevourer, ArcanaJudgement"
-Hoppers,Froggy swamp? (maybe they can be reskinned to frog ish things?),Swamp,,Lime,,"Rabbit, RabbitDiplomat, RabbitKnight, Cataphract, RelayKnight, SwitchFrog, Capybara, Traverser"
-Undead,Dead swamp?,Swamp,"Monster, SoulMages",Dark green + black,,"Hag, Lich, Leech, SoulDevourer, PoisonMage, Repulser, Vulture, QueenLeech, Ghoul, GhoulMarshall, Phantom"
-Monster,Swamp,Swamp,"ForcedMovers, Statue",Dark green + purple + black,,"BigSlime, Statue, Gargoyle, Hopper, KingHopper, Checker, PoisonElemental, PoisonFrog, Repulser, WaveEgg"
-Lycanthropes,Dark forest,Forest,Rabbit,Dark green + orange,,"RabbitKnight, RabbitCourier, RabbitQueen, Moon, Repulser, Rabbit, SoulDevourer, HornSpirit"
-Rabbit,Fluffy cotton plant fields?,Temperate,"Lycanthropes, Amoebas",White + green,,"Werefox, ArcanaDevil, RingSpirit, FlowerPawn, SpringKnight, Honeybee, Lust, FeatherSpirit"
-Giant,Savanna,Savanna,"GreatBeasts, SlowMovers",Yellowish green,,"SlothQueen, ArcanaStrength, Leo, Knight, Werebear, FlatQueen, FlatRook, KangarooQueen"
-Dark,Dark grasslands + city?,Temperate,"Criminals, Undead",Black + gray,,"Robber, Enforcer, Smuggler, Mercenary, Outlaw, Submarine, Tunnel, Greed, VoidElemental, VoidWisp, ShadowQueen, TailPawn, GhoulPawn, FallPawn, FallKnight"
-Royalist,Big gilded cities,Savanna,"Enchanter, Troupe, Teleporters",Gold + orange,,"Attractor, Hypnotist, Jester, Bunker, Peasant, Inquisitor, Guard, Charmer, Greed, RabbitDiplomat, Prince, Princess"
-Mirror,Glass + metal,Desert,"Armored, ObjectSpirit, Glass",Grayish blue,,"GlassBishop, GlassSpirit, RelayBishop, StickyBishop, AceOfSwords, PageOfSwords, QueenOfSwords, LightElemental, LightWisp, Mirrorer"
-Electro,Electrical trees and wires + crack ground,Savanna,Clockwork,Yellow,,"ClockworkSnapper, BladeBeast, PushBishop, Jupiter, SwitchSquire, ShieldSpirit, Duelist, Fencer, FlankingBishop, MetalFox, Roller, ReboundRook"
-ObjectSpirit,n/a (forge lands?),Rocky,"Armored, Clockwork, Mirror",Orange + gray,,"BladeBeast, Shrimp"
-Crooked,Crooked zigzag plants,Temperate,,Green + Magenta?,,"Aries, KangarooQueen, KangarooPrincess, Trebuchet, FlankingPawn, FlankingKnight, NarrowRook, FlatKnight, AxePawn"
-Clockwork,Metallic gear land + gear trees (desert ish?),Desert,Electro,Orange + silver,,"Bolter, Shocker, LightningElemental, Train, DaggerSpirit, SwordSpirit, Rammer, Libra, GlassQueen, GlassRook, SoulCannon, WaxPawn"
-Plants,Extremely overgrown (giant plants?),Forest,Amoebas,Bright green,,"SpringPawn, SpringKnight, ArcanaEmpress, Tunnel, Callisto, Werewolf, Elephant"
-Statue,Quarry (a lot of stone),Rocky,Rook,Gray + orangish red,,"IceElemental, Immobilizer, ArcanaPriestess, Charity, StickyMan, Pusher, Rook, Anchorite, Skeleton, WaxQueen, WaxSoldier, WaxPawn, RockEgg"
-ZoneRestricted,Rock wall and tree wall structures? (a lot of cliffs and natural barriers?),Rocky,"Rook, Statue",Indigo?,,"ArcanaHierophant, Earth, Saturn, Pawn, Knight, Pegasus, StickyRook, AceOfPentacles, PageOfPentacles, QueenOfPentacles, Vampire, RockEgg"
-Splitters,Branchy trees?,Forest,"Zodiac, Normal",Yellow + green,,"Gemini, AmoebaArchbishop, Disguiser, QueenLeech, SoulCannon, GrailSpirit, RingSpirit"
-Flankers,Wavy plants and landscape patterns?,Temperate,Electro,Teal + blue,,"Bolter, Shocker, Pincer, Lancer, Ganymede, Blackguard, SlipPawn, GlassSpirit"
-FrontBias,Top heavy plants and rock structures?,Savanna,FrontBack,Orange + lime,,"ArcanaHanged, Uranus, NarrowKnight, NarrowBishop, Recaller, DayPawn, DayBishop, DayQueen, Peasant"
-FrontBack,Plants have two halves?,Savanna,FrontBias,Teal green + lime green?,,"ArcanaHanged, FrontQueen, FrontKnight, NightPawn, NightKnight, NightQueen, Yeoman"
-Narrow,Bamboo forest?,Forest,Flat,Minty green,,"Pillar, Statue, FloatMage, Comet, Paladin, PawnStack, FrontRook, FrontPawn, WarpMage, Peasant"
-Flat,Flat desert ish savanna land?,Savanna,Narrow,Gray + lime ish green,,"Bat, GravityMage, Wall, Raft, Asteroid, Paladin, Humility, Watchtower, ShieldSpirit"
-Glass,Gray glass land + gray sand?,Desert,"Clockwork, Mirror",Gray + quartz gray? + pinkish crystal?,,"GlassSpirit, SwordSpirit, BottleSpirit, DaggerSpirit, Pawn, BigBomb, Bomb, Lanterner"
-Quick,Small plants infesting everything?,Temperate,,Yellow + cyan,,"Mercury, ArcanaChariot, Runner, FastPawn, Warship, Falcon, Rabbit, CrookedBishop, CrookedPawn"
-Slow,Big thick trees and large megastructures?,Forest,GreatBeasts,Orange ish,,"Sloth, SnailQueen, Pusher, PushRook, CrookedRook, CrookedQueen, ClockworkTurtle, Cannon, MegaCannon"
-SoulMages,"Wasteland of dead stuff, big mage towers",Rocky,"Undead, DeadlySins",Black + purple,,"ArcanaDevil, Lust, Gluttony, GrailSpirit, RingSpirit, Revenant, Abomination, Zombie, GlassPawn, Greed, RelayBishop"
-ChargeMovers,Glowing plants?,Temperate,,Cyan + teal,,"Diligence, Patience, Canoe, Taurus, Fledgling, EchoSoldier, GlassBishop, GlassKnight, GlassPawn"
-ForcedMovers,White bony plants? Red ground? (on the coast?),Temperate,Undead,Red + dark blue,,"Wrath, BerserkerPawn, Boat, Vampire, GlassPawn, MiniBomb, HornSpirit, HoneyBomb, ArcanaPriestess"
-Criminals,? (rocky wasteland?),Rocky,Dark,Red + Black,,"Spy, Disguiser"
-Troupe,n/a (some kind of river crossroads land where a lot of festivals happen?),Islands,"Teleporters, Royalists",White + red + pink (festive colors? Circus colors?),,"Entrancer, Hypnotist, Pisces, Aquarius, CapSpirit, Imitator, ArcanaFool"
-Teleporters,Rocky desert?,Desert,,White + purple/pink,,"FloatMage, CapSpirit, GlassSpirit, Infiltrator, Assassin, RoyalDouble, RoyalMaid, EchoSoldier, ChargeWarper"
-Icy,Icy hills,Icy,,Cyan,,"Europa, FreezeMage, ArcanaHermit, Missionary, AceOfCups, PageOfCups, QueenOfCups, WinterQueen, WinterBishop, WinterPawn, Immobilizer"
-Poison,Toxic acidic swamp,Swamp,"Undead, Monster, Lycanthrope",Dark green + purple,,"PoisonMage, SparkMage, HealerMage, WaterElemental, WaterWisp, Gluttony, Werechimera, Plaguebearer, BottleSpirit"
-StatusMages,Rocky desert?,Desert,,Gray + pink,,"PoisonElemental, IceElemental, MatchPawn, Temperance, Immobilizer"
-Skip,Floating plants?,Forest,Swift,White + yellow?,,"Balloon, CrookedBishop, Runner, Skipper, Locust, NarrowRook, NarrowPawn"
-Seasonal,Multi season plants? (fire + ice or spring + fall etc),Forest,"Fire, Icy",Orange + cyan blue + lime + red? (todo: make sure doesn't clash),,"DayPawn, NightPawn, Vestal, SnowQueen, Warden, ArcanaEmpress, AceOfWands, PageOfWands, QueenOfWands"
-DayNight,Half sun colored + half moon colored?,Temperate,"Fire, Icy",Yellow + blueish silver?,,"ArcanaStar, ArcanaTower, SwitchPaladin, SwitchKnight, WarBishop"
-Honeybees,Big honey colored hive world + magenta reddish wax,Temperate,GreatBeasts,Yellow + magenta,,"ArcanaEmperor, Fan, PushQueen, PushPawn, Candler, Conductor"
-Targetters,Metallic cubic land? (desert?),Desert,"Clockwork, ObjectSpirit, Teleporters",Cyan + gray,,"BladeBeast, ShieldSpirit, GlassSpirit, Watchtower, Bunker, ChargeCannon, WarpWeaver, Recaller, Flipper"
-Rollers,"? (spherical plants and rocks, relatively flat ish land?) (savanna / desert?)",Desert,"Fast, Quick",Indigo + gray,,"SwiftQueen, Hummingbird, ArcanaFortune, HoneybeeLieutenant, Bishight, Knishop, QuickKnight, QuickSlug, QuickPawn, FeatherSpirit"
-Gliders,Woody forest (so the squirrels and such can live),Forest,,Brownish orange,,"Leafling, Tunnel, Hawk, Blossom, Gardener, Burrower, QuickHog, Capricorn"
-Amoebas,Slimy swamp,Swamp,"Monster, Undead",Bright teal ish green + blue water,,"BigSlime, Slime, PoisonFrog, Fortress, Imitator, ArcanaFool, Sludge, Plaguebearer, Marshqueen, Brook"
-GreatBeasts,Big island with giant plants,Islands,"Giant, Ultimate",Reddish + greenish + blueish,,"SlothQueen, Leo, ArcanaStrength, Squire, Dragoon, Pegasus, SuperPawn, Tardigrade, Werechimera, HeavyFrog, HeavyPawn, SnowQueen, PythonQueen"
-Lost,Very foggy island (Basically a reflection of Ultimate),Temperate,"Ultimate, Divine",Bright neon ish green + white,,"Pegasus, Paladin, Eagle, RingSpirit, FeatherSpirit"
+OldIndex,Class,Climate category,Tier,Nearby,Extra Pieces
+0,None,,-1,,
+1,Normal,Temperate,0,Knight|Bishop|Rook,Guard|Amazon|Prince|Princess|Squirrel
+2,Knight,Temperate,1,Bishop,Pegasus|Triknight|TrojanHorse|Shielder|EliteMilitia|Militia|ChargeKnight|ChargePawn|RoseKnight
+3,Bishop,RockyCold,1,Rook|Knight,Pontiff|Tribishop|Courtesan|Lobster|Monk|Arch|CornerlessBishop|Harlequin|Augur|Yeoman
+4,Rook,RockyHot,1,,Stronghold|Birook|Marshall|Shrimp|EdgeRook|Bastion|Bunker|Capricorn
+5,Amazons,Forest,1,Ultimate|Gliders|Birds,Leafling|Squirrel|Queen|Turret|RoyalGuard|RoyalCastle|RoyalRecruit|CenterQueen|Suprema|Empress|GhoulAmazon
+6,Ultimate,Icy,7,Divine,ArcanaWorld|Paladin|Amazon|ElephantQueen|MegaCannon|Dragon|MountainTurtle|OceanSerpent|TorchSpirit
+7,Divine,Icy,8,Ultimate|Icy,Empress|Suprema|RollerQueen|HoneybeeQueen|SlothQueen|GliderQueen|RelayQueen
+8,Armored,RockyHot,3,Fire,Scorpio|Cancer|ShieldSpirit|Rook|Vestal|Torcher|ElephantBulwark|SteelPuppet|SteelGolem
+9,Explosive,RockyHot,3,Fire,IceBomb|PoisonBomb|ArcanaMagician|SwitchTower|HoneyBomb|SoulCannon|VolcanoTower|MegaCannon|Cannon
+10,Relay,Islands,2,Electro,ArcanaWorld|ArcanaSun|Charity|Kindness|Envy|SwitchPaladin|Paladin
+11,Swift,Islands,2,Quick|Rollers,QuickHog|Fan|AirWisp|AirElemental|Roller|SwitchTower|SkipQueen|SkipRook|SkipBishop|RollerQueen|BounceBishop|GlassSpirit
+12,Boat,Islands,2,Amoebas,WaterWisp|WaterElemental|Smuggler|BottleSpirit|Pisces|Carrier|Cardinal|Crab|Watchtower|PufferfishQueen|PufferfishPawn|SplashMage|WaveEgg
+13,Push,Swamp,2,SlowMovers,ArcanaPriestess|ArcanaEmperor|Archbishop|Aries|SwitchKnight|SkipGuard|SkipPawn
+14,Sticky,Swamp,2,Honeybees,Honeybee|HoneybeeLieutenant|FrontBishop|WaxQueen|WarpMage
+15,Fire,Desert,3,Elemental,FireWisp|FireElemental|Outlaw|Scorpio|TorchSpirit|ArcanaTemperance|Sagittarius|LavaGolem|SummerQueen|SummerRook|SummerPawn|FlameEgg
+16,Enchanter,Forest,6,Teleporters|Troupe|StatusMages,Jester|Harlequin|Dancer|ArcanaFool|Robber|Enforcer|Banshee|Sloth|Watchtower
+17,DeadlySins,RockyHot,6,Ultimate|Fire|Warlike,ArcanaDevil|ArcanaDeath|Robber|HornSpirit|PiercingCharge|MiniBomb|LavaGolem|SoulDevourer
+18,HeavenlyVirtues,Icy,6,Ultimate|Divine,ArcanaLovers|ArcanaHermit|ArcanaJustice|ArcanaJudgement|Virgo|Bishop|Priest|Traverser|LightElemental|WaterElemental
+19,TarotMajor,Temperate,6,Zodiac|Elemental,AirWisp|FireWisp|WaterWisp|EarthWisp|Brook|Imitator|Virgo|Libra|TorchSpirit|CapSpirit
+20,TarotMinor,Temperate,6,,AirWisp|FireWisp|WaterWisp|EarthWisp|AirElemental|FireElemental|WaterElemental|EarthElemental
+21,Planets,Icy,5,Zodiac,IceElemental|EarthElemental|Bomb|Magnet|ElectroPawn|IceGolem|ArcanaFortune|CapSpirit|TorchSpirit
+22,Zodiac,Icy,5,Planets,Pusher|Boat|Shrimp|ArcanaMoon|ArcanaStar|ArcanaSun|SwiftBishop|Venus|VolcanoTower
+23,Elemental,RockyHot,4,Fire|GreatBeasts|Electro|Icy,AceOfWands|AceOfSwords|AceOfPentacles|AceOfCups|Aquarius|ClockworkLeaper|ClockworkWalker|FlameObelisk
+24,Birds,RockyCold,3,Gliders,AirElemental|AirWisp|Neptune|FeatherSpirit|ArcanaPriestess|Airship|Bat|Harpy|Hummingbird|FloatMage|GliderQueen|FlameEgg
+25,Switchers,Forest,3,Clockwork,"ClockworkTowerB,ClockworkTowerR|RelayRook|SwiftRook|WarRook|ElephantCrusher"
+26,Warlike,RockyHot,2,Rook,Wrath|Imp|HornSpirit|Dragoon|RelayQueen|SwiftQueen|Mars|ChargeBeast|SoulDevourer|ArcanaJudgement
+27,Hoppers,Swamp,3,,Rabbit|RabbitDiplomat|RabbitKnight|Cataphract|RelayKnight|SwitchFrog|Capybara|Traverser
+28,Undead,Swamp,4,Monster|SoulMages,Hag|Lich|Leech|SoulDevourer|PoisonMage|Repulser|Vulture|QueenLeech|Ghoul|GhoulMarshall|Phantom
+29,Monster,Swamp,4,ForcedMovers|Statue,BigSlime|Statue|Gargoyle|Hopper|KingHopper|Checker|PoisonElemental|PoisonFrog|Repulser|WaveEgg
+30,Lycanthropes,Forest,5,Rabbit,RabbitKnight|RabbitCourier|RabbitQueen|Moon|Repulser|Rabbit|SoulDevourer|HornSpirit
+31,Rabbit,Temperate,6,Lycanthropes|Amoebas,Werefox|ArcanaDevil|RingSpirit|FlowerPawn|SpringKnight|Honeybee|Lust|FeatherSpirit
+32,Giant,Savanna,4,GreatBeasts|SlowMovers,SlothQueen|ArcanaStrength|Leo|Knight|Werebear|FlatQueen|FlatRook|KangarooQueen
+33,Dark,Swamp,5,Criminals|Undead,Robber|Enforcer|Smuggler|Mercenary|Outlaw|Submarine|Tunnel|Greed|VoidElemental|VoidWisp|ShadowQueen|TailPawn|GhoulPawn|FallPawn|FallKnight
+34,Royalist,Savanna,4,Enchanter|Troupe|Teleporters,Attractor|Hypnotist|Jester|Bunker|Peasant|Inquisitor|Guard|Charmer|Greed|RabbitDiplomat|Prince|Princess
+35,Mirror,Desert,5,Armored|ObjectSpirit|Glass,GlassBishop|GlassSpirit|RelayBishop|StickyBishop|AceOfSwords|PageOfSwords|QueenOfSwords|LightElemental|LightWisp|Mirrorer
+36,Electro,Savanna,5,Clockwork,ClockworkSnapper|BladeBeast|PushBishop|Jupiter|SwitchSquire|ShieldSpirit|Duelist|Fencer|FlankingBishop|MetalFox|Roller|ReboundRook
+37,ObjectSpirit,RockyCold,-1,Armored|Clockwork|Mirror,BladeBeast|Shrimp
+38,Crooked,Icy,3,Zodiac|Icy,Aries|KangarooQueen|KangarooPrincess|Trebuchet|FlankingPawn|FlankingKnight|NarrowRook|FlatKnight|AxePawn
+39,Clockwork,Desert,5,Electro|Armored|Targetters,Bolter|Shocker|LightningElemental|Train|DaggerSpirit|SwordSpirit|Rammer|Libra|GlassQueen|GlassRook|SoulCannon|WaxPawn
+40,Plants,Forest,4,Amoebas,SpringPawn|SpringKnight|ArcanaEmpress|Tunnel|Callisto|Werewolf|Elephant
+41,Statue,RockyCold,3,Rook,IceElemental|Immobilizer|ArcanaPriestess|Charity|StickyMan|Pusher|Rook|Anchorite|Skeleton|WaxQueen|WaxSoldier|WaxPawn|RockEgg
+42,ZoneRestricted,Icy,3,Rook|Statue,ArcanaHierophant|Earth|Saturn|Pawn|Knight|Pegasus|StickyRook|AceOfPentacles|PageOfPentacles|QueenOfPentacles|Vampire|RockEgg
+43,Splitters,Forest,5,Zodiac|Normal,Gemini|AmoebaArchbishop|Disguiser|QueenLeech|SoulCannon|GrailSpirit|RingSpirit
+44,Flankers,Temperate,4,Electro,Bolter|Shocker|Pincer|Lancer|Ganymede|Blackguard|SlipPawn|GlassSpirit
+45,FrontBias,Savanna,3,FrontBack,ArcanaHanged|Uranus|NarrowKnight|NarrowBishop|Recaller|DayPawn|DayBishop|DayQueen|Peasant
+46,FrontBack,Savanna,3,FrontBias,ArcanaHanged|FrontQueen|FrontKnight|NightPawn|NightKnight|NightQueen|Yeoman
+47,Narrow,Forest,3,Flat,Pillar|Statue|FloatMage|Comet|Paladin|PawnStack|FrontRook|FrontPawn|WarpMage|Peasant
+48,Flat,Savanna,3,Narrow,Bat|GravityMage|Wall|Raft|Asteroid|Paladin|Humility|Watchtower|ShieldSpirit
+49,Glass,Desert,2,Clockwork|Mirror,GlassSpirit|SwordSpirit|BottleSpirit|DaggerSpirit|Pawn|BigBomb|Bomb|Lanterner
+50,Quick,Temperate,6,,Mercury|ArcanaChariot|Runner|FastPawn|Warship|Falcon|Rabbit|CrookedBishop|CrookedPawn
+51,Slow,Forest,6,GreatBeasts,Sloth|SnailQueen|Pusher|PushRook|CrookedRook|CrookedQueen|ClockworkTurtle|Cannon|MegaCannon
+52,SoulMages,RockyCold,6,Undead|DeadlySins,ArcanaDevil|Lust|Gluttony|GrailSpirit|RingSpirit|Revenant|Abomination|Zombie|GlassPawn|Greed|RelayBishop
+53,ChargeMovers,Temperate,3,,Diligence|Patience|Canoe|Taurus|Fledgling|EchoSoldier|GlassBishop|GlassKnight|GlassPawn
+54,ForcedMovers,Savanna,3,Undead,Wrath|BerserkerPawn|Boat|Vampire|GlassPawn|MiniBomb|HornSpirit|HoneyBomb|ArcanaPriestess
+55,Criminals,RockyCold,-1,Dark,Spy|Disguiser
+56,Troupe,Islands,-1,Teleporters|Royalists,Entrancer|Hypnotist|Pisces|Aquarius|CapSpirit|Imitator|ArcanaFool
+57,Teleporters,Desert,-1,,FloatMage|CapSpirit|GlassSpirit|Infiltrator|Assassin|RoyalDouble|RoyalMaid|EchoSoldier|ChargeWarper
+58,Icy,Icy,4,Planets,Europa|FreezeMage|ArcanaHermit|Missionary|AceOfCups|PageOfCups|QueenOfCups|WinterQueen|WinterBishop|WinterPawn|Immobilizer
+59,Poison,Swamp,4,Undead|Monster|Lycanthrope,PoisonMage|SparkMage|HealerMage|WaterElemental|WaterWisp|Gluttony|Werechimera|Plaguebearer|BottleSpirit
+60,StatusMages,Desert,6,Enchanter,PoisonElemental|IceElemental|MatchPawn|Temperance|Immobilizer
+61,Skip,Forest,3,Swift,Balloon|CrookedBishop|Runner|Skipper|Locust|NarrowRook|NarrowPawn
+62,Seasonal,Forest,4,Fire|Icy,DayPawn|NightPawn|Vestal|SnowQueen|Warden|ArcanaEmpress|AceOfWands|PageOfWands|QueenOfWands
+63,DayNight,Temperate,4,Fire|Icy,ArcanaStar|ArcanaTower|SwitchPaladin|SwitchKnight|WarBishop
+64,Honeybees,Temperate,4,GreatBeasts,ArcanaEmperor|Fan|PushQueen|PushPawn|Candler|Conductor
+65,Targetters,Desert,6,Clockwork|ObjectSpirit|Teleporters,BladeBeast|ShieldSpirit|GlassSpirit|Watchtower|Bunker|ChargeCannon|WarpWeaver|Recaller|Flipper
+66,Rollers,Desert,5,Fast|Quick,SwiftQueen|Hummingbird|ArcanaFortune|HoneybeeLieutenant|Bishight|Knishop|QuickKnight|QuickSlug|QuickPawn|FeatherSpirit
+67,Gliders,Forest,4,Plant|Bird,Leafling|Tunnel|Hawk|Blossom|Gardener|Burrower|QuickHog|Capricorn
+68,Amoebas,Swamp,5,Monster|Undead,BigSlime|Slime|PoisonFrog|Fortress|Imitator|ArcanaFool|Sludge|Plaguebearer|Marshqueen|Brook
+69,GreatBeasts,Islands,7,Giant|Ultimate,SlothQueen|Leo|ArcanaStrength|Squire|Dragoon|Pegasus|SuperPawn|Tardigrade|Werechimera|HeavyFrog|HeavyPawn|SnowQueen|PythonQueen
+70,Lost,Islands,7,Ultimate|Divine,Pegasus|Paladin|Eagle|RingSpirit|FeatherSpirit

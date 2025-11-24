@@ -379,9 +379,9 @@ Conductor,8,mWmF,,AnyTandemMover,TRUE,,Troupe,3
 Harlequin,3,"(0,2)(1,2)(2,2)",,SwapCapture,FALSE,,Troupe,1.5
 Jester,4,Q,,SwapCapture,FALSE,,Troupe,1.5
 Dancer,0.5,WF,,SwapCapture,FALSE,Jester,Troupe,1.5
-Penguin,3,"oWfc(0,2)c(2,2)",,InflictFreeze|WaterImmune,TRUE,,Icy,3
+Penguin,3.5,oWfcZ2cB2,,InflictFreeze|WaterImmune,TRUE,,Icy,3
 IceElemental,2.5,"v(0,2)h(1,2)FvW",,InflictFreeze|WaterImmune,TRUE,,Icy,3
-EmperorPenguin,8,"oWoFcB2=cR2=c(1,2)",,InflictFreeze|WaterImmune,TRUE,,Icy,3
+EmperorPenguin,8,"oWoFcB2=cZ2=c(1,2)",,InflictFreeze|WaterImmune,TRUE,,Icy,3
 SnowBomb,4,WF,,IceExplode|WaterImmune,TRUE,,Icy,3.5
 SnowQueen,11,"B3hR3(1,2)",,InflictFreeze|FreezeCapturer|WaterImmune,TRUE,,Icy,3
 Snowman,1,fF,,InflictFreeze|FreezeCapturer|WaterImmune,TRUE,SnowQueen,Icy,3

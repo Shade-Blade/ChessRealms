@@ -37,13 +37,6 @@ public class MapNodeScript : MonoBehaviour
 
         //generate an army
         GenerateArmy();
-
-        if (nodeType == MapNodeType.BossBattle)
-        {
-            int i = Random.Range(1, 26);
-
-            em = (Board.EnemyModifier)(1 << i);
-        }
     }
 
     public void GenerateArmy()
@@ -63,6 +56,13 @@ public class MapNodeScript : MonoBehaviour
             pieceValueTotal += pte.pieceValueX2 / 2f;
         }
         text.text = pieceValueTotal + "";
+
+        if (nodeType == MapNodeType.BossBattle)
+        {
+            int i = Random.Range(1, 26);
+
+            em = (Board.EnemyModifier)(1 << i);
+        }
     }
 
     private void OnMouseDown()
