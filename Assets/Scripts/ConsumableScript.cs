@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventListener
+public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventListener, IShopItem
 {
     Vector3 homePos;
 
@@ -21,11 +21,22 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
     public ConsumableBadgePanelScript cps;
     public TrashCanScript trashCan;
 
+    public bool canInteract;
+
+    public ShopItemScript sis;
+
+    public void SetShopItemScript(ShopItemScript sis)
+    {
+        this.sis = sis;
+    }
+
+
     public virtual void Start()
     {
         homePos = transform.position;
         dob = GetComponent<DraggableObject>();
         dob.canDrag = true;
+        canInteract = true;
 
         //bad architecture?
         //But I don't really know of a better way
@@ -86,6 +97,11 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
         transform.position = homePos;
     }
 
+    public int GetCost()
+    {
+        return 5;
+    }
+
     public void OnDragStart()
     {
     }
@@ -95,6 +111,7 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
 
         if (trashCan != null && consumableIndex >= 0)
         {
+            trashCan.text.text = "Sell: $" + GetCost();
             trashCan.SetActive();
         }
         if (cps != null)
@@ -124,7 +141,13 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
         if (cps.QueryPositionConsumable(transform.position) != -1)
         {
             //Consumable panel rearranging
-            cps.TryPlaceConsumable(this, cps.QueryPositionConsumable(transform.position));
+            if (cps.TryPlaceConsumable(this, cps.QueryPositionConsumable(transform.position)))
+            {
+                if (sis != null)
+                {
+                    sis.Purchase();
+                }
+            }
         } else if (trashCan.QueryPosition(transform.position) && consumableIndex != -1)
         {
             //Trash can
@@ -164,5 +187,21 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
         }
         ResetPosition();
         cps.FixInventory();
+    }
+
+    public virtual void Update()
+    {
+        dob.canDrag = bs.CanSelectPieces();
+        bc.enabled = bs.CanSelectPieces() && text.enabled && canInteract;
+    }
+
+    public void EnableInteraction()
+    {
+        canInteract = true;
+    }
+
+    public void DisableInteraction()
+    {
+        canInteract = false;
     }
 }

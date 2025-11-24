@@ -6,6 +6,7 @@ public class TrashCanScript : MonoBehaviour
 {
     public SpriteRenderer sprite;
     public BoxCollider bc;
+    public TMPro.TMP_Text text;
 
     public bool active;
 
@@ -36,11 +37,13 @@ public class TrashCanScript : MonoBehaviour
         if (!active)
         {
             sprite.color = new Color(1, 0.4f, 0.4f, 0);
+            text.text = "";
         } else
         {
             if (forbidden)
             {
                 sprite.color = new Color(0.6f, 0.4f, 0.4f, 1);
+                text.text = "Can't Sell";
             }
             else if (highlighted)
             {

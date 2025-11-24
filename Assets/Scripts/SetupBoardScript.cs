@@ -189,7 +189,7 @@ public class SetupBoardScript : BoardScript
         TrySetupMove(ps, move);
     }
 
-    public override void TrySetupMove(PieceScript ps, uint move)
+    public override bool TrySetupMove(PieceScript ps, uint move)
     {
         if (Board.IsSetupMoveLegal(ref board, move))
         {
@@ -206,9 +206,11 @@ public class SetupBoardScript : BoardScript
             ResetSelected();
 
             FixBoardBasedOnPosition();
+            return true;
         }
 
         ResetSelected();
         FixBoardBasedOnPosition();
+        return false;
     }
 }

@@ -14,13 +14,18 @@ public class MapNodeScript : MonoBehaviour
         Event,
         BossBattle
     }
+    public MapNodeType nodeType;
 
     public float truePieceValueTotal;
     public float pieceValueTotal;
     public int pieceTypes;
     public Piece.PieceClass pieceClass;
-    public Piece.PieceType[] army;
+    public Piece.PieceType[] army;          //Reused for the free pieces or shop pieces
     public Board.EnemyModifier em;
+
+    public int depth;
+    public List<MapNodeScript> parents;
+    public List<MapNodeScript> children;
 
     public bool debugRegenerate;
 
@@ -32,6 +37,13 @@ public class MapNodeScript : MonoBehaviour
 
         //generate an army
         GenerateArmy();
+
+        if (nodeType == MapNodeType.BossBattle)
+        {
+            int i = Random.Range(1, 26);
+
+            em = (Board.EnemyModifier)(1 << i);
+        }
     }
 
     public void GenerateArmy()

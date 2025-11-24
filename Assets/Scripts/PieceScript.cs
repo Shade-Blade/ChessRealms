@@ -162,6 +162,22 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         return isSelected;
     }
 
+    public int GetCost()
+    {
+        int cost = 0;
+        if (GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(piece)) != null)
+        {
+            cost = GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(piece)).pieceValueX2;
+        }
+
+        if (Piece.GetPieceModifier(piece) != 0)
+        {
+            cost += 5;
+        }
+
+        return cost;
+    }
+
     public void OnDragStart()
     {
     }
@@ -170,6 +186,14 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         (bs.hoverX, bs.hoverY) = bs.GetCoordinatesFromPosition(transform.position);            
         if (trashCan != null && bs.setupMoves)
         {
+            if (!canDelete)
+            {
+                trashCan.text.text = "Can't Sell";
+            }
+            else
+            {
+                trashCan.text.text = "Sell: $" + (GetCost() & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE);
+            }
             trashCan.SetActive();
             if (!canDelete)
             {
@@ -210,7 +234,13 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                     bs.TrySetupMove(this, x, y, bs.hoverX, bs.hoverY);
                 } else if (trashCan != null && isGiant ? trashCan.QueryPosition(transform.position + new Vector3(BoardScript.SQUARE_SIZE / 2, BoardScript.SQUARE_SIZE / 2)) : trashCan.QueryPosition(transform.position))
                 {
-                    bs.TrySetupMove(this, Move.PackMove(x, y, 15, 15));
+                    //does this make sense?
+                    //This should not have problems (i.e. being able to get money and keep the piece)
+                    bool value = bs.TrySetupMove(this, Move.PackMove(x, y, 15, 15));
+                    if (value)
+                    {
+                        MainManager.Instance.playerData.coins += GlobalPieceManager.GetPieceTableEntry(piece).pieceValueX2;
+                    }
                 } else
                 {
                     transform.position = BoardScript.GetSpritePositionFromCoordinates(x, y, -0.5f);

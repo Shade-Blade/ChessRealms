@@ -71,7 +71,7 @@ public class ConsumableBadgePanelScript : MonoBehaviour
         return -1;
     }
 
-    public void TryPlaceConsumable(ConsumableScript cs, int i)
+    public bool TryPlaceConsumable(ConsumableScript cs, int i)
     {
         if (MainManager.Instance.playerData.consumables[i] == Move.ConsumableMoveType.None)
         {
@@ -81,6 +81,7 @@ public class ConsumableBadgePanelScript : MonoBehaviour
                 MainManager.Instance.playerData.consumables[cs.consumableIndex] = Move.ConsumableMoveType.None;
             }
             MainManager.Instance.playerData.consumables[i] = cs.cmt;
+            return true;
         }
         else
         {
@@ -89,14 +90,15 @@ public class ConsumableBadgePanelScript : MonoBehaviour
             {
                 MainManager.Instance.playerData.consumables[cs.consumableIndex] = MainManager.Instance.playerData.consumables[i];
                 MainManager.Instance.playerData.consumables[i] = cs.cmt;
+                return true;
             } else
             {
                 //give up
-                return;
+                return false;
             }
         }
     }
-    public void TryPlaceBadge(BadgeScript bs, int i)
+    public bool TryPlaceBadge(BadgeScript bs, int i)
     {
         if (MainManager.Instance.playerData.badges[i] == 0)
         {
@@ -106,6 +108,7 @@ public class ConsumableBadgePanelScript : MonoBehaviour
                 MainManager.Instance.playerData.badges[bs.badgeIndex] = 0;
             }
             MainManager.Instance.playerData.badges[i] = bs.pm;
+            return true;
         }
         else
         {
@@ -114,11 +117,12 @@ public class ConsumableBadgePanelScript : MonoBehaviour
             {
                 MainManager.Instance.playerData.badges[bs.badgeIndex] = MainManager.Instance.playerData.badges[i];
                 MainManager.Instance.playerData.badges[i] = bs.pm;
+                return true;
             }
             else
             {
                 //give up
-                return;
+                return false;
             }
         }
     }
@@ -126,10 +130,16 @@ public class ConsumableBadgePanelScript : MonoBehaviour
     public void TryDeleteConsumable(ConsumableScript cs)
     {
         MainManager.Instance.playerData.consumables[cs.consumableIndex] = Move.ConsumableMoveType.None;
+
+        //Todo: Consumable data table to determine what consumables cost
+        MainManager.Instance.playerData.coins += 5;
     }
     public void TryDeleteBadge(BadgeScript bs)
     {
         MainManager.Instance.playerData.badges[bs.badgeIndex] = 0;
+
+        //Todo: Badge data table to determine what badges cost
+        MainManager.Instance.playerData.coins += 5;
     }
 
     public void FixInventory()

@@ -2,15 +2,24 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SetupPieceScript : PieceScript
+public class SetupPieceScript : PieceScript, IShopItem
 {
     Vector3 homePos;
+    public bool canInteract;
+
+    public ShopItemScript sis;
+
+    public void SetShopItemScript(ShopItemScript sis)
+    {
+        this.sis = sis;
+    }
 
     public override void Start()
     {
         base.Start();
 
         homePos = transform.position;
+        canInteract = true;
 
         //Debug
         Setup(piece);
@@ -26,8 +35,8 @@ public class SetupPieceScript : PieceScript
             bc.enabled = false;
             return;
         }
-        dob.canDrag = bs.CanSelectPieces() && bs.setupMoves;
-        bc.enabled = bs.CanSelectPieces() && text.enabled && bs.setupMoves; //Become intangible while animating
+        dob.canDrag = bs.CanSelectPieces() && bs.setupMoves && canInteract;
+        bc.enabled = bs.CanSelectPieces() && text.enabled && bs.setupMoves && canInteract; //Become intangible while animating
         if (!bs.setupMoves)
         {
             backSprite.enabled = false;
@@ -156,7 +165,13 @@ public class SetupPieceScript : PieceScript
                 return;
             }
 
-            bs.TrySetupMove(this, Move.MakeSetupCreateMove(Piece.GetPieceType(piece), Piece.GetPieceAlignment(piece), (byte)bs.hoverX, (byte)bs.hoverY));
+            if (bs.TrySetupMove(this, Move.MakeSetupCreateMove(Piece.GetPieceType(piece), Piece.GetPieceAlignment(piece), (byte)bs.hoverX, (byte)bs.hoverY)))
+            {
+                if (sis != null)
+                {
+                    sis.Purchase();
+                }
+            }
 
             ResetPosition();
             bs.FixBoardBasedOnPosition();
@@ -170,5 +185,15 @@ public class SetupPieceScript : PieceScript
     public void ResetPosition()
     {
         transform.position = homePos;
+    }
+
+    public void EnableInteraction()
+    {
+        canInteract = true;
+    }
+
+    public void DisableInteraction()
+    {
+        canInteract = false;
     }
 }

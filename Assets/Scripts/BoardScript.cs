@@ -233,7 +233,7 @@ public class BoardScript : MonoBehaviour
         return Board.IsSetupMoveLegal(ref board, move);
     }
 
-    public virtual void TrySetupMove(PieceScript ps, uint move)
+    public virtual bool TrySetupMove(PieceScript ps, uint move)
     {
         if (Board.IsSetupMoveLegal(ref board, move))
         {
@@ -251,11 +251,12 @@ public class BoardScript : MonoBehaviour
 
             ResetSelected(true);
             FixBoardBasedOnPosition();
-            return;
+            return true;
         }
 
         ResetSelected(true);
         FixBoardBasedOnPosition();
+        return false;
     }
 
     public virtual void TryMove(PieceScript ps, Piece.PieceAlignment pa, int x, int y, int newX, int newY)

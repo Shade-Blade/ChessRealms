@@ -10,6 +10,14 @@ public class BadgeSlotScript : MonoBehaviour
 
     public bool highlighted;
 
+    public ShopItemScript sis;
+
+    public void SetShopItemScript(ShopItemScript sis)
+    {
+        this.sis = sis;
+    }
+
+
     public void Start()
     {
         cps = FindAnyObjectByType<ConsumableBadgePanelScript>();

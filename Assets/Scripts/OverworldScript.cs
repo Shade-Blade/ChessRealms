@@ -12,27 +12,37 @@ public class OverworldScript : MonoBehaviour
         SetupEvent, //event that pulls up the setup board (shops and such)
     }
 
-    public BoardScript bs;
+    //public BoardScript bs;
+    public GameObject mapNodeSubobject;
 
     public GameObject realmMap;
     public GameObject setupBoard;
 
     public BattleUIScript bus;
 
+    public MapNodeScript ms;
+
     public void EnterNode(MapNodeScript ms)
     {
+        this.ms = ms;
         setupBoard.SetActive(false);
         realmMap.SetActive(false);
 
         MainManager.Instance.currentSelected = null;
 
         //currently all map nodes are battles
-        bs = BattleBoardScript.CreateBoard(ms.army, MainManager.Instance.playerData.GetPlayerModifier(), ms.em);
+        //bs = BattleBoardScript.CreateBoard(ms.army, MainManager.Instance.playerData.GetPlayerModifier(), ms.em);
+        mapNodeSubobject = BattleBoardScript.CreateBoard(ms.army, MainManager.Instance.playerData.GetPlayerModifier(), ms.em).gameObject;
     }
 
     public void ReturnFromNode()
     {
-        Destroy(bs.gameObject);
+        //use ms to do stuff
+        if (mapNodeSubobject != null)
+        {
+            Destroy(mapNodeSubobject);
+        }
+        ms = null;
         realmMap.SetActive(true);
         setupBoard.SetActive(true);
 

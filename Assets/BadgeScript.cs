@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListener
+public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListener, IShopItem
 {
     Vector3 homePos;
 
@@ -21,11 +21,19 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     public ConsumableBadgePanelScript cps;
     public TrashCanScript trashCan;
 
+    public bool canInteract;
+    public ShopItemScript sis;
+
+    public void SetShopItemScript(ShopItemScript sis)
+    {
+        this.sis = sis;
+    }
     public virtual void Start()
     {
         homePos = transform.position;
         dob = GetComponent<DraggableObject>();
         dob.canDrag = true;
+        canInteract = true;
 
         //bad architecture?
         //But I don't really know of a better way
@@ -89,6 +97,11 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         transform.position = homePos;
     }
 
+    public int GetCost()
+    {
+        return 5;
+    }
+
     public void OnDragStart()
     {
     }
@@ -96,6 +109,7 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     {       
         if (trashCan != null && badgeIndex >= 0 && bs != null && bs.setupMoves)
         {
+            trashCan.text.text = "Sell: $" + GetCost();
             trashCan.SetActive();
         }
         if (cps != null)
@@ -125,7 +139,13 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         if (cps.QueryPositionBadge(transform.position) != -1)
         {
             //Consumable panel rearranging
-            cps.TryPlaceBadge(this, cps.QueryPositionBadge(transform.position));
+            if (cps.TryPlaceBadge(this, cps.QueryPositionBadge(transform.position)))
+            {
+                if (sis != null)
+                {
+                    sis.Purchase();
+                }
+            }
         }
         else if (trashCan.QueryPosition(transform.position) && badgeIndex != -1 && bs != null && bs.setupMoves)
         {
@@ -135,5 +155,21 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         }
         ResetPosition();
         cps.FixInventory();
+    }
+
+    public virtual void Update()
+    {
+        dob.canDrag = bs.CanSelectPieces();
+        bc.enabled = bs.CanSelectPieces() && text.enabled && canInteract;
+    }
+
+    public void EnableInteraction()
+    {
+        canInteract = true;
+    }
+
+    public void DisableInteraction()
+    {
+        canInteract = false;
     }
 }

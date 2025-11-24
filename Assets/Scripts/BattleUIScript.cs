@@ -17,6 +17,7 @@ public class BattleUIScript : MonoBehaviour
 
     public ConsumableScript debugConsumable;
     public SetupPieceScript debugSetupPiece;
+    public BadgeScript debugBadge;
 
     public Scrollbar difficultySlider;
 
@@ -24,6 +25,7 @@ public class BattleUIScript : MonoBehaviour
     public TMPro.TMP_Text turnText;
     public TMPro.TMP_Text scoreText;
     public TMPro.TMP_Text pieceText;
+    public TMPro.TMP_Text moneyText;
 
     public TMPro.TMP_InputField valueField;
     public TMPro.TMP_InputField typeField;
@@ -40,6 +42,7 @@ public class BattleUIScript : MonoBehaviour
         cps.SetBoardScript(bs);
         debugConsumable.bs = bs;
         debugSetupPiece.bs = bs;
+        debugBadge.bs = bs;
         if (bs is BattleBoardScript bbs)
         {
             bbs.thinkingText = thinkingText;
@@ -154,5 +157,10 @@ public class BattleUIScript : MonoBehaviour
 
             bbs.ResetBoard(army, pm, em);
         }
+    }
+
+    public void Update()
+    {
+        moneyText.text = "$" + MainManager.Instance.playerData.coins;
     }
 }

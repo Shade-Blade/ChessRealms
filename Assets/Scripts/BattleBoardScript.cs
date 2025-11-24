@@ -827,7 +827,7 @@ public class BattleBoardScript : BoardScript
         TrySetupMove(ps, move);
     }
 
-    public override void TrySetupMove(PieceScript ps, uint move)
+    public override bool TrySetupMove(PieceScript ps, uint move)
     {
         if (Board.IsSetupMoveLegal(ref board, move))
         {
@@ -882,10 +882,12 @@ public class BattleBoardScript : BoardScript
             extraMoveTrails = new List<MoveTrailScript>();
 
             FixBoardBasedOnPosition();
+            return true;
         }
 
         ResetSelected();
         FixBoardBasedOnPosition();
+        return false;
     }
 
     public override void TryMove(PieceScript ps, Piece.PieceAlignment pa, int x, int y, int newX, int newY)
