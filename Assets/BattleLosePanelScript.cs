@@ -6,7 +6,7 @@ public class BattleLosePanelScript : MonoBehaviour
 {
     public void ContinueButton()
     {
-        FindObjectOfType<OverworldScript>().ReturnFromNode();
+        FindObjectOfType<OverworldScript>().ReturnFromNode(false);
         Destroy(gameObject);
     }
 }

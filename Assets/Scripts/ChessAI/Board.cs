@@ -2372,7 +2372,7 @@ public class Board
             case SpecialType.CoastMove:
             case SpecialType.ShadowMove:
             case Move.SpecialType.PlantMove:
-                if (blackToMove && (globalData.enemyModifier & Board.EnemyModifier.Greedy) != 0 && (globalData.whitePerPlayerInfo.startPieceCount - whitePerPlayerInfo.pieceCount) < 2)
+                if (blackToMove && (globalData.enemyModifier & Board.EnemyModifier.Greedy) != 0 && (whitePerPlayerInfo.piecesLost) < 2)
                 {
                     if (!passiveMove && tpa != opa)
                     {
@@ -3422,7 +3422,7 @@ public class Board
                     goto case SpecialType.MoveOnly;
                 } else
                 {
-                    if (blackToMove && (globalData.enemyModifier & Board.EnemyModifier.Greedy) != 0 && (globalData.whitePerPlayerInfo.startPieceCount - whitePerPlayerInfo.pieceCount) < 3)
+                    if (blackToMove && (globalData.enemyModifier & Board.EnemyModifier.Greedy) != 0 && (whitePerPlayerInfo.piecesLost) < 2)
                     {
                         if (tpa != opa)
                         {
@@ -10019,9 +10019,18 @@ public class Board
         globalData.bitboard_updatedPieces |= (1uL << (Move.GetToXYInt(move)));
         uint newPiece = pieces[Move.GetFromXYInt(move)];
 
+        //swap the 2 places
+
+        //Very straightforward
+        uint oldPiece = pieces[(Move.GetFromX(move)) + ((Move.GetFromY(move) << 3))];
+        SetPieceAtCoordinate(Move.GetFromX(move), Move.GetFromY(move), pieces[(Move.GetToX(move)) + ((Move.GetToY(move) << 3))]);
+        SetPieceAtCoordinate(Move.GetToX(move), Move.GetToY(move), oldPiece);
+
+        /*
         //Move the thing
         DeletePieceMovedFromCoordinate(Move.GetFromX(move), Move.GetFromY(move), GlobalPieceManager.GetPieceTableEntry(newPiece), Piece.GetPieceAlignment(newPiece));
         PlaceMovedPiece(newPiece, Move.GetToX(move), Move.GetToY(move), GlobalPieceManager.GetPieceTableEntry(newPiece), Piece.GetPieceAlignment(newPiece));
+        */
     }
 
     public static bool SetupMoveIsKingCapture(ref Board b, uint move)
@@ -10131,10 +10140,20 @@ public class Board
         }
         else
         {
+            /*
             if (b.pieces[GetToXYInt(move)] != 0)
             {
                 return false;
             }
+            */
+
+            //New: now you swap the 2 pieces (but target must not be giant)
+            //Can probably assume 
+            if (b.pieces[GetToXYInt(move)] != 0 && ((GlobalPieceManager.GetPieceTableEntry(b.pieces[GetToXYInt(move)]).piecePropertyB & PiecePropertyB.Giant) != 0))
+            {
+                return false;
+            }
+            return true;
         }
 
         return !SetupMoveIsKingCapture(ref b, move);

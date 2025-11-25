@@ -159,8 +159,8 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
     public virtual void Update()
     {
-        dob.canDrag = bs.CanSelectPieces();
-        bc.enabled = bs.CanSelectPieces() && text.enabled && canInteract;
+        dob.canDrag = bs.CanSelectPieces() && canInteract;
+        bc.enabled = bs.CanSelectPieces() && text.enabled;
     }
 
     public void EnableInteraction()

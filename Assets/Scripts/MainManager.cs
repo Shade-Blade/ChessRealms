@@ -288,6 +288,45 @@ public class MainManager : MonoBehaviour
         return v.x * Vector3.right + v.y * Vector3.up;
     }
 
+    public static Vector2 LineCollision(Vector2 a, Vector2 b, Vector2 a2, Vector2 b2)
+    {
+        //some determinants of some matrixes
+        float t = ((a.x - a2.x) * (a2.y - b2.y) - (a.y - a2.y) * (a2.x - b2.x)) / ((a.x - b.x) * (a2.y - b2.y) - (a.y - b.y) * (a2.x - b2.x));
+        float u = ((a.x - b.x) * (a.y - a2.y) - (a.y - b.y) * (a.x - a2.x)) / ((a.x - b.x) * (a2.y - b2.y) - (a.y - b.y) * (a2.x - b2.x));
+
+        if (t < 0 || t > 1 || u < 0 || u > 1)
+        {
+            return Vector2.positiveInfinity;
+        }
+
+        return (a.x + t) * Vector2.right + (a.y + t * (b.y - a.y)) * Vector2.up;
+    }
+    public static Vector2 RectangleCollision(Vector2 a, Vector2 b, float bottom, float top, float left, float right)
+    {
+        Vector2 leftI = LineCollision(a, b, new Vector2(left, bottom), new Vector2(left, top));
+        Vector2 rightI = LineCollision(a, b, new Vector2(right, bottom), new Vector2(right, top));
+        Vector2 topI = LineCollision(a, b, new Vector2(left, top), new Vector2(right, top));
+        Vector2 bottomI = LineCollision(a, b, new Vector2(left, bottom), new Vector2(right, bottom));
+
+        if (leftI != Vector2.positiveInfinity)
+        {
+            return leftI;
+        }
+        if (rightI != Vector2.positiveInfinity)
+        {
+            return rightI;
+        }
+        if (topI != Vector2.positiveInfinity)
+        {
+            return topI;
+        }
+        if (bottomI != Vector2.positiveInfinity)
+        {
+            return bottomI;
+        }
+        return Vector2.positiveInfinity;
+    }
+
     public static int PopBitboardLSB1(ulong bitboard, out ulong output)
     {
         if (bitboard == 0)

@@ -36,7 +36,7 @@ public class SetupPieceScript : PieceScript, IShopItem
             return;
         }
         dob.canDrag = bs.CanSelectPieces() && bs.setupMoves && canInteract;
-        bc.enabled = bs.CanSelectPieces() && text.enabled && bs.setupMoves && canInteract; //Become intangible while animating
+        bc.enabled = bs.CanSelectPieces() && text.enabled && bs.setupMoves; //Become intangible while animating (Shop item version is still selectable so you can see descriptions)
         if (!bs.setupMoves)
         {
             backSprite.enabled = false;

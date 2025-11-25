@@ -38,7 +38,23 @@ public class MapNodeScript : MonoBehaviour
 
     public void Start()
     {
-        os = FindObjectOfType<OverworldScript>();
+        if (parents == null)
+        {
+            parents = new List<MapNodeScript>();
+        }
+        if (children == null)
+        {
+            children = new List<MapNodeScript>();
+        }
+        if (childrenLines == null)
+        {
+            childrenLines = new List<LineRenderer>();
+        }
+
+        if (os == null)
+        {
+            os = FindObjectOfType<OverworldScript>();
+        }
 
         switch (nodeType)
         {
@@ -124,7 +140,7 @@ public class MapNodeScript : MonoBehaviour
 
     public void GenerateArmy()
     {
-        army = ArmyGenerator.GenerateArmy(truePieceValueTotal, pieceTypes, 0.5f, 0.5f, pieceClass, em);
+        army = ArmyGenerator.GenerateArmy(truePieceValueTotal, pieceTypes, truePieceValueTotal > 15f ? 0.5f + ((10f * 0.25f) / (truePieceValueTotal - 5)) : 0.75f, 0.5f, pieceClass, em);
         //Recount piece value because it could be off by 1 or something
         pieceValueTotal = 0;
         for (int i = 0; i < army.Length; i++)

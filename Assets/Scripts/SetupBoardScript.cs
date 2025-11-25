@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class SetupBoardScript : BoardScript
 {
+    public TMPro.TMP_Text pieceInfoText;
     public override void Start()
     {
         BattleUIScript bus = FindObjectOfType<BattleUIScript>();
@@ -212,5 +213,142 @@ public class SetupBoardScript : BoardScript
         ResetSelected();
         FixBoardBasedOnPosition();
         return false;
+    }
+
+    public override void Update()
+    {
+        pieceInfoText.text = "";
+        string propertyText = "";
+        string moveText = "";
+        if (selectedPiece != null)
+        {
+            PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(selectedPiece.piece);
+
+            pieceInfoText.text += pte.type + "\n";
+            pieceInfoText.text += "Value: " + (pte.pieceValueX2 / 2f) + "\n";
+            pieceInfoText.text += "Move: ";
+            for (int i = 0; i < pte.moveInfo.Length; i++)
+            {
+                MoveGeneratorInfoEntry mgie = pte.moveInfo[i];
+                if (mgie.atom > MoveGeneratorInfoEntry.MoveGeneratorAtom.SpecialMoveDivider)
+                {
+                    propertyText += mgie.atom + "\n";
+                    continue;
+                }
+                for (int j = 0; j < 15; j++)
+                {
+                    if (((int)mgie.modifier & (1 << j)) != 0)
+                    {
+                        moveText += (MoveGeneratorInfoEntry.MoveGeneratorPreModifier)(1 << j);
+                    }
+                }
+
+                if (mgie.atom == MoveGeneratorInfoEntry.MoveGeneratorAtom.Leaper)
+                {
+                    moveText += "(" + mgie.x + ", " + mgie.y + ")";
+                }
+                else
+                {
+                    moveText += mgie.atom;
+                }
+
+                if (mgie.range > 1)
+                {
+                    moveText += mgie.range;
+                }
+
+                switch (mgie.rangeType)
+                {
+                    case MoveGeneratorInfoEntry.RangeType.Exact:
+                        moveText += "=";
+                        break;
+                    case MoveGeneratorInfoEntry.RangeType.AntiRange:
+                        moveText += "-";
+                        break;
+                    case MoveGeneratorInfoEntry.RangeType.Minimum:
+                        moveText += "+";
+                        break;
+                }
+
+                moveText += " ";
+            }
+            pieceInfoText.text += moveText + "\n";
+            moveText = "";
+            if (pte.enhancedMoveInfo.Length > 0)
+            {
+                pieceInfoText.text += "Bonus Type: " + pte.enhancedMoveType + "\n";
+
+                pieceInfoText.text += "Bonus Move: ";
+                for (int i = 0; i < pte.enhancedMoveInfo.Length; i++)
+                {
+                    MoveGeneratorInfoEntry mgie = pte.enhancedMoveInfo[i];
+                    if (mgie.atom > MoveGeneratorInfoEntry.MoveGeneratorAtom.SpecialMoveDivider)
+                    {
+                        propertyText += mgie.atom + "\n";
+                        continue;
+                    }
+                    for (int j = 0; j < 15; j++)
+                    {
+                        if (((int)mgie.modifier & (1 << j)) != 0)
+                        {
+                            moveText += (MoveGeneratorInfoEntry.MoveGeneratorPreModifier)(1 << j);
+                        }
+                    }
+
+                    if (mgie.atom == MoveGeneratorInfoEntry.MoveGeneratorAtom.Leaper)
+                    {
+                        moveText += "(" + mgie.x + ", " + mgie.y + ")";
+                    }
+                    else
+                    {
+                        moveText += mgie.atom;
+                    }
+
+                    if (mgie.range > 1)
+                    {
+                        moveText += mgie.range;
+                    }
+
+                    switch (mgie.rangeType)
+                    {
+                        case MoveGeneratorInfoEntry.RangeType.Exact:
+                            moveText += "=";
+                            break;
+                        case MoveGeneratorInfoEntry.RangeType.AntiRange:
+                            moveText += "-";
+                            break;
+                        case MoveGeneratorInfoEntry.RangeType.Minimum:
+                            moveText += "+";
+                            break;
+                    }
+
+                    moveText += " ";
+                }
+                pieceInfoText.text += moveText + "\n";
+            }
+
+            if (pte.promotionType != 0)
+            {
+                pieceInfoText.text += "Promotes to " + pte.promotionType + "\n";
+            }
+
+            if (pte.pieceProperty != 0 || pte.piecePropertyB != 0 || propertyText.Length > 0)
+            {
+                pieceInfoText.text += "Properties:\n" + propertyText;
+                ulong propertiesA = (ulong)pte.pieceProperty;
+
+                while (propertiesA != 0)
+                {
+                    int index = MainManager.PopBitboardLSB1(propertiesA, out propertiesA);
+                    pieceInfoText.text += (Piece.PieceProperty)(1uL << index) + "\n";
+                }
+                propertiesA = (ulong)pte.piecePropertyB;
+                while (propertiesA != 0)
+                {
+                    int index = MainManager.PopBitboardLSB1(propertiesA, out propertiesA);
+                    pieceInfoText.text += (Piece.PiecePropertyB)(1uL << index) + "\n";
+                }
+            }
+        }
     }
 }

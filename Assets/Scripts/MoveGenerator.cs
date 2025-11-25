@@ -3034,7 +3034,8 @@ internal static class MoveGenerator
                         }
 
                         //Debug.Log(((b.globalData.playerModifier & Board.PlayerModifier.Backdoor) != 0) + " " + ((i & 3) == 1 || (i & 3) == 2) + " " + (((subY) == 0 || (subY) == 7)));
-                        if ((b.globalData.playerModifier & Board.PlayerModifier.Backdoor) != 0 && ((i & 3) == 1 || (i & 3) == 2 && ((subY) == 0 || (subY) == 7)))
+                        //No king backdoor because that seems very cheesy?
+                        if (pt != PieceType.King && ((b.globalData.playerModifier & Board.PlayerModifier.Backdoor) != 0 && ((i & 3) == 1 || (i & 3) == 2 && ((subY) == 0 || (subY) == 7))))
                         {
                             //Debug.Log("Backdoor " + i + " " + (i >> 3) + " " + pa + " " + Piece.GetPieceType(b.pieces[i]));
                             GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, subX, subY, GlobalPieceManager.Instance.backdoorModifierMove, null, moveMetadata);
@@ -4118,6 +4119,17 @@ internal static class MoveGenerator
 
         if (pa == Piece.PieceAlignment.White)
         {
+            //turn 1 no capture (To stop certain kinds of team building instant cheeses)
+            if (b.turn == 0 && b.bonusPly == 0)
+            {
+                if (pse == Piece.PieceStatusEffect.Bloodlust)
+                {
+                    return;
+                }
+                pse = PieceStatusEffect.Soaked;
+                piece = Piece.SetPieceStatusEffect(Piece.PieceStatusEffect.Soaked, piece);
+            }
+
             //Complacent boss: can't capture 2 turns in a row
             if ((b.globalData.enemyModifier & Board.EnemyModifier.Complacent) != 0 && b.whitePerPlayerInfo.capturedLastTurn)
             {
@@ -7125,11 +7137,11 @@ internal static class MoveGenerator
                 }
                 if (lastTempY < 0)
                 {
-                    lastTempX += 8;
+                    lastTempY += 8;
                 }
                 if (lastTempY > 7)
                 {
-                    lastTempX -= 8;
+                    lastTempY -= 8;
                 }
 
                 bool isRider = false;
@@ -7329,7 +7341,8 @@ internal static class MoveGenerator
 
         //Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
 
-        if (pa == Piece.PieceAlignment.Black && (b.globalData.enemyModifier & Board.EnemyModifier.Knave) != 0)
+        //king can't to stop instant cheeses in early game with less pieces
+        if (pa == Piece.PieceAlignment.Black && (b.globalData.enemyModifier & Board.EnemyModifier.Knave) != 0 && pte.type != PieceType.King)
         {
             tubular = true;
         }
@@ -8175,26 +8188,30 @@ internal static class MoveGenerator
                 {
                     if (isRider)
                     {
-                        md = new MoveMetadata(piece, tempX, tempY, MoveMetadata.PathType.Leaper, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, pathtagA), MoveMetadata.MakePathTag(mgie.atom, pathtagB) });
+                        md = new MoveMetadata(piece, tempX, tempY, MoveMetadata.PathType.Leaper, specialType, new List<uint>());
                         if (!blockedA)
                         {
+                            md.pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, pathtagA));
                             md.AddPredecessor(moveMetadata[Move.PackMove((byte)x, (byte)y, (byte)(tempXA), (byte)(tempYA))]);
                         }
                         if (!blockedB)
                         {
+                            md.pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, pathtagB));
                             md.AddPredecessor(moveMetadata[Move.PackMove((byte)x, (byte)y, (byte)(tempXB), (byte)(tempYB))]);
                         }
                         moveMetadata.Add(mdKey, md);
                     }
                     else
                     {
-                        md = new MoveMetadata(piece, tempX, tempY, MoveMetadata.PathType.Slider, specialType, new List<uint> { MoveMetadata.MakePathTag(mgie.atom, pathtagA), MoveMetadata.MakePathTag(mgie.atom, pathtagB) });
+                        md = new MoveMetadata(piece, tempX, tempY, MoveMetadata.PathType.Slider, specialType, new List<uint>());
                         if (!blockedA)
                         {
+                            md.pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, pathtagA));
                             md.AddPredecessor(moveMetadata[Move.PackMove((byte)x, (byte)y, (byte)(tempXA), (byte)(tempYA))]);
                         }
                         if (!blockedB)
                         {
+                            md.pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, pathtagB));
                             md.AddPredecessor(moveMetadata[Move.PackMove((byte)x, (byte)y, (byte)(tempXB), (byte)(tempYB))]);
                         }
                         moveMetadata.Add(mdKey, md);
@@ -8205,11 +8222,11 @@ internal static class MoveGenerator
                     md = moveMetadata[mdKey];
                     if (!blockedA)
                     {
-                        md.pathTags.Add(pathtagA);
+                        md.pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, pathtagA));
                     }
                     if (!blockedB)
                     {
-                        md.pathTags.Add(pathtagB);
+                        md.pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, pathtagB));
                     }
                     if (!blockedA)
                     {
@@ -8851,10 +8868,10 @@ internal static class MoveGenerator
 
                 if ((b.globalData.enemyModifier & Board.EnemyModifier.Blinking) != 0)
                 {
-                    int fX = Move.GetFromX(b.whitePerPlayerInfo.lastMove);
-                    int fY = Move.GetFromY(b.whitePerPlayerInfo.lastMove);
+                    int tX = Move.GetToX(b.whitePerPlayerInfo.lastMove);
+                    int tY = Move.GetToY(b.whitePerPlayerInfo.lastMove);
 
-                    if (((fX + fY) & 1) == 0)   //= was on black
+                    if (((tX + tY) & 1) == 0)   //= was on black
                     {
                         bitboard &= BITBOARD_PATTERN_WHITESQUARES;
                     }

@@ -9,12 +9,12 @@ public class BattleWinPanelScript : MonoBehaviour
 
     public void Start()
     {
-        text.text = "Win $" + Mathf.CeilToInt((bs.board.globalData.blackPerPlayerInfo.startPieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) / 8f);
+        text.text = "Win $" + Mathf.Max(4, Mathf.CeilToInt((bs.board.globalData.blackPerPlayerInfo.startPieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) / 8f));
     }
 
     public void ContinueButton()
     {
-        MainManager.Instance.playerData.coins += Mathf.CeilToInt((bs.board.globalData.blackPerPlayerInfo.startPieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) / 8f);
+        MainManager.Instance.playerData.coins += Mathf.Max(4, Mathf.CeilToInt((bs.board.globalData.blackPerPlayerInfo.startPieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) / 8f));
         FindObjectOfType<OverworldScript>().ReturnFromNode();
         Destroy(gameObject);
     }

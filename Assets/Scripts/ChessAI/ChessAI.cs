@@ -1268,7 +1268,7 @@ public class ChessAI
 
             if ((b.globalData.bitboard_piecesBlack & newBitboard) == 0)
             {
-                if (endgameValue >= 0.5f || rank > 3)
+                if (endgameValue >= 0.5f || rank > 1)
                 {
                     output += rank * rank * 0.01f;
                 }
@@ -1288,7 +1288,7 @@ public class ChessAI
 
             if ((b.globalData.bitboard_piecesBlack & newBitboard) == 0)
             {
-                if (endgameValue >= 0.5f || rank > 3)
+                if (endgameValue >= 0.5f || rank > 1)
                 {
                     output += rank * rank * 0.01f;
                 }
@@ -1305,7 +1305,7 @@ public class ChessAI
 
             if ((b.globalData.bitboard_piecesWhite & newBitboard) == 0)
             {
-                if (endgameValue >= 0.5f || rank > 3)
+                if (endgameValue >= 0.5f || rank > 1)
                 {
                     output -= rank * rank * 0.01f;
                 }
@@ -1325,7 +1325,7 @@ public class ChessAI
 
             if ((b.globalData.bitboard_piecesWhite & newBitboard) == 0)
             {
-                if (endgameValue >= 0.5f || rank > 3)
+                if (endgameValue >= 0.5f || rank > 1)
                 {
                     output -= rank * rank * 0.01f;
                 }
