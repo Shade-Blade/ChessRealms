@@ -1940,34 +1940,38 @@ public class ChessAI
             //Victory scores are probably not going to change by depth so can be used no matter what depth there is?
             if (((zte.depth >= depth && killerMoves != null) || (zte.score < BLACK_VICTORY / 2 || zte.score > WHITE_VICTORY / 2)) && !history.Contains(boardOldHash) && zte.move != 0)
             {
-                //Exact number: can use immediately
-                if (zte.flags == ZTableEntry.BOUND_EXACT)
+                //root node choosing a null move is a problem (transpose hash collision?)
+                if (killerMoves != null || zte.move != 0)
                 {
-                    nodesTransposed++;
-                    return (zte.move, zte.score);
-                }
-
-                if (b.blackToMove)
-                {
-                    //Reduce the score (check for < alpha)
-                    if (zte.flags == ZTableEntry.BOUND_ALPHA)
+                    //Exact number: can use immediately
+                    if (zte.flags == ZTableEntry.BOUND_EXACT)
                     {
-                        if (zte.score <= alpha)
+                        nodesTransposed++;
+                        return (zte.move, zte.score);
+                    }
+
+                    if (b.blackToMove)
+                    {
+                        //Reduce the score (check for < alpha)
+                        if (zte.flags == ZTableEntry.BOUND_ALPHA)
                         {
-                            nodesTransposed++;
-                            return (zte.move, zte.score);
+                            if (zte.score <= alpha)
+                            {
+                                nodesTransposed++;
+                                return (zte.move, zte.score);
+                            }
                         }
                     }
-                }
-                else
-                {
-                    //Increase the score (check for > beta)
-                    if (zte.flags == ZTableEntry.BOUND_BETA)
+                    else
                     {
-                        if (zte.score >= beta)
+                        //Increase the score (check for > beta)
+                        if (zte.flags == ZTableEntry.BOUND_BETA)
                         {
-                            nodesTransposed++;
-                            return (zte.move, zte.score);
+                            if (zte.score >= beta)
+                            {
+                                nodesTransposed++;
+                                return (zte.move, zte.score);
+                            }
                         }
                     }
                 }
