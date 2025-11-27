@@ -725,6 +725,8 @@ public static class Piece
         Sneaky = 1uL << 20,         //Top bottom non captures
         Reflecter = 1uL << 21,        
 
+        BoundaryProperties = Cylindrical | Sneaky | Reflecter,
+
         Unique = 1uL << 22,             //this is mostly a out of battle restriction, make into a boolean in the PTE?
 
         //Invincibility of various forms
@@ -874,6 +876,7 @@ public static class Piece
         ReverseMomentum = 1uL << 38,
         BounceMomentum = 1uL << 39,
 
+        ForwardMomentum = Momentum | BounceMomentum,
         AnyMomentum = Momentum | ReverseMomentum | BounceMomentum,
 
         TandemMover = 1uL << 40,

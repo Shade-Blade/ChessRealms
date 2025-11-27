@@ -50,8 +50,8 @@ public struct MoveBoardCacheEntry
 public class ChessAI
 {
     ZTableEntry[] zobristTable;
-    public ulong zTableSize = (1 << 18);
-    public ulong moveBoardCacheTableSize = (1 << 14);   //since these entries are very large I shouldn't make this too big (Boards are a lot less lightweight)
+    public ulong zTableSize = (1 << 21); //2 million entries now?
+    //public ulong moveBoardCacheTableSize = (1 << 14);   //since these entries are very large I shouldn't make this too big (Boards are a lot less lightweight)
 
     ulong[][] zobristHashes;
     ulong[] zobristSupplemental;
@@ -1152,8 +1152,8 @@ public class ChessAI
         float output = 0;
 
         //Check all pawns
-        ulong whitePawnBitboard = b.globalData.bitboard_pawnsWhite;
-        ulong blackPawnBitboard = b.globalData.bitboard_pawnsBlack;
+        ulong whitePawnBitboard = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesWhite;
+        ulong blackPawnBitboard = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesBlack;
 
         ulong afilebitboard = 0x0101010101010101;
 
@@ -1175,7 +1175,7 @@ public class ChessAI
             //Debug.Log("Pawn at " + (index & 7) + " " + ((index & 56) >> 3));
             //MainManager.PrintBitboard(newBitboard);
 
-            if ((b.globalData.bitboard_pawnsBlack & newBitboard) == 0)
+            if ((blackPawnBitboard & newBitboard) == 0)
             {
                 output += 0.15f;
                 output += ((index & 56) >> 3) * 0.15f;
@@ -1199,7 +1199,7 @@ public class ChessAI
             //Debug.Log("Pawn at " + (index & 7) + " " + ((index & 56) >> 3));
             //MainManager.PrintBitboard(newBitboard);
 
-            if ((b.globalData.bitboard_pawnsWhite & newBitboard) == 0)
+            if ((whitePawnBitboard & newBitboard) == 0)
             {
                 output -= 0.15f;
                 output -= (7 - ((index & 56) >> 3)) * 0.15f;
@@ -1224,7 +1224,7 @@ public class ChessAI
             return 1;
         }
 
-        ulong kingBitboard = b.globalData.bitboard_kingWhite;
+        ulong kingBitboard = b.globalData.bitboard_king & b.globalData.bitboard_piecesWhite;
 
         int distance = 0;
         while (distance < 8)
@@ -1232,7 +1232,7 @@ public class ChessAI
             kingBitboard = MainManager.SmearBitboard(kingBitboard);
             distance++;
 
-            if ((kingBitboard & b.globalData.bitboard_kingBlack) != 0) 
+            if ((kingBitboard & b.globalData.bitboard_king & b.globalData.bitboard_piecesBlack) != 0) 
             {
                 break;
             }
@@ -1245,8 +1245,8 @@ public class ChessAI
     }
     public float EvaluateEndgameKingOvertaken(ref Board b, float endgameValue)
     {
-        ulong whiteKingBitboard = b.globalData.bitboard_kingWhite;
-        ulong blackKingBitboard = b.globalData.bitboard_kingWhite;
+        ulong whiteKingBitboard = b.globalData.bitboard_king & b.globalData.bitboard_piecesWhite;
+        ulong blackKingBitboard = b.globalData.bitboard_king & b.globalData.bitboard_piecesBlack;
 
         ulong afilebitboard = 0x0101010101010101;
 
@@ -2615,7 +2615,7 @@ public class ChessAI
 
         for (int i = 0; i < moves.Count; i++)
         {
-            scoreDict[moves[i]] = QMoveScore(ref b, ref copy, boardOldHash, moves[i], qdepth > 2);
+            scoreDict[moves[i]] = QMoveScore(ref b, ref copy, boardOldHash, moves[i], qdepth > 1);
 
             //If you see a KING CAPTURE you can just stop immediately
             if (scoreDict[moves[i]] == KING_CAPTURE)

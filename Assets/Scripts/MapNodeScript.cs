@@ -158,7 +158,7 @@ public class MapNodeScript : MonoBehaviour
 
         if (nodeType == MapNodeType.BossBattle)
         {
-            int i = Random.Range(1, 26);
+            int i = Random.Range(1, 25);
 
             em = (Board.EnemyModifier)(1 << i);
         }

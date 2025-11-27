@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Unity.Burst.Intrinsics;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -150,6 +151,7 @@ public class MainManager : MonoBehaviour
         //Now 680k ish with more random small optimizations
         //Now 900k with more aggressive stuff to avoid updating piece bitboards as much
         //Now 1.2m with inlining annotations for tiny methods
+        //1.5m with other random tiny things
 
         //90 ish seconds for depth 6 normal
 
@@ -162,6 +164,7 @@ public class MainManager : MonoBehaviour
         //4896537
         //120882519
 
+        //Bugs fixed now
         
         for (int i = 0; i <= 4; i++)
         {
@@ -327,6 +330,8 @@ public class MainManager : MonoBehaviour
         return Vector2.positiveInfinity;
     }
 
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int PopBitboardLSB1(ulong bitboard, out ulong output)
     {
         if (bitboard == 0)
@@ -349,8 +354,9 @@ public class MainManager : MonoBehaviour
         }
         */
 
-        ulong isolated = (bitboard) ^ (bitboard - 1);
-        isolated -= isolated >> 1;
+        //2 casts = bad?
+        //But the assembly might not do anything with those casts
+        ulong isolated = ((bitboard) & (ulong)(-(long)bitboard));
 
         //1 bit left
         output = bitboard - isolated;
@@ -358,8 +364,49 @@ public class MainManager : MonoBehaviour
 
         return index;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int PopBitboardLSB1(ulong bitboard)
+    {
+        if (bitboard == 0)
+        {
+            return -1;
+        }
+
+        //Intrinsics
+        /*
+        if (IsBmi1Supported)
+        {
+            //trailing zero count u64
+            ulong specialOutput = tzcnt_u64(bitboard);
+
+            //bit lowest set reset
+            output = blsr_u64(bitboard);
+
+            return (int)specialOutput;
+        }
+        */
+
+        /*
+        ulong isolated = (bitboard) ^ (bitboard - 1);
+        isolated -= isolated >> 1;
+        */
+
+        //-x = (~x + 1)
+
+        //2 casts = bad?
+        //But the assembly might not do anything with those casts
+        //ulong isolated = ((bitboard) & (ulong)(-(long)bitboard));
+
+        //1 bit left
+        int index = debrujin_index64[((((bitboard) & (ulong)(-(long)bitboard))) * 0x03f79d71b4cb0a89) >> 58];
+
+        return index;
+    }
+
     //Slower than LSB1
     //but at least it looks simpler than the wacky magic number stuff
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int PopBitboardMSB1(ulong bitboard, out ulong output)
     {
         ulong test = bitboard;
@@ -399,6 +446,44 @@ public class MainManager : MonoBehaviour
         }
 
         output &= ~(1uL << index);
+        return index;
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int PopBitboardMSB1(ulong bitboard)
+    {
+        ulong test = bitboard;
+        int index = 0;
+
+        if (test > 0xffffffff)
+        {
+            index += 32;
+            test >>= 32;
+        }
+        if (test > 0xffff)
+        {
+            index += 16;
+            test >>= 16;
+        }
+        if (test > 0xff)
+        {
+            index += 8;
+            test >>= 8;
+        }
+        if (test > 0xf)
+        {
+            index += 4;
+            test >>= 4;
+        }
+        if (test > 0x3)
+        {
+            index += 2;
+            test >>= 2;
+        }
+        if (test > 0x1)
+        {
+            index += 1;
+            test >>= 1;
+        }
         return index;
     }
     public static int PopCount(ulong bitboard)
@@ -562,55 +647,46 @@ public class MainManager : MonoBehaviour
         }
         Debug.Log(output);
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ulong GetWraparoundCutoff(int wrapAround)
     {
-        ulong wrapCutoff = 0xffffffffffffffff;
         switch (wrapAround)
         {
+            case -8:
+                return 0;
             case -7:
-                wrapCutoff = NO_BCDEFGH_FILE;
-                break;
+                return NO_BCDEFGH_FILE;
             case -6:
-                wrapCutoff = NO_CDEFGH_FILE;
-                break;
+                return NO_CDEFGH_FILE;
             case -5:
-                wrapCutoff = NO_DEFGH_FILE;
-                break;
+                return NO_DEFGH_FILE;
             case -4:
-                wrapCutoff = NO_EFGH_FILE;
-                break;
+                return NO_EFGH_FILE;
             case -3:
-                wrapCutoff = NO_FGH_FILE;
-                break;
+                return NO_FGH_FILE;
             case -2:
-                wrapCutoff = NO_GH_FILE;
-                break;
+                return NO_GH_FILE;
             case -1:
-                wrapCutoff = NO_H_FILE;
-                break;
+                return NO_H_FILE;
+            default:
+                return MoveGenerator.BITBOARD_PATTERN_FULL;
             case 1:
-                wrapCutoff = NO_A_FILE;
-                break;
+                return NO_A_FILE;
             case 2:
-                wrapCutoff = NO_AB_FILE;
-                break;
+                return NO_AB_FILE;
             case 3:
-                wrapCutoff = NO_ABC_FILE;
-                break;
+                return NO_ABC_FILE;
             case 4:
-                wrapCutoff = NO_ABCD_FILE;
-                break;
+                return NO_ABCD_FILE;
             case 5:
-                wrapCutoff = NO_ABCDE_FILE;
-                break;
+                return NO_ABCDE_FILE;
             case 6:
-                wrapCutoff = NO_ABCDEF_FILE;
-                break;
+                return NO_ABCDEF_FILE;
             case 7:
-                wrapCutoff = NO_ABCDEFG_FILE;
-                break;
+                return NO_ABCDEFG_FILE;
+            case 8:
+                return 0;
         }
-        return wrapCutoff;
     }
     public static ulong ShiftBitboardPattern(ulong pattern, int xy, int dx, int dy)
     {

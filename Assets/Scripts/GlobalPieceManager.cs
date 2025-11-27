@@ -33,18 +33,27 @@ public sealed class GlobalPieceManager : MonoBehaviour
 
     public PieceClassEntry[] pieceClassTable;
 
-    public float[] pieceSquareTableCenter;  //for most pieces
-    public float[] pieceSquareTableCorner;   //for king
-    public float[] pieceSquareTableTopCenter;   //for promotable things
-    public float[] pieceSquareTableTopCenterKing;   //for king in endgame (extreme top values because of the top victory condition)
+    public static float[] pieceSquareTableCenter;  //for most pieces
+    public static float[] pieceSquareTableCorner;   //for king
+    public static float[] pieceSquareTableTopCenter;   //for promotable things
+    public static float[] pieceSquareTableTopCenterKing;   //for king in endgame (extreme top values because of the top victory condition)
 
-    public int[][] orbiterDeltas;
-    public Dir[][] orbiterDirections;
-    public Dir[][] orbiterDirectionsRadial;
+    public static int[][] orbiterDeltas;
+    public static Dir[][] orbiterDirections;
+    public static Dir[][] orbiterDirectionsRadial;
 
-    public int[][] orbiterDeltas2;
-    public Dir[][] orbiterDirections2;
-    public Dir[][] orbiterDirectionsRadial2;
+    public static int[][] orbiterDeltas2;
+    public static Dir[][] orbiterDirections2;
+    public static Dir[][] orbiterDirectionsRadial2;
+
+    public static ulong[] raysRight;
+    public static ulong[] raysLeft;
+    public static ulong[] raysUp;
+    public static ulong[] raysDown;
+    public static ulong[] raysUR;
+    public static ulong[] raysUL;
+    public static ulong[] raysDR;
+    public static ulong[] raysDL;
 
     //King value is given a big number as a flag to easily get a king count
     //I don't necessarily want to put this in a separate variable as that would be a lot of "if type == king" checks everywhere which is annoying and potentially slows things down
@@ -67,12 +76,10 @@ public sealed class GlobalPieceManager : MonoBehaviour
         intInstance = this;
         LoadPieceTable();
         LoadPieceClassTable();
-    }
-    public void Start()
-    {
+
         LoadPieceSquareTables();
         LoadOrbiterDirections();
-
+        LoadRays();
         defensiveModifierMove = new MoveGeneratorInfoEntry();
         defensiveModifierMove.atom = MoveGeneratorAtom.R;
         defensiveModifierMove.modifier |= MoveGeneratorPreModifier.m;
@@ -96,6 +103,138 @@ public sealed class GlobalPieceManager : MonoBehaviour
         flyingGeneralModifierMove = new MoveGeneratorInfoEntry();
         flyingGeneralModifierMove.atom = MoveGeneratorAtom.R;
         flyingGeneralModifierMove.modifier = MoveGeneratorPreModifier.k;
+    }
+
+    public void LoadRays()
+    {
+        raysRight = new ulong[64];
+        raysLeft = new ulong[64];
+        raysUp = new ulong[64];
+        raysDown = new ulong[64];
+        raysUR = new ulong[64];
+        raysUL = new ulong[64];
+        raysDR = new ulong[64];
+        raysDL = new ulong[64];
+
+        for (int xy = 0; xy < 64; xy++)
+        {
+            int x = xy & 7;
+            int y = xy >> 3;
+            ulong bitindex = 1uL << xy;
+
+            if (x != 7)
+            {
+                //xy < 63
+                //note: x == 7 is true at position 63 so that check is unnecessary
+                raysRight[xy] = (MoveGenerator.BITBOARD_PATTERN_RANK1 << (xy + 1)) & MainManager.GetWraparoundCutoff(x + 1);
+            }
+            if (x != 0)
+            {
+                if (xy >= 8)
+                {
+                    raysLeft[xy] = (MoveGenerator.BITBOARD_PATTERN_RANK1 << (xy - 8)) & MainManager.GetWraparoundCutoff(x - 8);
+                }
+                else
+                {
+                    raysLeft[xy] = (MoveGenerator.BITBOARD_PATTERN_RANK1 >> (8 - xy)) & MainManager.GetWraparoundCutoff(x - 8);
+                }
+            }
+            if (y < 7)
+            {
+                raysUp[xy] = MoveGenerator.BITBOARD_PATTERN_AFILE << (xy + 8);
+            }
+            if (y > 0)
+            {
+                raysDown[xy] = MoveGenerator.BITBOARD_PATTERN_AFILE >> (64 - xy);
+            }
+
+            raysUR[xy] = ((MoveGenerator.BITBOARD_PATTERN_DIAGONAL << (xy)) & MainManager.GetWraparoundCutoff(x)) & ~bitindex;
+
+            raysDL[xy] = ((MoveGenerator.BITBOARD_PATTERN_DIAGONAL >> (63 - xy)) & MainManager.GetWraparoundCutoff(x - 7)) & ~bitindex;
+
+            if (xy <= 56)
+            {
+                raysDR[xy] = ((MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL >> (56 - xy)) & MainManager.GetWraparoundCutoff(x)) & ~bitindex;
+            }
+            else
+            {
+                raysDR[xy] = ((MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL << (xy - 56)) & MainManager.GetWraparoundCutoff(x)) & ~bitindex;
+            }
+            if (xy <= 7)
+            {
+                raysUL[xy] = ((MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL >> (7 - xy)) & MainManager.GetWraparoundCutoff(x - 7)) & ~bitindex;
+            }
+            else
+            {
+                raysUL[xy] = ((MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL << (xy - 7)) & MainManager.GetWraparoundCutoff(x - 7)) & ~bitindex;
+            }
+        }
+
+        /*
+                                        //ray right
+                                ulong rayBitboard = 0;
+                                ulong hitBitboard = 0;
+                                if (x != 7)
+                                {
+                                    //xy < 63
+                                    //note: x == 7 is true at position 63 so that check is unnecessary
+                                    rayBitboard = (BITBOARD_PATTERN_RANK1 << (xy + 1)) & MainManager.GetWraparoundCutoff(x + 1);
+                                    hitBitboard = rayBitboard & blockerBitboard;
+                                    int hit = MainManager.PopBitboardLSB1(hitBitboard);
+                                }
+
+                                //ray left
+                                if (x != 0)
+                                {
+                                    if (xy >= 8)
+                                    {
+                                        rayBitboard = (BITBOARD_PATTERN_RANK1 << (xy - 8)) & MainManager.GetWraparoundCutoff(x - 8);
+                                        hitBitboard = rayBitboard & blockerBitboard;
+                                    }
+                                    else
+                                    {
+                                        rayBitboard = (BITBOARD_PATTERN_RANK1 >> (8 - xy)) & MainManager.GetWraparoundCutoff(x - 8);
+                                        hitBitboard = rayBitboard & blockerBitboard;
+                                    }
+                                }
+
+                                //ray up
+                                if (y < 7)
+                                {
+                                    rayBitboard = BITBOARD_PATTERN_AFILE << (xy + 8);
+                                    hitBitboard = rayBitboard & blockerBitboard;
+                                }
+
+                                //ray down
+                                if (y > 0)
+                                {
+                                    rayBitboard = BITBOARD_PATTERN_AFILE >> (64 - xy);
+                                    hitBitboard = rayBitboard & blockerBitboard;
+                                }
+
+                                /*
+                                ulong lustfulBitboard = 0;
+                                lustfulBitboard |= BITBOARD_PATTERN_AFILE << (subX);
+                                lustfulBitboard |= BITBOARD_PATTERN_RANK1 << (subY << 3);
+                                lustfulBitboard |= (BITBOARD_PATTERN_DIAGONAL << (i)) & MainManager.GetWraparoundCutoff(subX);
+                                lustfulBitboard |= (BITBOARD_PATTERN_DIAGONAL >> (63 - i)) & MainManager.GetWraparoundCutoff(subX - 7);
+                                if (i <= 56)
+                                {
+                                    lustfulBitboard |= (BITBOARD_PATTERN_ANTIDIAGONAL >> (56 - i)) & MainManager.GetWraparoundCutoff(subX);
+                                }
+                                else
+                                {
+                                    lustfulBitboard |= (BITBOARD_PATTERN_ANTIDIAGONAL << (i - 56)) & MainManager.GetWraparoundCutoff(subX);
+                                }
+                                if (i <= 7)
+                                {
+                                    lustfulBitboard |= (BITBOARD_PATTERN_ANTIDIAGONAL >> (7 - i)) & MainManager.GetWraparoundCutoff(subX - 7);
+                                }
+                                else
+                                {
+                                    lustfulBitboard |= (BITBOARD_PATTERN_ANTIDIAGONAL << (i - 7)) & MainManager.GetWraparoundCutoff(subX - 7);
+                                }
+                                */
     }
 
     public void LoadOrbiterDirections()
