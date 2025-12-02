@@ -4,7 +4,7 @@ Very rough prototype of a big chess variant game with a lot of pieces.
 Progress is mostly on hold because I don't know how to make the engine actually good (depth 6+)
 
 # Chess Engine Information
-It is probably very inefficient by chess engine standards though I don't know enough to optimize it much more than it already is. The perft test runs at ~500k nodes per second and the engine itself usually runs to depth 6-7 in the 4 seconds per move I give it. It's at a point where it isn't making obviously stupid moves but it also probably doesn't play very well. I can sometimes beat it and I'm not that good at chess (~1000 chess.com elo), though I can't tell how much of that is that the engine is low depth vs the engine is flawed.
+It is probably very inefficient by chess engine standards though I don't know enough to optimize it much more than it already is. The perft test runs at ~1.3m nodes per second and the engine itself usually runs to depth 6-7 in the 4 seconds per move I give it. It's at a point where it isn't making obviously stupid moves but it also probably doesn't play very well. I can sometimes beat it and I'm not that good at chess (~1000 chess.com elo), though I can't tell how much of that is that the engine is low depth vs the engine is flawed.
 
 ## Search features
 - Transposition table with zobrist hashes (though this is less efficient as the last move is part of the board state)
