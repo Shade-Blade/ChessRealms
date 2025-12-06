@@ -2,13 +2,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Unity.VisualScripting;
 using UnityEngine;
 using static Move;
 using static MoveGeneratorInfoEntry;
 using static Piece;
-using static UnityEngine.GraphicsBuffer;
 
 public sealed class GlobalPieceManager : MonoBehaviour
 {
@@ -60,8 +60,8 @@ public sealed class GlobalPieceManager : MonoBehaviour
     //This is an easier way
     //Note that the game will break if you put too many kings on the board at the same time as it will overflow the short counter
     //1024 might also be reachable if the board is filled with highly valued pieces? So I chose 2048 instead
-    public const short KING_VALUE_BONUS = 2048;
-    public const short KING_VALUE_BONUS_MINUS_ONE = 2047;
+    public const short KING_VALUE_BONUS = 1 << 11;  //2048
+    public const short KING_VALUE_BONUS_MINUS_ONE = (1 << 11) - 1;  //2047
 
     public MoveGeneratorInfoEntry defensiveModifierMove;
     public MoveGeneratorInfoEntry recallModifierMove;
@@ -432,7 +432,8 @@ public sealed class GlobalPieceManager : MonoBehaviour
             }
         }
     }
-    public float ReadPSTCenter(Piece.PieceAlignment pa, int index)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float ReadPSTCenter(Piece.PieceAlignment pa, int index)
     {
         if (pa == Piece.PieceAlignment.Black)
         {
@@ -442,7 +443,8 @@ public sealed class GlobalPieceManager : MonoBehaviour
             return pieceSquareTableCenter[index];
         }
     }
-    public float ReadPSTEdge(Piece.PieceAlignment pa, int index)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float ReadPSTEdge(Piece.PieceAlignment pa, int index)
     {
         if (pa == Piece.PieceAlignment.Black)
         {
@@ -453,7 +455,8 @@ public sealed class GlobalPieceManager : MonoBehaviour
             return pieceSquareTableCorner[index];
         }
     }
-    public float ReadPSTTopCenter(Piece.PieceAlignment pa, int index)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float ReadPSTTopCenter(Piece.PieceAlignment pa, int index)
     {
         if (pa == Piece.PieceAlignment.Black)
         {
@@ -464,7 +467,8 @@ public sealed class GlobalPieceManager : MonoBehaviour
             return pieceSquareTableTopCenter[index];
         }
     }
-    public float ReadPSTTopCenterKing(Piece.PieceAlignment pa, int index)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static float ReadPSTTopCenterKing(Piece.PieceAlignment pa, int index)
     {
         if (pa == Piece.PieceAlignment.Black)
         {
@@ -506,6 +510,7 @@ public sealed class PieceTableEntry
     public Piece.PieceClass pieceClass;
 
     public float complexityLevel;
+    public bool canIndirectCapture; //Pieces with this marked as false can speed up Q search a lot
 
     public static PieceTableEntry Parse(Piece.PieceType target, string[] tableRow)
     {
@@ -765,6 +770,22 @@ public sealed class PieceTableEntry
             float.TryParse(tableRow[8], out float complexity);
 
             output.complexityLevel = complexity;
+        }
+
+        switch (output.type)
+        {
+            case PieceType.FlankingBishop:
+            case PieceType.FlankingKnight:
+            case PieceType.FlankingPawn:
+            case PieceType.Duelist:
+            case PieceType.Fencer:
+            case PieceType.PythonQueen:
+            case PieceType.Pincer:               
+            case PieceType.Shocker:
+            case PieceType.Bolter:
+            case PieceType.LightningElemental:
+                output.canIndirectCapture = true;
+                break;
         }
 
         return output;
@@ -1206,6 +1227,11 @@ public sealed class PieceClassEntry
     public int index;
     public string name; //to do later: move this to a text only file
 
+    public Color squareColorLight;
+    public Color squareColorDark;
+    public Color backgroundColorLight;
+    public Color backgroundColorDark;
+
     public Piece.PieceType[] normalPieces;
     public Piece.PieceType[] extraPieces;
 
@@ -1260,16 +1286,49 @@ public sealed class PieceClassEntry
             output.climate = c;
         }
 
+        //Debug.Log(tableRow[5] + " " + tableRow[6] + " " + tableRow[7] + " " + tableRow[8]);
         if (tableRow.Length > 5)
         {
-            int t;
-            int.TryParse(tableRow[5], out t);
-            output.tier = t;
+            Color c;
+            c = MainManager.ParseColor(tableRow[5]).GetValueOrDefault();
+            c.a = 1;
+            output.squareColorLight = c;
         }
 
         if (tableRow.Length > 6)
         {
-            string[] nearbyClasses = tableRow[6].Split("|");
+            Color c;
+            c = MainManager.ParseColor(tableRow[6]).GetValueOrDefault();
+            c.a = 1;
+            output.squareColorDark = c;
+        }
+
+        if (tableRow.Length > 7)
+        {
+            Color c;
+            c = MainManager.ParseColor(tableRow[7]).GetValueOrDefault();
+            c.a = 1;
+            output.backgroundColorLight = c;
+        }
+
+        if (tableRow.Length > 8)
+        {
+            Color c;
+            c = MainManager.ParseColor(tableRow[8]).GetValueOrDefault();
+            c.a = 1;
+            output.backgroundColorDark = c;
+        }
+
+        if (tableRow.Length > 9)
+        {
+            int t;
+            int.TryParse(tableRow[9], out t);
+            output.tier = t;
+        }
+
+        if (tableRow.Length > 10)
+        {
+            string[] nearbyClasses = tableRow[10].Split("|");
 
             List<Piece.PieceClass> nearbyClassesList = new List<PieceClass>();
             for (int j = 0; j < nearbyClasses.Length; j++)
@@ -1302,10 +1361,10 @@ public sealed class PieceClassEntry
         }
         output.normalPieces = normalPieces.ToArray();
 
-        if (tableRow.Length > 7)
+        if (tableRow.Length > 11)
         {
             List<Piece.PieceType> extraPiecesList = new List<PieceType>();
-            string[] extraPieces = tableRow[7].Split("|");
+            string[] extraPieces = tableRow[11].Split("|");
             for (int j = 0; j < extraPieces.Length; j++)
             {
                 Piece.PieceType pt = PieceType.Null;

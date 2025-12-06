@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
 using static Move;
 
 public class SquareScript : MonoBehaviour
@@ -70,10 +71,20 @@ public class SquareScript : MonoBehaviour
 
         lastIsHover = isHover;
         isHover = false;
+
+        //debug
+        if (sq.type == Square.SquareType.Normal)
+        {
+            image.color = isBlack ? bs.squareColorBlack : bs.squareColorWhite;
+        }
     }
 
     public void HoverStart()
     {
+        if (sq.type != Square.SquareType.Normal)
+        {
+            Debug.Log("Hover start " + sq.type);
+        }
     }
 
     public void HoverStop()
@@ -90,7 +101,8 @@ public class SquareScript : MonoBehaviour
                 image.color = new Color(0, 0, 0, 1);
                 break;
             case Square.SquareType.Normal:
-                image.color = isBlack ? new Color(0.4f, 0.3f, 0.15f) : new Color(1, 0.9f, 0.7f);
+                image.color = isBlack ? bs.squareColorBlack : bs.squareColorWhite;
+                //image.color = isBlack ? new Color(0.4f, 0.3f, 0.15f) : new Color(1, 0.9f, 0.7f);
                 break;
             case Square.SquareType.Fire:
                 image.color = isBlack ? new Color(0.5f, 0.3f, 0.1f) : new Color(1, 0.5f, 0.1f);

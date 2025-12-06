@@ -217,6 +217,9 @@ public class SetupBoardScript : BoardScript
 
     public override void Update()
     {
+        backgroundA.color = backgroundColorWhite;
+        backgroundB.color = backgroundColorBlack;
+
         pieceInfoText.text = "";
         string propertyText = "";
         string moveText = "";

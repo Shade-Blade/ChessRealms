@@ -29,6 +29,26 @@ public class BoardScript : MonoBehaviour
 
     public bool setupMoves = false;
 
+    public Color squareColorWhite;
+    public Color squareColorBlack;
+    public Color backgroundColorWhite;
+    public Color backgroundColorBlack;
+
+    //debug: later I will make the real background use these colors
+    //(Idea: give the board a border that is mid colored?)
+    public SpriteRenderer backgroundA;
+    public SpriteRenderer backgroundB;
+
+    public void SetTheme(Piece.PieceClass pc)
+    {
+        PieceClassEntry pce = GlobalPieceManager.GetPieceClassEntry(pc);
+
+        backgroundColorWhite = pce.backgroundColorLight;
+        backgroundColorBlack = pce.backgroundColorDark;
+        squareColorWhite = pce.squareColorLight;
+        squareColorBlack = pce.squareColorDark;
+    }
+
     //offset by SQUARE_SIZE
     //so this is the center of each square
     //Board coordinates for x, y
@@ -363,7 +383,8 @@ public class BoardScript : MonoBehaviour
 
     public virtual void Update()
     {
-
+        backgroundA.color = backgroundColorWhite;
+        backgroundB.color = backgroundColorBlack;
     }
 
     public virtual bool CanSelectPieces()

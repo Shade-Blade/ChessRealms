@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unity.Burst.Intrinsics;
 using Unity.VisualScripting;
+using UnityEditor.Search;
 using UnityEngine;
 using static Unity.Burst.Intrinsics.X86.Bmi1;
 using static Unity.Burst.Intrinsics.X86.Popcnt;
@@ -165,7 +166,7 @@ public class MainManager : MonoBehaviour
         //120882519
 
         //Bugs fixed now
-        
+        /*
         for (int i = 0; i <= 4; i++)
         {
             DateTime currentTime = DateTime.UtcNow;
@@ -184,6 +185,20 @@ public class MainManager : MonoBehaviour
             //bbs.thinkingText.text = output;
             Debug.Log(output);
         } 
+        */
+
+        //AI testing
+        ChessAI cai = new ChessAI();
+        Board board = new Board();
+        board.Setup(Board.BoardPreset.Normal);
+        cai.board = board;
+        cai.InitAI(3);
+        cai.SetDifficulty(3);
+        cai.maxDepth = 4;
+        cai.keepSearching = true;
+        cai.searchTime = 0;
+        cai.moveFound = false;
+        cai.AlphaBetaAI(null);
     }
 
     // Update is called once per frame
@@ -328,6 +343,237 @@ public class MainManager : MonoBehaviour
             return bottomI;
         }
         return Vector2.positiveInfinity;
+    }
+
+    public static int ParseHex2Byte(string parse)
+    {
+        //Debug.Log(parse + " " + parse.Length);
+        if (parse.Length != 2)
+        {
+            return 0;
+        }
+
+        int CharToInt(char a)
+        {
+            //Debug.Log("ith " + a);
+            if (int.TryParse(a + "", out int a2))
+            {
+                return a2;
+            }
+            else
+            {
+                return (a - 'a' + 10);
+            }
+        }
+
+        char a = parse[0];
+        char b = parse[1];
+
+        int a2 = CharToInt(a);
+        int b2 = CharToInt(b);
+
+        return a2 * 16 + b2;
+    }
+    public static Color? ParseColor(string parse)
+    {
+        parse = parse.ToLower();
+
+        int CharToInt(char a)
+        {
+            //Debug.Log("ith " + a);
+            if (int.TryParse(a + "", out int a2))
+            {
+                return a2;
+            }
+            else
+            {
+                return (a - 'a' + 10);
+            }
+        }
+
+        //v2 version
+        if (parse.Length > 1 && parse[0] == '#')
+        {
+            //Next up is a hex code thing
+            string hexValue = parse.Substring(1);
+
+            //something like FFFFFFFF might not work with ToInt32 since that returns an int not a uint
+            //long colorVal = Convert.ToInt64("0x" + hexValue, 16);
+            //uint realcolor = (uint)colorVal;
+
+            //check correctness
+            if (hexValue.Length != 4 && hexValue.Length != 6 && hexValue.Length != 8)
+            {
+                //Wrong length
+                //Debug.Log("Wrong length " + hexValue + " has length " + hexValue.Length);
+                return null;
+            }
+
+            float red = 0;
+            float green = 0;
+            float blue = 0;
+            float alpha = 0;
+            switch (hexValue.Length)
+            {
+                /*
+                case 4: //weird 16 bit format (5 bits each for rgb, 1 bit for a) (
+                    red = ((((realcolor) % (1 << 16)) >> 11) / 31f);
+                    green = ((((realcolor) % (1 << 11)) >> 6) / 31f);
+                    blue = ((((realcolor) % (1 << 6)) >> 1) / 31f);
+                    alpha = ((((realcolor) % (1 << 1)) >> 0) / 1f);
+                    break;
+                */
+                case 4: //rgba
+                    red = CharToInt(hexValue[0]) / 15f;
+                    green = CharToInt(hexValue[0]) / 15f;
+                    blue = CharToInt(hexValue[0]) / 15f;
+                    alpha = CharToInt(hexValue[0]) / 15f;
+                    //red = ((((realcolor) % (1 << 16)) >> 12) / 15f);
+                    //green = ((((realcolor) % (1 << 12)) >> 8) / 15f);
+                    //blue = ((((realcolor) % (1 << 8)) >> 4) / 15f);
+                    //alpha = ((((realcolor) % (1 << 4)) >> 0) / 15f);
+                    break;
+                case 6: //rrggbb
+                    red = ParseHex2Byte(hexValue[0] + "" + hexValue[1]) / 255f;
+                    green = ParseHex2Byte(hexValue[2] + "" + hexValue[3]) / 255f;
+                    blue = ParseHex2Byte(hexValue[4] + "" + hexValue[5]) / 255f;
+                    alpha = 1;
+                    //red = ((((realcolor) % (1 << 24)) >> 16) / 255f);
+                    //green = ((((realcolor) % (1 << 16)) >> 8) / 255f);
+                    //blue = ((((realcolor) % (1 << 8)) >> 0) / 255f);
+                    //alpha = 1;
+                    break;
+                case 8: //rrggbbaa
+                    red = ParseHex2Byte(hexValue[0] + "" + hexValue[1]) / 255f;
+                    green = ParseHex2Byte(hexValue[2] + "" + hexValue[3]) / 255f;
+                    blue = ParseHex2Byte(hexValue[4] + "" + hexValue[5]) / 255f;
+                    alpha = ParseHex2Byte(hexValue[6] + "" + hexValue[7]) / 255f;
+                    //red = ((((realcolor) % (1L << 32)) >> 24) / 255f);
+                    //green = ((((realcolor) % (1 << 24)) >> 16) / 255f);
+                    //blue = ((((realcolor) % (1 << 16)) >> 8) / 255f);
+                    //alpha = ((((realcolor) % (1 << 8)) >> 0) / 255f);
+                    break;
+            }
+
+            //Debug.Log(parse + " Colors: " + red + " " + green + " " + blue + " " + alpha);
+            return new Color(red, green, blue, alpha);
+        }
+        else
+        {
+            //Debug.Log("Invalid start " + parse);
+            return null;
+        }
+
+        /*
+        //fail parse: null
+        try
+        {
+            if (parse.Length > 1 && parse[0] == '#')
+            {
+                //Next up is a hex code thing
+                string hexValue = parse.Substring(1);
+
+                //something like FFFFFFFF might not work with ToInt32 since that returns an int not a uint
+                long colorVal = Convert.ToInt64("0x" + hexValue, 16);
+                uint realcolor = (uint)colorVal;
+
+                //check correctness
+                if (hexValue.Length != 4 && hexValue.Length != 6 && hexValue.Length != 8)
+                {
+                    //Wrong length
+                    //Debug.Log("Wrong length " + hexValue + " has length " + hexValue.Length);
+                    return null;
+                }
+
+                float red = 0;
+                float green = 0;
+                float blue = 0;
+                float alpha = 0;
+                switch (hexValue.Length)
+                {
+                    
+                    case 4: //weird 16 bit format (5 bits each for rgb, 1 bit for a) (
+                        red = ((((realcolor) % (1 << 16)) >> 11) / 31f);
+                        green = ((((realcolor) % (1 << 11)) >> 6) / 31f);
+                        blue = ((((realcolor) % (1 << 6)) >> 1) / 31f);
+                        alpha = ((((realcolor) % (1 << 1)) >> 0) / 1f);
+                        break;
+                    
+                    case 4: //rgba
+                        red = ((((realcolor) % (1 << 16)) >> 12) / 15f);
+                        green = ((((realcolor) % (1 << 12)) >> 8) / 15f);
+                        blue = ((((realcolor) % (1 << 8)) >> 4) / 15f);
+                        alpha = ((((realcolor) % (1 << 4)) >> 0) / 15f);
+                        break;
+                    case 6: //rrggbb
+                        red = ((((realcolor) % (1 << 24)) >> 16) / 255f);
+                        green = ((((realcolor) % (1 << 16)) >> 8) / 255f);
+                        blue = ((((realcolor) % (1 << 8)) >> 0) / 255f);
+                        alpha = 1;
+                        break;
+                    case 8: //rrggbbaa
+                        red = ((((realcolor) % (1L << 32)) >> 24) / 255f);
+                        green = ((((realcolor) % (1 << 24)) >> 16) / 255f);
+                        blue = ((((realcolor) % (1 << 16)) >> 8) / 255f);
+                        alpha = ((((realcolor) % (1 << 8)) >> 0) / 255f);
+                        break;
+                }
+
+                //Debug.Log("Colors: " + red + " " + green + " " + blue + " " + alpha);
+                return new Color(red, green, blue, alpha);
+            }
+            else
+            {
+                //Debug.Log("Invalid start " + parse);
+                return null;
+            }
+
+        } catch (FormatException)
+        {
+            Debug.Log("General parse failure: " + parse);
+            return null;
+        }
+        */
+    }
+    public static string ColorToString(Color a)
+    {
+        //inverse of parse color
+        string output = "#";
+
+        int intVal = (int)(255 * a.r + 0.5f);
+
+        string IntToHex(int a)
+        {
+            //Debug.Log("ith " + a);
+            if (a < 10)
+            {
+                return a.ToString();
+            }
+            else
+            {
+                return ((char)('a' + (char)(a - 10))).ToString();
+            }
+        }
+
+        output += IntToHex(intVal / 16);
+        output += IntToHex(intVal % 16);
+        intVal = (int)(255 * (a.g) + 0.5f);
+        output += IntToHex(intVal / 16);
+        output += IntToHex(intVal % 16);
+        intVal = (int)(255 * (a.b) + 0.5f);
+        output += IntToHex(intVal / 16);
+        output += IntToHex(intVal % 16);
+
+        if (a.a != 1)
+        {
+            intVal = (int)(255 * a.a + 0.5f);
+            output += IntToHex(intVal / 16);
+            output += IntToHex(intVal % 16);
+        }
+
+        //Debug.Log(a + " " + output);
+
+        return output;
     }
 
 

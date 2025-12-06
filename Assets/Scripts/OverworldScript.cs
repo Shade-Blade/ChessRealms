@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Net;
+using System.Numerics;
 using UnityEngine;
 
 public class OverworldScript : MonoBehaviour
@@ -18,7 +20,8 @@ public class OverworldScript : MonoBehaviour
     public GameObject worldMapTemplate;
     public GameObject realmMapTemplate;
 
-    public GameObject worldMap;
+    public bool worldMapMode;
+    public WorldMapScript worldMap;
     public RealmMapScript realmMap;
 
     public SetupBoardScript setupBoard;
@@ -29,30 +32,70 @@ public class OverworldScript : MonoBehaviour
     {
         //redundant?
         bus.SetBoard(setupBoard);
-        realmMap.os = this;
+        if (realmMap != null)
+        {
+            realmMap.os = this;
+        }
+        if (worldMap != null)
+        {
+            worldMap.os = this;
+        }
+        setupBoard.SetTheme(worldMap.lastRealm);
+        worldMapMode = true;
     }
 
     public void EnterNode(MapNodeScript ms)
     {
-        realmMap.current = ms;
-        realmMap.gameObject.SetActive(false);
-
-        MainManager.Instance.currentSelected = null;
-
-        switch (ms.nodeType)
+        if (worldMapMode)
         {
-            case MapNodeScript.MapNodeType.Battle:
-            case MapNodeScript.MapNodeType.BossBattle:
-                setupBoard.gameObject.SetActive(false);
-                mapNodeSubobject = BattleBoardScript.CreateBoard(ms.army, MainManager.Instance.playerData.GetPlayerModifier(), ms.em).gameObject;
-                break;
-            case MapNodeScript.MapNodeType.Shop:
-                mapNodeSubobject = ShopScript.CreateShop(FindObjectOfType<SetupBoardScript>(), ms.pieceClass, ms.pieceTypes, 3, 3).gameObject;
-                break;
-            case MapNodeScript.MapNodeType.FreePiece:
-                break;
-            case MapNodeScript.MapNodeType.Event:
-                break;
+            worldMap.current = ms;
+            worldMap.gameObject.SetActive(false);
+
+            MainManager.Instance.currentSelected = null;
+
+            switch (ms.nodeType)
+            {
+                case MapNodeScript.MapNodeType.WorldNode:
+                    //Make a realm map
+                    if (realmMap != null)
+                    {
+                        Destroy(realmMap.gameObject);
+                    }
+
+                    GameObject newMap = Instantiate(realmMapTemplate, transform);
+                    realmMap = newMap.GetComponent<RealmMapScript>();
+                    realmMap.baseDifficulty = ms.pieceValueTotal;
+                    realmMap.pieceClass = ms.pieceClass;
+                    realmMap.os = this;
+                    realmMap.Init();
+                    setupBoard.SetTheme(realmMap.pieceClass);
+                    worldMapMode = false;
+                    break;
+            }
+        }
+        else
+        {
+            realmMap.current = ms;
+            realmMap.gameObject.SetActive(false);
+
+            MainManager.Instance.currentSelected = null;
+
+            switch (ms.nodeType)
+            {
+                case MapNodeScript.MapNodeType.Battle:
+                case MapNodeScript.MapNodeType.BossBattle:
+                    setupBoard.gameObject.SetActive(false);
+                    mapNodeSubobject = BattleBoardScript.CreateBoard(ms.army, MainManager.Instance.playerData.GetPlayerModifier(), ms.em).gameObject;
+                    mapNodeSubobject.GetComponent<BattleBoardScript>().SetTheme(realmMap.pieceClass);
+                    break;
+                case MapNodeScript.MapNodeType.Shop:
+                    mapNodeSubobject = ShopScript.CreateShop(FindObjectOfType<SetupBoardScript>(), ms.pieceClass, ms.pieceTypes, 3, 3).gameObject;
+                    break;
+                case MapNodeScript.MapNodeType.FreePiece:
+                    break;
+                case MapNodeScript.MapNodeType.Event:
+                    break;
+            }
         }
     }
 
@@ -82,45 +125,45 @@ public class OverworldScript : MonoBehaviour
 
     public void ReturnFromRealmMap()
     {
-        //todo: make a world map to choose the next realm from multiple options
-
-        float oldDifficulty = realmMap.baseDifficulty;
-        Piece.PieceClass oldClass = realmMap.pieceClass;
-
-        Destroy(realmMap.gameObject);
-
-        GameObject newMap = Instantiate(realmMapTemplate, transform);
-        realmMap = newMap.GetComponent<RealmMapScript>();
-
-        realmMap.baseDifficulty = oldDifficulty * Mathf.Pow(1.2f, 2.5f);
-
-        bool realmInvalid = true;
-        while (realmInvalid)
+        //reopen world map
+        //use ms to do stuff
+        if (mapNodeSubobject != null)
         {
-            realmInvalid = true;
-            realmMap.pieceClass = (Piece.PieceClass)(Random.Range(0, 71));
-
-            if (GlobalPieceManager.GetPieceClassEntry(realmMap.pieceClass).index != -1)
-            {
-                realmInvalid = false;
-            }
-
-            if (realmMap.pieceClass == oldClass)
-            {
-                realmInvalid = true;
-            }
-
-            //tier check
-            int oldTier = GlobalPieceManager.GetPieceClassEntry(oldClass).tier;
-            int newTier = GlobalPieceManager.GetPieceClassEntry(realmMap.pieceClass).tier;
-
-            if (oldTier < newTier - 1 || oldTier > newTier + 1)
-            {
-                realmInvalid = true;
-            }
+            Destroy(mapNodeSubobject);
         }
+        //currentPosition = null;
+        Destroy(realmMap.gameObject);
+        worldMap.gameObject.SetActive(true);
+        worldMap.CompleteNode();
+        worldMapMode = true;
+        setupBoard.gameObject.SetActive(true);
+        bus.SetBoard(setupBoard);
 
-        realmMap.os = this;
-        realmMap.Init();
+        MainManager.Instance.currentSelected = null;
+
+        bus.turnText.text = "";
+        bus.scoreText.text = "";
+        bus.pieceText.text = "";
+        bus.thinkingText.text = "";
+    }
+
+    public void ReturnFromWorldMap()
+    {
+        //Build another world map
+        float oldDifficulty = worldMap.baseDifficulty;
+        Piece.PieceClass oldClass = worldMap.lastNode.pieceClass;
+
+        Destroy(worldMap.gameObject);
+
+        GameObject newMap = Instantiate(worldMapTemplate, transform);
+        worldMap = newMap.GetComponent<WorldMapScript>();
+
+        worldMap.baseDifficulty = oldDifficulty * Mathf.Pow(1.2f, 11f);
+
+        worldMap.lastRealm = oldClass;
+
+        worldMap.os = this;
+        worldMap.Init();
+        setupBoard.SetTheme(Piece.PieceClass.None);
     }
 }

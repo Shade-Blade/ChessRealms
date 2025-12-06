@@ -27,7 +27,7 @@ public class SetupPieceScript : PieceScript, IShopItem
 
     public override void Update()
     {
-        if (bs == null)
+        if (bs == null || piece == 0)
         {
             backSprite.enabled = false;
             text.enabled = false;

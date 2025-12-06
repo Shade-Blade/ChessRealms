@@ -24,7 +24,7 @@ Fortress,9,WG,,,FALSE,,Rook,2
 Shielder,1,fhW,,,FALSE,Rook,Rook,1
 Amazon,12,"RB(1,2)",,,FALSE,,Amazons,0.5
 Guard,2.5,WF,,,FALSE,,Amazons,1
-Courtesan,3,"W(2,2)",,,FALSE,,Amazons,1
+Ranger,3,"W(2,2)",,,FALSE,,Amazons,1
 Warden,5.5,"W(0,2)(2,2)",,,FALSE,,Amazons,1
 Princess,4,fB2fR2,,,FALSE,Queen,Amazons,1
 Pegasus,5,"(1,2)m(1,2)2+m(2,3)",,,FALSE,,Ultimate,1.5

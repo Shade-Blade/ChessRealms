@@ -589,14 +589,9 @@ internal static class MoveGenerator
             return;
         }
 
-        //hardcoded thing
-        if (pte.type == PieceType.MegaCannon && Piece.GetPieceSpecialData(piece) != 0)
-        {
-            return;
-        }
-
         ulong blockerBitboard = GetBlockerBitboard(ref b, pa, pte);
 
+        Piece.PieceModifier pm = Piece.GetPieceModifier(piece);
         if (pa == Piece.PieceAlignment.White)
         {
             //Unpredictable
@@ -635,7 +630,7 @@ internal static class MoveGenerator
                 return;
             }
 
-            if (((pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0) && Piece.GetPieceModifier(piece) != PieceModifier.Immune && ((1uL << xy & b.globalData.bitboard_immobilizerBlack) != 0))
+            if (((pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0) && pm != PieceModifier.Immune && ((1uL << xy & b.globalData.bitboard_immobilizerBlack) != 0))
             {
                 return;
             }
@@ -677,8 +672,6 @@ internal static class MoveGenerator
         {
             return;
         }
-
-        Piece.PieceModifier pm = Piece.GetPieceModifier(piece);
 
         if (pm == Piece.PieceModifier.NoSpecial)
         {
@@ -777,10 +770,17 @@ internal static class MoveGenerator
                     }
                 }
                 return;
+            case PieceType.MegaCannon:
+                //hardcoded thing
+                if (Piece.GetPieceSpecialData(piece) != 0)
+                {
+                    return;
+                }
+                break;
         }
 
-        ulong allyBitboard = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesBlack : b.globalData.bitboard_piecesWhite;
-        ulong enemyBitboardAdjacent = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesWhiteAdjacent : b.globalData.bitboard_piecesBlackAdjacent;
+        //ulong allyBitboard = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesBlack : b.globalData.bitboard_piecesWhite;
+        //ulong enemyBitboardAdjacent = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesWhiteAdjacent : b.globalData.bitboard_piecesBlackAdjacent;
         ulong entry = 0;
         switch (pte.enhancedMoveType)
         {
@@ -802,6 +802,7 @@ internal static class MoveGenerator
 
                 ulong emptyBitboard = ~b.globalData.bitboard_pieces;
 
+                ulong allyBitboard = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesBlack : b.globalData.bitboard_piecesWhite;
                 if (pte.enhancedMoveType == Piece.EnhancedMoveType.PartialForcedCapture)
                 {
                     allyBitboard |= emptyBitboard;
@@ -841,7 +842,8 @@ internal static class MoveGenerator
                     entry = mbt.Get(x, y);
                 }
 
-                if ((entry & ~allyBitboard) != 0)
+                ulong allyBitboardB = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesBlack : b.globalData.bitboard_piecesWhite;
+                if ((entry & ~allyBitboardB) != 0)
                 {
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
@@ -870,7 +872,7 @@ internal static class MoveGenerator
                 {
                     GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
                 }
-
+                ulong enemyBitboardAdjacent = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesWhiteAdjacent : b.globalData.bitboard_piecesBlackAdjacent;
                 if (((1uL << xy) & enemyBitboardAdjacent) != 0)
                 {
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
@@ -884,8 +886,8 @@ internal static class MoveGenerator
                 {
                     GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
                 }
-
-                if (((1uL << xy) & enemyBitboardAdjacent) != 0)
+                ulong enemyBitboardAdjacentB = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesWhiteAdjacent : b.globalData.bitboard_piecesBlackAdjacent;
+                if (((1uL << xy) & enemyBitboardAdjacentB) != 0)
                 {
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
@@ -895,10 +897,11 @@ internal static class MoveGenerator
                 return;
             case Piece.EnhancedMoveType.NoAllyMover:
                 //problem: the piece itself is inside the bitboard so it would be considered adjacent to itself
-                allyBitboard = MainManager.SmearBitboard(allyBitboard & ~(1uL << xy));
+                ulong allyBitboardC = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesBlack : b.globalData.bitboard_piecesWhite;
+                ulong allyBitboardD = MainManager.SmearBitboard(allyBitboardC & ~(1uL << xy));
 
                 //MainManager.PrintBitboard(allyBitboard);
-                if ((allyBitboard & (1uL << xy)) == 0)
+                if ((allyBitboardD & (1uL << xy)) == 0)
                 {
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
@@ -914,11 +917,13 @@ internal static class MoveGenerator
                 }
                 return;
             case Piece.EnhancedMoveType.AllyMover:
+
+                ulong allyBitboardE = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesBlack : b.globalData.bitboard_piecesWhite;
                 //problem: the piece itself is inside the bitboard so it would be considered adjacent to itself
-                allyBitboard = MainManager.SmearBitboard(allyBitboard & ~(1uL << xy));
+                ulong allyBitboardF = MainManager.SmearBitboard(allyBitboardE & ~(1uL << xy));
 
                 //MainManager.PrintBitboard(allyBitboard);
-                if ((allyBitboard & (1uL << xy)) == 0)
+                if ((allyBitboardF & (1uL << xy)) == 0)
                 {
                     foreach (MoveGeneratorInfoEntry mgie in pte.moveInfo)
                     {
@@ -1029,14 +1034,13 @@ internal static class MoveGenerator
                     }
                 }
                 return;
+            default:
+                foreach (MoveGeneratorInfoEntry mgie in pte.moveInfo)
+                {
+                    GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
+                }
+                return;
         }
-
-        foreach (MoveGeneratorInfoEntry mgie in pte.moveInfo)
-        {
-            GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
-        }
-
-        return;
     }
 
     //To do: Move these to a MoveGeneration class
@@ -3427,8 +3431,9 @@ internal static class MoveGenerator
         //Move.Dir dir;
 
         bool bitboardIncompatible = moveMetadata != null;
-        bitboardIncompatible |= (pte.pieceProperty & Piece.PieceProperty.BoundaryProperties) != 0;      //currently can't do rays crossing edges of board (would have to cast multiple rays)
-        bitboardIncompatible |= (pte.pieceProperty & Piece.PieceProperty.RangeChange) != 0;             //currently the bitboard setups use fixed ranges
+        //bitboardIncompatible |= (pte.pieceProperty & Piece.PieceProperty.BoundaryProperties) != 0;      //currently can't do rays crossing edges of board (would have to cast multiple rays)
+        //bitboardIncompatible |= (pte.pieceProperty & Piece.PieceProperty.RangeChange) != 0;             //currently the bitboard setups use fixed ranges
+        bitboardIncompatible |= (pte.pieceProperty & Piece.PieceProperty.BitboardIncompatible) != 0;
         //bool reflecter = (pte.pieceProperty & Piece.PieceProperty.Reflecter) != 0;
         if (pa == Piece.PieceAlignment.Black && (b.globalData.enemyModifier & Board.EnemyModifier.Knave) != 0)
         {
@@ -3466,21 +3471,24 @@ internal static class MoveGenerator
 
         Move.SpecialType specialType = Move.SpecialType.Normal;
 
-        if (pm == Piece.PieceModifier.NoSpecial)
+        switch (mgie.modifier)
         {
-            if (mgie.atom >= MoveGeneratorAtom.SpecialMoveDivider)
-            {
-                return;
-            }
-        }
-
-        if ((mgie.modifier & MoveGeneratorPreModifier.m) != 0)
-        {
-            specialType = Move.SpecialType.MoveOnly;
-        }
-        if ((mgie.modifier & MoveGeneratorPreModifier.c) != 0)
-        {
-            specialType = Move.SpecialType.CaptureOnly;
+            case MoveGeneratorPreModifier.m:
+                specialType = Move.SpecialType.MoveOnly;
+                break;
+            case MoveGeneratorPreModifier.c:
+                specialType = Move.SpecialType.CaptureOnly;
+                break;
+            default:
+                if ((mgie.modifier & MoveGeneratorPreModifier.m) != 0)
+                {
+                    specialType = Move.SpecialType.MoveOnly;
+                }
+                if ((mgie.modifier & MoveGeneratorPreModifier.c) != 0)
+                {
+                    specialType = Move.SpecialType.CaptureOnly;
+                }
+                break;
         }
 
         if (pm != Piece.PieceModifier.NoSpecial)
@@ -3826,6 +3834,11 @@ internal static class MoveGenerator
         }
         else
         {
+            if (mgie.atom >= MoveGeneratorAtom.SpecialMoveDivider)
+            {
+                return;
+            }
+
             //r, e -> c
             if ((mgie.modifier & MoveGeneratorPreModifier.r) != 0)
             {
@@ -3951,9 +3964,9 @@ internal static class MoveGenerator
             }
         }
 
+        /*
         if (pa == Piece.PieceAlignment.Black)
         {
-            /*
             //Greedy boss: first 3 captures are Convert
             if ((b.globalData.enemyModifier & Board.EnemyModifier.Greedy) != 0 && (b.globalData.whitePerPlayerInfo.startPieceCount - b.whitePerPlayerInfo.pieceCount) < 3)
             {
@@ -3967,8 +3980,8 @@ internal static class MoveGenerator
                     specialType = SpecialType.ConvertCaptureOnly;
                 }
             }
-            */
         }
+        */
 
         if ((pte.piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
         {
@@ -4004,13 +4017,16 @@ internal static class MoveGenerator
             //Water squares
             //Voided status effect
             ulong waterBitboard = b.globalData.bitboard_square_water;
+            ulong harpyBitboard = 0;
             switch (pa)
             {
                 case PieceAlignment.White:
                     waterBitboard = b.globalData.bitboard_waterBlack;
+                    harpyBitboard = b.globalData.bitboard_harpyBlack;
                     break;
                 case PieceAlignment.Black:
                     waterBitboard = b.globalData.bitboard_waterWhite;
+                    harpyBitboard = b.globalData.bitboard_harpyWhite;
                     break;
             }
 
@@ -4034,6 +4050,7 @@ internal static class MoveGenerator
             //This includes advancers, withdrawers, coordinators, leapers
             //Harpy effect
             //Capture only zone
+            /*
             ulong harpyBitboard = 0;
             switch (pa)
             {
@@ -4044,6 +4061,7 @@ internal static class MoveGenerator
                     harpyBitboard = b.globalData.bitboard_harpyWhite;
                     break;
             }
+            */
             if (pse == Piece.PieceStatusEffect.Bloodlust || ((pte.pieceProperty & Piece.PieceProperty.NoTerrain) == 0 && b.globalData.squares[xy].type == Square.SquareType.CaptureOnly) || (bitIndex & harpyBitboard) != 0)
             {
                 if (pse == Piece.PieceStatusEffect.Soaked)
@@ -4316,13 +4334,16 @@ internal static class MoveGenerator
             //Water squares
             //Voided status effect
             ulong waterBitboard = b.globalData.bitboard_square_water;
+            ulong harpyBitboard = 0;
             switch (pa)
             {
                 case PieceAlignment.White:
                     waterBitboard = b.globalData.bitboard_waterBlack;
+                    harpyBitboard = b.globalData.bitboard_harpyBlack;
                     break;
                 case PieceAlignment.Black:
                     waterBitboard = b.globalData.bitboard_waterWhite;
+                    harpyBitboard = b.globalData.bitboard_harpyWhite;
                     break;
             }
             if (pse == Piece.PieceStatusEffect.Soaked || ((((1uL << xy) & waterBitboard) != 0) && ((pte.pieceProperty & (Piece.PieceProperty.WaterImmune | Piece.PieceProperty.NoTerrain)) == 0)))
@@ -4345,6 +4366,7 @@ internal static class MoveGenerator
             //This includes advancers, withdrawers, coordinators, leapers
             //Harpy effect
             //Capture only zone
+            /*
             ulong harpyBitboard = 0;
             switch (pa)
             {
@@ -4355,6 +4377,7 @@ internal static class MoveGenerator
                     harpyBitboard = b.globalData.bitboard_harpyWhite;
                     break;
             }
+            */
             if (pse == Piece.PieceStatusEffect.Bloodlust || ((pte.pieceProperty & Piece.PieceProperty.NoTerrain) == 0 && b.globalData.squares[xy].type == Square.SquareType.CaptureOnly) || (1uL << xy & harpyBitboard) != 0)
             {
                 if (pse == Piece.PieceStatusEffect.Soaked)
@@ -4369,7 +4392,7 @@ internal static class MoveGenerator
                 pse = PieceStatusEffect.Bloodlust;
             }
 
-            ulong allowBitboard = GetAllowedSquares(ref b, piece, x, y, pa, Piece.GetPieceModifier(piece), specialType, pte);
+            ulong allowBitboard = GetAllowedSquares(ref b, piece, x, y, pa, pm, specialType, pte);
 
             switch (mgie.atom)
             {

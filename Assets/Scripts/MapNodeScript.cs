@@ -13,7 +13,8 @@ public class MapNodeScript : MonoBehaviour
         Shop,
         FreePiece,
         Event,
-        BossBattle
+        BossBattle,
+        WorldNode,  //world map node
     }
     public MapNodeType nodeType;
 
@@ -69,6 +70,9 @@ public class MapNodeScript : MonoBehaviour
                 break;
             case MapNodeType.Shop:
                 text.text = "Shop";
+                break;
+            case MapNodeType.WorldNode:
+                text.text = GlobalPieceManager.GetPieceClassEntry(pieceClass).name + "\nRealm\n" + truePieceValueTotal;
                 break;
         }
 
@@ -127,9 +131,18 @@ public class MapNodeScript : MonoBehaviour
         } else if (active)
         {
             backSprite.color = Color.green;
-        } else
+            if (nodeType == MapNodeType.WorldNode)
+            {
+                backSprite.color = GlobalPieceManager.GetPieceClassEntry(pieceClass).backgroundColorLight;
+            }
+        }
+        else
         {
             backSprite.color = new Color(0, 0.5f, 0, 0.75f);
+            if (nodeType == MapNodeType.WorldNode)
+            {
+                backSprite.color = GlobalPieceManager.GetPieceClassEntry(pieceClass).backgroundColorDark;
+            }
         }
     }
 
@@ -140,6 +153,12 @@ public class MapNodeScript : MonoBehaviour
 
     public void GenerateArmy()
     {
+        if (nodeType == MapNodeType.BossBattle)
+        {
+            int i = Random.Range(1, 25);
+
+            em = (Board.EnemyModifier)(1 << i);
+        }
         army = ArmyGenerator.GenerateArmy(truePieceValueTotal, pieceTypes, truePieceValueTotal > 15f ? 0.5f + ((10f * 0.25f) / (truePieceValueTotal - 5)) : 0.75f, 0.5f, pieceClass, em);
         //Recount piece value because it could be off by 1 or something
         pieceValueTotal = 0;
@@ -155,13 +174,6 @@ public class MapNodeScript : MonoBehaviour
             pieceValueTotal += pte.pieceValueX2 / 2f;
         }
         text.text = pieceValueTotal + "";
-
-        if (nodeType == MapNodeType.BossBattle)
-        {
-            int i = Random.Range(1, 25);
-
-            em = (Board.EnemyModifier)(1 << i);
-        }
     }
 
     private void OnMouseDown()

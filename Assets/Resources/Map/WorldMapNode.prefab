@@ -27,7 +27,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.7, y: 0.7, z: 0.8}
+  m_LocalScale: {x: 1.2, y: 1.2, z: 0.8}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 6774331424514108737}
@@ -119,7 +119,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0.8, y: 0.7}
+  m_SizeDelta: {x: 1.2, y: 1.2}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!23 &2230326639108769929
 MeshRenderer:
@@ -267,7 +267,7 @@ GameObject:
   - component: {fileID: 3711593014387367975}
   - component: {fileID: 4697937243673597834}
   m_Layer: 0
-  m_Name: MapNode
+  m_Name: WorldMapNode
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -309,7 +309,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.7, y: 0.7, z: 0.1}
+  m_Size: {x: 1.2, y: 1.2, z: 0.1}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &4697937243673597834
 MonoBehaviour:
@@ -325,6 +325,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   os: {fileID: 0}
   nodeType: 0
+  boxCollider: {fileID: 0}
   backSprite: {fileID: 1655133845835839731}
   truePieceValueTotal: 10
   pieceValueTotal: 0

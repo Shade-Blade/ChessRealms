@@ -110,10 +110,18 @@ public class RandomTable<T> : IRandomTableEntry<T>
 
     public static T ChooseRandom(T[] array)
     {
+        if (array.Length == 0)
+        {
+            return default;
+        }
         return array[RandomGenerator.GetIntRange(0, array.Length)];
     }
     public static T ChooseRandom(List<T> list)
     {
+        if (list.Count == 0)
+        {
+            return default;
+        }
         return list[RandomGenerator.GetIntRange(0, list.Count)];
     }
 

@@ -989,7 +989,7 @@ public class Board
         Piece.PieceType[] ptList = new Piece.PieceType[]
         {
             PieceType.CrookedBishop, PieceType.CrookedRook, PieceType.Lobster, PieceType.Shrimp, PieceType.King, PieceType.Stronghold, PieceType.Spy, PieceType.Warship,
-            PieceType.CrookedPawn, PieceType.ArcanaFortune, PieceType.Tardigrade, PieceType.Courtesan, PieceType.Moon, PieceType.FastPawn, PieceType.Runner, PieceType.Canoe,
+            PieceType.CrookedPawn, PieceType.ArcanaFortune, PieceType.Tardigrade, PieceType.Ranger, PieceType.Moon, PieceType.FastPawn, PieceType.Runner, PieceType.Canoe,
             0,0,0,0,0,0,0,0,
             0,0,0,0,0,0,0,0
         };
@@ -2270,7 +2270,8 @@ public class Board
         uint oldPiece = pieces[fxy]; //GetPieceAtCoordinate(fx, fy);
         uint targetPiece = pieces[txy]; //GetPieceAtCoordinate(tx, ty);
 
-        Piece.PieceType opt = Piece.GetPieceType(oldPiece);
+        PieceTableEntry pteO = globalData.GetPieceTableEntryFromCache(fxy, oldPiece); //GlobalPieceManager.GetPieceTableEntry(opt);
+        Piece.PieceType opt = pteO.type; //Piece.GetPieceType(oldPiece);
 
         if (opt == PieceType.Null)
         {
@@ -2297,7 +2298,7 @@ public class Board
 
         bool passiveMove = targetPiece == 0;
 
-        bool lastMoveStationary = Move.SpecialMoveStationary(Move.GetSpecialType(move));
+        bool lastMoveStationary = Move.SpecialMoveStationary(specialType);
         if (blackToMove)
         {
             blackPerPlayerInfo.lastMove = move;
@@ -2329,7 +2330,6 @@ public class Board
             }
         }
 
-        PieceTableEntry pteO = globalData.GetPieceTableEntryFromCache(fxy, oldPiece); //GlobalPieceManager.GetPieceTableEntry(opt);
         Piece.PieceAlignment opa = Piece.GetPieceAlignment(oldPiece);
 
         int blackPremovePiecesLost = blackPerPlayerInfo.piecesLost;
@@ -2363,8 +2363,9 @@ public class Board
             pteT = globalData.GetPieceTableEntryFromCache(txy, targetPiece); //GlobalPieceManager.GetPieceTableEntry(targetPiece);
         }
         Piece.PieceAlignment tpa = Piece.GetPieceAlignment(targetPiece);
-
         Piece.PieceStatusEffect pseO = Piece.GetPieceStatusEffect(oldPiece);
+
+        bool enemyMove = tpa != opa;
 
         switch (pseO)
         {
@@ -2375,7 +2376,7 @@ public class Board
             case PieceStatusEffect.Bloodlust:
                 //bloodlust
                 //Some special cases have to be handled separately
-                if (!passiveMove && tpa != opa && Move.SpecialMoveCaptureLike(specialType))
+                if (!passiveMove && enemyMove && Move.SpecialMoveCaptureLike(specialType))
                 {
                     oldPiece = Piece.SetPieceStatusEffect(0, oldPiece);
                     oldPiece = Piece.SetPieceStatusDuration(0, oldPiece);
@@ -2409,14 +2410,12 @@ public class Board
             case SpecialType.CoastMove:
             case SpecialType.ShadowMove:
             case Move.SpecialType.PlantMove:
-                if (blackToMove && (globalData.enemyModifier & Board.EnemyModifier.Greedy) != 0 && (whitePerPlayerInfo.piecesLost) < 2)
+                if (!passiveMove && blackToMove && (globalData.enemyModifier & Board.EnemyModifier.Greedy) != 0 && (whitePerPlayerInfo.piecesLost) < 2 && enemyMove)
                 {
-                    if (!passiveMove && tpa != opa)
-                    {
-                        //set to stationary
-                        blackPerPlayerInfo.lastPieceMovedLocation = (fx + fy * 8);
-                        goto case SpecialType.Convert;
-                    }
+                    //set to stationary
+                    lastMoveStationary = true;
+                    blackPerPlayerInfo.lastPieceMovedLocation = (fx + fy * 8);
+                    goto case SpecialType.Convert;
                 }
                 //need to fix this information for later
                 if (lastMoveStationary)
@@ -2428,11 +2427,11 @@ public class Board
                     }
                     else
                     {
-                        blackPerPlayerInfo.lastMove = Move.SetSpecialType(Move.SpecialType.Normal, whitePerPlayerInfo.lastMove);
+                        whitePerPlayerInfo.lastMove = Move.SetSpecialType(Move.SpecialType.Normal, whitePerPlayerInfo.lastMove);
                         whitePerPlayerInfo.lastPieceMovedLocation = (tx + ty * 8);
                     }
+                    lastMoveStationary = false;
                 }
-                lastMoveStationary = false;
 
                 //no check for ChargeMoveReset because the reset happens later?
                 //Minor inefficiency but ehh
@@ -2545,7 +2544,7 @@ public class Board
                         whitePerPlayerInfo.capturedLastTurn = true;
                     }
 
-                    Piece.PieceType tpt = Piece.GetPieceType(targetPiece);
+                    Piece.PieceType tpt = pteT.type; //Piece.GetPieceType(targetPiece);
 
                     bool pieceChange = false;
 
@@ -3086,14 +3085,16 @@ public class Board
                 //pull moves over here
                 switch (specialType) {
                     case Move.SpecialType.PullMove:
-                        DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, residuePiece);
+                        //DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, residuePiece);
+                        pieces[(fx + (fy << 3))] = residuePiece;
                         if (!passiveMove)
                         {
                             CapturePieceAtCoordinate(tx, ty, oldPiece, pteO, opa, pteT, tpa, boardUpdateMetadata);
                         }
                         else
                         {
-                            PlaceMovedPiece(oldPiece, tx, ty, pteO, opa);
+                            //PlaceMovedPiece(oldPiece, tx, ty, pteO, opa);
+                            pieces[tx + (ty << 3)] = oldPiece;
                         }
 
                         if (oldPiece == 0)
@@ -3155,7 +3156,8 @@ public class Board
                         break;
                     case SpecialType.ChargeMoveReset:
                         oldPiece = Piece.SetPieceSpecialData(0, oldPiece);
-                        DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, residuePiece);
+                        //DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, residuePiece);
+                        pieces[(fx + (fy << 3))] = residuePiece;
                         if (!passiveMove)
                         {
                             CapturePieceAtCoordinate(tx, ty, oldPiece, pteO, opa, pteT, tpa, boardUpdateMetadata);
@@ -3168,7 +3170,8 @@ public class Board
                             {
                                 globalData.bitboard_updatedEmpty |= (1uL << (fx + (fy << 3)));
                             }
-                            PlaceMovedPiece(oldPiece, tx, ty, pteO, opa);
+                            //PlaceMovedPiece(oldPiece, tx, ty, pteO, opa);
+                            pieces[tx + (ty << 3)] = oldPiece;
                         }
 
                         if (oldPiece == 0)
@@ -3181,7 +3184,8 @@ public class Board
                         {
                             oldPiece = Piece.SetPieceSpecialData((ushort)(Piece.GetPieceSpecialData(oldPiece) - 1), oldPiece);
                         }
-                        DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, residuePiece);
+                        //DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, residuePiece);
+                        pieces[(fx + (fy << 3))] = residuePiece;
                         if (!passiveMove)
                         {
                             CapturePieceAtCoordinate(tx, ty, oldPiece, pteO, opa, pteT, tpa, boardUpdateMetadata);
@@ -3194,7 +3198,8 @@ public class Board
                             {
                                 globalData.bitboard_updatedEmpty |= (1uL << (fx + (fy << 3)));
                             }
-                            PlaceMovedPiece(oldPiece, tx, ty, pteO, opa);
+                            //PlaceMovedPiece(oldPiece, tx, ty, pteO, opa);
+                            pieces[tx + (ty << 3)] = oldPiece;
                         }
 
                         if (oldPiece == 0)
@@ -3203,7 +3208,8 @@ public class Board
                         }
                         break;
                     default:
-                        DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, residuePiece);
+                        //DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, residuePiece);
+                        pieces[(fx + (fy << 3))] = residuePiece;
                         if (!passiveMove)
                         {
                             CapturePieceAtCoordinate(tx, ty, oldPiece, pteO, opa, pteT, tpa, boardUpdateMetadata);
@@ -3216,7 +3222,8 @@ public class Board
                             {
                                 globalData.bitboard_updatedEmpty |= (1uL << (fx + (fy << 3)));
                             }
-                            PlaceMovedPiece(oldPiece, tx, ty, pteO, opa);
+                            //PlaceMovedPiece(oldPiece, tx, ty, pteO, opa);
+                            pieces[tx + (ty << 3)] = oldPiece;
                         }
 
                         if (oldPiece == 0)
@@ -3506,7 +3513,7 @@ public class Board
                 {
                     if (blackToMove && (globalData.enemyModifier & Board.EnemyModifier.Greedy) != 0 && (whitePerPlayerInfo.piecesLost) < 2)
                     {
-                        if (tpa != opa)
+                        if (enemyMove)
                         {
                             //set to stationary
                             blackPerPlayerInfo.lastPieceMovedLocation = (fx + fy * 8);
@@ -4796,7 +4803,7 @@ public class Board
             py = fy;
         }
 
-        if (!passiveMove && Move.SpecialMoveCaptureLike(specialType) && tpa != opa)
+        if (!passiveMove && Move.SpecialMoveCaptureLike(specialType) && enemyMove)
         {
             if (Piece.GetPieceModifier(oldPiece) == PieceModifier.Radiant)
             {
@@ -5360,6 +5367,7 @@ public class Board
                 (int sdx, int sdy) = Move.DirToDelta(dir);
                 int tempX = fx;
                 int tempY = fy;
+                globalData.bitboard_updatedEmpty &= ~(1uL << (fx + (fy << 3)));
                 while (tempX != tx || tempY != ty)
                 {
                     if (dir == Dir.Null)
@@ -5599,22 +5607,22 @@ public class Board
 
         bool bonusMove = false;
 
-        //you only get 1 bonus ply from bonus movers
-        //So you get 
-        if ((pteO.pieceProperty & PieceProperty.BonusMove) != 0 && bonusPly < 1)
-        {
-            if (blackToMove && opa == PieceAlignment.Black)
-            {
-                bonusMove = true;
-            }
-            if (!blackToMove && opa == PieceAlignment.White)
-            {
-                bonusMove = true;
-            }
-        }
 
+        //you only get 1 bonus ply from bonus movers
         if (bonusPly < 1)
         {
+            if ((pteO.pieceProperty & PieceProperty.BonusMove) != 0)
+            {
+                if (blackToMove && opa == PieceAlignment.Black)
+                {
+                    bonusMove = true;
+                }
+                if (!blackToMove && opa == PieceAlignment.White)
+                {
+                    bonusMove = true;
+                }
+            }
+
             if (blackToMove)
             {
                 if (turn < 5 && (globalData.enemyModifier & EnemyModifier.Youthful) != 0)
@@ -5675,7 +5683,8 @@ public class Board
 
         //More complex than normal movement
 
-        ulong bitindex = 1uL << fx + fy * 8;
+        int fxy = (fx + (fy << 3));
+        ulong bitindex = 1uL << fxy;
         bitindex |= bitindex << 1;
         bitindex |= bitindex << 8;
 
@@ -5757,7 +5766,9 @@ public class Board
         }
 
         //out of move loop: now do the move
-        DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, 0);
+
+        DeleteGiant(pieces[fxy], fx, fy);
+        //DeleteGiantPieceMovedFromCoordinate(fx, fy, 0);
 
         if (boardUpdateMetadata != null)
         {
@@ -5798,11 +5809,14 @@ public class Board
             {
                 blackPerPlayerInfo.pieceValueSumX2 -= (short)(pteO.pieceValueX2 - pteT.pieceValueX2);
             }
-            PlaceMovedPiece(oldPiece, tx, ty, pteO, opa);
+            //PlaceMovedPiece(oldPiece, tx, ty, pteO, opa);
+            pieces[tx + (ty << 3)] = oldPiece;
         }
         else
         {
-            PlaceMovedPiece(oldPiece, tx, ty, pteO, opa);
+            //PlaceMovedPiece(oldPiece, tx, ty, pteO, opa);
+            PlaceGiant(oldPiece, tx, ty);
+            //pieces[tx + (ty << 3)] = oldPiece;
         }
     }
     public void ApplyConsumableMove(uint move, List<BoardUpdateMetadata> boardUpdateMetadata)
@@ -6248,24 +6262,26 @@ public class Board
         //SetPieceAtCoordinate(x, y, 0);
         pieces[(x + (y << 3))] = 0;
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void CapturePieceAtCoordinate(int x, int y, uint newPiece, PieceTableEntry pte, Piece.PieceAlignment pa, PieceTableEntry pteT, Piece.PieceAlignment paT, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         DeletePieceAtCoordinate(x, y, pteT, paT, boardUpdateMetadata);
-        PlaceMovedPiece(newPiece, x, y, pte, pa);
+        pieces[x + (y << 3)] = newPiece;
+        //PlaceMovedPiece(newPiece, x, y, pte, pa);
     }
-    public void DeletePieceMovedFromCoordinate(int x, int y, PieceTableEntry pte, Piece.PieceAlignment pa, uint residuePiece = 0)
+    /*
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void DeleteGiantPieceMovedFromCoordinate(int x, int y, uint residuePiece = 0)
     {
-        //PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(GetPieceAtCoordinate(x, y)));
-
-        if (pte != null && (pte.piecePropertyB & PiecePropertyB.Giant) != 0)
-        {
-            DeleteGiant(GetPieceAtCoordinate(x, y), x, y);
-            return;
-        }
-
-        pieces[(x + (y << 3))] = residuePiece;
-        //SetPieceAtCoordinate(x, y, residuePiece);
+        DeleteGiant(GetPieceAtCoordinate(x, y), x, y);
+        return;
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void DeletePieceMovedFromCoordinate(int x, int y, uint residuePiece = 0)
+    {
+        pieces[(x + (y << 3))] = residuePiece;
+    }
+    */
     public void DeleteArcanaMoon(bool black, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         if (globalData.arcanaMoonOutdated)
@@ -6779,6 +6795,9 @@ public class Board
             blackPerPlayerInfo.pieceCount++;
         }
     }
+
+    /*
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void PlaceMovedPiece(uint piece, int x, int y, PieceTableEntry pte, Piece.PieceAlignment pa)
     {
         if (pte == null)
@@ -6794,6 +6813,7 @@ public class Board
 
         pieces[x + (y << 3)] = piece;
     }
+    */
     public void PlaceGiant(uint piece, int x, int y)
     {
         //which corner of the giant is this
@@ -7438,7 +7458,8 @@ public class Board
             globalData.bitboard_updatedPieces |= (1uL << (fx + (fy << 3)));
             globalData.bitboard_updatedPieces |= (1uL << (tx + (ty << 3)));
 
-            DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, 0);
+            //DeletePieceMovedFromCoordinate(fx, fy, pteO, opa, 0);
+            pieces[(fx + (fy << 3))] = 0;
             CapturePieceAtCoordinate(tx, ty, oldPiece, pteO, opa, pteT, tpa, boardUpdateMetadata);
 
             if (oldPiece == 0)
@@ -7569,8 +7590,10 @@ public class Board
 
             oldPiece = Piece.SetPieceSpecialData(0, oldPiece);
 
-            DeletePieceMovedFromCoordinate(fx, fy, pte, pa);
-            PlaceMovedPiece(oldPiece, tx, ty, pte, pa);
+            //DeletePieceMovedFromCoordinate(fx, fy, pte, pa);
+            //PlaceMovedPiece(oldPiece, tx, ty, pte, pa);
+            pieces[(fx + (fy << 3))] = 0;
+            pieces[tx + (ty << 3)] = oldPiece;
         }
 
         while (megacannon != 0)
@@ -10708,7 +10731,7 @@ public static class Move
     //public SpecialType specialType;
     
     //This is kind of a bit flags thing so you can add perpendicular directions together
-    public enum Dir : sbyte
+    public enum Dir : int //sbyte
     {
         DownLeft = 10,
         Down = 8,
@@ -10721,7 +10744,7 @@ public static class Move
         UpRight = 5,
     }
 
-    public enum SpecialType : byte
+    public enum SpecialType : int //byte
     {
         Normal,
         MoveOnly,

@@ -49,7 +49,7 @@ public static class Piece
         Shielder,
         Amazon,
         Guard,
-        Courtesan,
+        Ranger,
         Warden,
         Princess,
         Pegasus,
@@ -726,6 +726,7 @@ public static class Piece
         Reflecter = 1uL << 21,        
 
         BoundaryProperties = Cylindrical | Sneaky | Reflecter,
+        BitboardIncompatible = RangeChange | BoundaryProperties,
 
         Unique = 1uL << 22,             //this is mostly a out of battle restriction, make into a boolean in the PTE?
 

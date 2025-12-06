@@ -2306,6 +2306,9 @@ public class BattleBoardScript : BoardScript
 
     public override void Update()
     {
+        backgroundA.color = backgroundColorWhite;
+        backgroundB.color = backgroundColorBlack;
+
         chessAI.searchDuration = moveThinkTime;
 
         if (awaitingMove)
