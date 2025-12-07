@@ -52,29 +52,25 @@ public class RealmMapScript : MonoBehaviour
         MapNodeScript mns = MakeMapNodeScript(startPos, Mathf.Min(500, baseDifficulty), 2, MapNodeScript.MapNodeType.Start);
         MapNodeScript pastMNS = mns;
 
+        //b1 is hard but leads to d early
+        //b2, c is easier but longer and has 2 battles before the next shop
+
         //todo: find better way to do stuff to have branching paths
+        MapNodeScript a = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.2f) + delta * Random.Range(-0.2f, 0.2f), baseDifficulty, (int)Mathf.Clamp(4 + (baseDifficulty / 10f), 4, 7), MapNodeScript.MapNodeType.Shop);
+        MapNodeScript b1 = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(-0.8f, -0.6f), Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 1.9f)), 3, MapNodeScript.MapNodeType.Battle);
+        MapNodeScript b2 = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(0.6f, 0.8f), Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 1)), 3, MapNodeScript.MapNodeType.Battle);
+        MapNodeScript c = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.6f) + delta * Random.Range(0.6f, 0.8f), Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 2)), 3, MapNodeScript.MapNodeType.Battle);
+        MapNodeScript d = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(-0.2f, 0.2f), baseDifficulty, (int)Mathf.Clamp(4 + (baseDifficulty / 10f), 4, 7), MapNodeScript.MapNodeType.Shop);
 
-        //hardcoded shop after start
-        mns = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.2f) + delta * Random.Range(-0.2f, 0.2f), baseDifficulty, (int)Mathf.Clamp(4 + (baseDifficulty / 10f), 4, 7), MapNodeScript.MapNodeType.Shop);
-        pastMNS.children.Add(mns);
-        pastMNS = mns;
-
-        mns = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(-0.4f, 0.4f), Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 1)), 3, MapNodeScript.MapNodeType.Battle);
-        pastMNS.children.Add(mns);
-        pastMNS = mns;
-
-        //2 battles on some branches
-        mns = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.6f) + delta * Random.Range(-0.4f, 0.4f), Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 2)), 4, MapNodeScript.MapNodeType.Battle);
-        pastMNS.children.Add(mns);
-        pastMNS = mns;
-
-        //hardcoded shop before boss
-        mns = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(-0.2f, 0.2f), baseDifficulty, (int)Mathf.Clamp(4 + (baseDifficulty / 10f), 4, 7), MapNodeScript.MapNodeType.Shop);
-        pastMNS.children.Add(mns);
-        pastMNS = mns;
+        mns.children.Add(a);
+        a.children.Add(b1);
+        a.children.Add(b2);
+        b1.children.Add(d);
+        b2.children.Add(c);
+        c.children.Add(d);
 
         mns = MakeMapNodeScript(endPos, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 3)), 5, MapNodeScript.MapNodeType.BossBattle);
-        pastMNS.children.Add(mns);
+        d.children.Add(mns);
 
         lastNode = mns;
     }

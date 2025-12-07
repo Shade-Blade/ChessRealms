@@ -107,6 +107,15 @@ public class RandomTable<T> : IRandomTableEntry<T>
 
         return output;
     }
+    //surface level
+    public int GetPossibleOutcomes()
+    {
+        return table.Count;
+    }
+    public T ForceOutcome(int i)
+    {
+        return table[i].Output(new GlobalRandomGenerator());
+    }
 
     public static T ChooseRandom(T[] array)
     {

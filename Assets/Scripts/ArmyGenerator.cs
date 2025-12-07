@@ -52,6 +52,17 @@ public static class ArmyGenerator
 
         List<PieceTableEntry> hardcodeTable = pieceTable.GetAllOutput();
 
+        List<Piece.PieceType> extraPieces = Board.EnemyModifierExtraPieces(em);
+        float maxValue = tryValue / 2;
+        for (int i = 0; i < extraPieces.Count; i++)
+        {
+            tryValue -= GlobalPieceManager.GetPieceTableEntry(extraPieces[i]).pieceValueX2 / 2f;
+        }
+        if (tryValue < maxValue)
+        {
+            tryValue = maxValue;
+        }
+
         /*
         string hardcodeOutput = "";
         for (int i = 0; i < hardcodeTable.Count; i++)
@@ -74,6 +85,12 @@ public static class ArmyGenerator
             if (pteTarget == null)
             {
                 break;
+            }
+
+            //overpowered
+            if (pteTarget.type == PieceType.Prince && (em & Board.EnemyModifier.KingSpecialModifiers) != 0)
+            {
+                continue;
             }
 
             //Attempt to increase variety
@@ -280,7 +297,7 @@ public static class ArmyGenerator
             rowSize = 2;
         }
 
-        List<Piece.PieceType> extraPieces = Board.EnemyModifierExtraPieces(em);
+        //List<Piece.PieceType> extraPieces = Board.EnemyModifierExtraPieces(em);
 
         for (int i = 0; i < extraPieces.Count; i++)
         {

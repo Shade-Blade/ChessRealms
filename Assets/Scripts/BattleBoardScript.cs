@@ -1257,6 +1257,9 @@ public class BattleBoardScript : BoardScript
         {
             //Error
             Debug.LogError("Black AI attempted an illegal move, retrying");
+            //MainManager.PrintBitboard(board.globalData.bitboard_piecesBlack);
+            //MainManager.PrintBitboard(board.globalData.bitboard_piecesBlackAdjacent);
+            //Debug.LogError(board.globalData.bitboard_piecesBlack + " " + board.globalData.bitboard_piecesBlackAdjacent);
             awaitingMove = false;
             chessAI.moveFound = false;
             errorMove = true;
@@ -2259,15 +2262,17 @@ public class BattleBoardScript : BoardScript
 
         enemyMoveList = new List<uint>();
         enemyMoveMetadata = new Dictionary<uint, MoveMetadata>();
-        MoveGenerator.GenerateMovesForPlayer(enemyMoveList, ref board, !board.blackToMove ? PieceAlignment.Black : PieceAlignment.White, enemyMoveMetadata);
+        Board copy = new Board(board);
+        copy.ApplyNullMove(false);
+        MoveGenerator.GenerateMovesForPlayer(enemyMoveList, ref copy, copy.blackToMove ? PieceAlignment.Black : PieceAlignment.White, enemyMoveMetadata);
         //MoveGeneratorInfoEntry.GenerateMovesForPlayer(enemyMoveList, ref board, PieceAlignment.Black);
 
-        board.globalData.mbtactiveInverse.MakeInverse(board.globalData.mbtactive);
+        copy.globalData.mbtactiveInverse.MakeInverse(copy.globalData.mbtactive);
         for (int i = 0; i < squares.Count; i++)
         {
-            if (board.globalData.mbtactiveInverse.Get(i % 8, i / 8) != 0)
+            if (copy.globalData.mbtactiveInverse.Get(i % 8, i / 8) != 0)
             {
-                if (board.blackToMove)
+                if (copy.blackToMove)
                 {
                     squares[i].czhWhite = true;
                 }

@@ -475,6 +475,7 @@ public class Board
         Zenith = 1u << 24, //When king is captured, it replaces the highest position index ally piece (note that position index is y*8 + x)
 
         KingMoveModifiers = Fusion | Envious | Lustful | Xyloid,
+        KingSpecialModifiers = KingMoveModifiers | Slothful | Obelisk | Voracious | Terror | Zenith,
         SecondaryModifiers = Defensive | KingMoveModifiers
     }
 
@@ -1435,10 +1436,8 @@ public class Board
     {
         List<PieceType> newpieces = new List<PieceType>();
 
-        //todo: whenever I finally make the random enemy preset generator I will move this there
         if ((em & EnemyModifier.Jester) != 0)
         {
-            newpieces.Add(PieceType.Jester);
             newpieces.Add(PieceType.Jester);
             newpieces.Add(PieceType.Jester);
             newpieces.Add(PieceType.Jester);
@@ -1447,12 +1446,10 @@ public class Board
         {
             newpieces.Add(PieceType.King);
             newpieces.Add(PieceType.King);
-            newpieces.Add(PieceType.King);
         }
         if ((em & EnemyModifier.Queenly) != 0)
         {
             newpieces.Add(PieceType.Queen);
-            newpieces.Add(PieceType.Princess);
             newpieces.Add(PieceType.Princess);
         }
 
@@ -2197,6 +2194,17 @@ public class Board
         {
             RunTurnEnd(blackToMove, false, null);
         }
+
+        //to correctly check for check instead of running into the "no moving the same piece the enemy did" thing
+        if (blackToMove)
+        {
+            blackPerPlayerInfo.lastPieceMovedLocation = -1;
+        }
+        else
+        {
+            whitePerPlayerInfo.lastPieceMovedLocation = -1;
+        }
+
         bonusPly = 0;
         blackToMove = !blackToMove;
     }
@@ -10599,6 +10607,8 @@ public class Board
         List<uint> moves = new List<uint>();
         Dictionary<uint, MoveMetadata> moveDict = new Dictionary<uint, MoveMetadata>();
         MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, moveDict);
+
+        //b.BoardPrint();
 
         Board copy = new Board();
         for (int i = 0; i < moves.Count; i++)

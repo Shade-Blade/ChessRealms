@@ -3831,6 +3831,16 @@ internal static class MoveGenerator
                     }
                     break;
             }
+
+            //No blockers
+            if ((Move.CanFlyOverObstacles(specialType)))
+            {
+                blockerBitboard = 0;
+            }
+            if (pm == PieceModifier.Winged)
+            {
+                bitboardIncompatible = true;
+            }
         }
         else
         {
@@ -4411,7 +4421,7 @@ internal static class MoveGenerator
 
                     if (!directionRestricted)
                     {
-                        if (mgie.range == 1)
+                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal)
                         {
                             if (!bitboardIncompatible)
                             {
@@ -4420,6 +4430,7 @@ internal static class MoveGenerator
                                 ulong moveBitboard = ((bitIndex << 1) & MainManager.NO_A_FILE) | ((bitIndex >> 1) & MainManager.NO_H_FILE);
                                 moveBitboard |= bitIndex << 8;
                                 moveBitboard |= bitIndex >> 8;
+                                moveBitboard &= allowBitboard;
                                 GenerateSquaresBitboardDir(moves, ref b, pse, piece, x, y, moveBitboard, pa, specialType, pte, mgie, mbt);
                                 return;
                             } else
@@ -4562,6 +4573,7 @@ internal static class MoveGenerator
                                 }
 
                                 //bulk doing this is better than the Move.DeltaToDirSoft calls?
+                                moveBitboard &= allowBitboard;
                                 GenerateSquaresBitboardDir(moves, ref b, pse, piece, x, y, moveBitboard, pa, specialType, pte, mgie, mbt);
                             }
                             else
@@ -4578,7 +4590,7 @@ internal static class MoveGenerator
                         int tx = x;
                         int ty = y;
                         bool wasGenerated;
-                        if (mgie.range == 1)
+                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal)
                         {
                             if (!bitboardIncompatible)
                             {
@@ -4611,6 +4623,7 @@ internal static class MoveGenerator
                                 {
                                     moveBitboard |= ((bitIndex << 1) & MainManager.NO_A_FILE) | ((bitIndex >> 1) & MainManager.NO_H_FILE);
                                 }
+                                moveBitboard &= allowBitboard;
                                 GenerateSquaresBitboardDir(moves, ref b, pse, piece, x, y, moveBitboard, pa, specialType, pte, mgie, mbt);
                             } else
                             {
@@ -4705,7 +4718,7 @@ internal static class MoveGenerator
                             }
                         } else
                         {
-                            if (mgie.range == 0 && !bitboardIncompatible)
+                            if (mgie.range == 0 && !bitboardIncompatible && mgie.rangeType == RangeType.Normal)
                             {
                                 ulong rayBitboard = 0;
                                 ulong hitBitboard = 0;
@@ -4811,8 +4824,10 @@ internal static class MoveGenerator
                                         //GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, rayBitboard, Move.Dir.Left, pa, specialType, pte, mgie, mbt);
                                     }
                                 }
+                                moveBitboard &= allowBitboard;
 
                                 //bulk doing this is better than the Move.DeltaToDirSoft calls?
+                                moveBitboard &= allowBitboard;
                                 GenerateSquaresBitboardDir(moves, ref b, pse, piece, x, y, moveBitboard, pa, specialType, pte, mgie, mbt);
                             }
                             else
@@ -4902,7 +4917,7 @@ internal static class MoveGenerator
 
                     if (!directionRestricted)
                     {
-                        if (mgie.range == 1)
+                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal)
                         {
                             if (!bitboardIncompatible)
                             {
@@ -4910,6 +4925,7 @@ internal static class MoveGenerator
                                 ulong bitIndex = 1uL << (x + (y << 3));
                                 ulong altBitboard = ((bitIndex << 1) & MainManager.NO_A_FILE) | ((bitIndex >> 1) & MainManager.NO_H_FILE);
                                 ulong moveBitboard = (altBitboard << 8) | (altBitboard >> 8);
+                                moveBitboard &= allowBitboard;
                                 GenerateSquaresBitboardDir(moves, ref b, pse, piece, x, y, moveBitboard, pa, specialType, pte, mgie, mbt);
                             } else
                             {
@@ -4992,7 +5008,7 @@ internal static class MoveGenerator
                             ulong rayBitboard = 0;
                             ulong hitBitboard = 0;
                             ulong moveBitboard = 0;
-                            if (mgie.range == 0 && !bitboardIncompatible)
+                            if (mgie.range == 0 && !bitboardIncompatible && mgie.rangeType == RangeType.Normal)
                             {
                                 rayBitboard = GlobalPieceManager.raysUR[xy];
                                 if (rayBitboard != 0)
@@ -5044,6 +5060,7 @@ internal static class MoveGenerator
                                 }
 
                                 //bulk doing this is better than the Move.DeltaToDirSoft calls?
+                                moveBitboard &= allowBitboard;
                                 GenerateSquaresBitboardDir(moves, ref b, pse, piece, x, y, moveBitboard, pa, specialType, pte, mgie, mbt);
                             }
                             else
@@ -5057,7 +5074,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        if (mgie.range == 1) {
+                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal) {
                             if (!bitboardIncompatible)
                             {
                                 //bitboard tech
@@ -5086,6 +5103,7 @@ internal static class MoveGenerator
                                         moveBitboard |= (altBitboard << 8);
                                     }
                                 }
+                                moveBitboard &= allowBitboard;
                                 GenerateSquaresBitboardDir(moves, ref b, pse, piece, x, y, moveBitboard, pa, specialType, pte, mgie, mbt);
                             }
                             else
@@ -5178,7 +5196,7 @@ internal static class MoveGenerator
                             }
                         } else
                         {
-                            if (mgie.range == 0 && !bitboardIncompatible)
+                            if (mgie.range == 0 && !bitboardIncompatible && mgie.rangeType == RangeType.Normal)
                             {
                                 ulong moveBitboard = 0;
                                 ulong rayBitboard = 0;
@@ -5298,6 +5316,7 @@ internal static class MoveGenerator
                                 }
 
                                 //bulk doing this is better than the Move.DeltaToDirSoft calls?
+                                moveBitboard &= allowBitboard;
                                 GenerateSquaresBitboardDir(moves, ref b, pse, piece, x, y, moveBitboard, pa, specialType, pte, mgie, mbt);
                             }
                             else
@@ -8028,22 +8047,20 @@ internal static class MoveGenerator
                 }
 
                 //For flying: change type to flying
-                bool canFly = Move.CanFlyOverObstacles(specialType);
-                if ((canFly || pm == Piece.PieceModifier.Winged || ((pte.piecePropertyB & PiecePropertyB.NaturalWinged) != 0) || (pa == PieceAlignment.White && ((b.globalData.playerModifier & Board.PlayerModifier.SideWings) != 0) && (x < 2 || x > 5))) && specialType != SpecialType.FlyingMoveOnly)
+                //CanFly now just deletes the blocker bitboard completely
+                //bool canFly = Move.CanFlyOverObstacles(specialType);
+                if ((pm == Piece.PieceModifier.Winged || ((pte.piecePropertyB & PiecePropertyB.NaturalWinged) != 0) || (pa == PieceAlignment.White && ((b.globalData.playerModifier & Board.PlayerModifier.SideWings) != 0) && (x < 2 || x > 5))) && specialType != SpecialType.FlyingMoveOnly)
                 {
-                    if (!canFly)
+                    switch (specialType)
                     {
-                        switch (specialType)
-                        {
-                            case SpecialType.AllyAbility:
-                            case SpecialType.EmptyAbility:
-                            case SpecialType.EnemyAbility:
-                            case SpecialType.PassiveAbility:
-                                break;
-                            default:
-                                specialType = SpecialType.FlyingMoveOnly;
-                                break;
-                        }
+                        case SpecialType.AllyAbility:
+                        case SpecialType.EmptyAbility:
+                        case SpecialType.EnemyAbility:
+                        case SpecialType.PassiveAbility:
+                            break;
+                        default:
+                            specialType = SpecialType.FlyingMoveOnly;
+                            break;
                     }
 
                     if (moveMetadata != null && (!wasGenerated) && moveMetadata != null)
@@ -8387,12 +8404,9 @@ internal static class MoveGenerator
             if (!keepGoing)
             {
                 //For flying: change type to flying
-                if ((Move.CanFlyOverObstacles(specialType) || pm == Piece.PieceModifier.Winged || ((pte.piecePropertyB & PiecePropertyB.NaturalWinged) != 0) || (pa == PieceAlignment.White && ((b.globalData.playerModifier & Board.PlayerModifier.SideWings) != 0) && (x < 2 || x > 5))) && specialType != SpecialType.FlyingMoveOnly)
+                if ((pm == Piece.PieceModifier.Winged || ((pte.piecePropertyB & PiecePropertyB.NaturalWinged) != 0) || (pa == PieceAlignment.White && ((b.globalData.playerModifier & Board.PlayerModifier.SideWings) != 0) && (x < 2 || x > 5))) && specialType != SpecialType.FlyingMoveOnly)
                 {
-                    if (!Move.CanFlyOverObstacles(specialType))
-                    {
-                        specialType = SpecialType.FlyingMoveOnly;
-                    }
+                    specialType = SpecialType.FlyingMoveOnly;
 
                     //re-add the metadata if it would have failed the wasGenerated condition
                     if (moveMetadata != null && (!wasGenerated))
@@ -9310,26 +9324,23 @@ internal static class MoveGenerator
             if (!keepGoing)
             {
                 //For flying: change type to flying
-                if ((Move.CanFlyOverObstacles(specialType) || pm == Piece.PieceModifier.Winged || ((pte.piecePropertyB & PiecePropertyB.NaturalWinged) != 0) || (pa == PieceAlignment.White && ((b.globalData.playerModifier & Board.PlayerModifier.SideWings) != 0) && (x < 2 || x > 5))) && specialType != SpecialType.FlyingMoveOnly)
+                if ((pm == Piece.PieceModifier.Winged || ((pte.piecePropertyB & PiecePropertyB.NaturalWinged) != 0) || (pa == PieceAlignment.White && ((b.globalData.playerModifier & Board.PlayerModifier.SideWings) != 0) && (x < 2 || x > 5))) && specialType != SpecialType.FlyingMoveOnly)
                 {
-                    if (!Move.CanFlyOverObstacles(specialType))
+                    //No conversion of capture only to move only
+                    if (Move.SpecialMoveCantTargetEmpty(specialType))
                     {
-                        //No conversion of capture only to move only
-                        if (Move.SpecialMoveCantTargetEmpty(specialType))
-                        {
-                            return;
-                        }
-                        switch (specialType)
-                        {
-                            case SpecialType.AllyAbility:
-                            case SpecialType.EmptyAbility:
-                            case SpecialType.EnemyAbility:
-                            case SpecialType.PassiveAbility:
-                                break;
-                            default:
-                                specialType = SpecialType.FlyingMoveOnly;
-                                break;
-                        }
+                        return;
+                    }
+                    switch (specialType)
+                    {
+                        case SpecialType.AllyAbility:
+                        case SpecialType.EmptyAbility:
+                        case SpecialType.EnemyAbility:
+                        case SpecialType.PassiveAbility:
+                            break;
+                        default:
+                            specialType = SpecialType.FlyingMoveOnly;
+                            break;
                     }
 
                     if (moveMetadata != null && (!wasGenerated))
@@ -9619,7 +9630,7 @@ internal static class MoveGenerator
         {
             //can return early
             //just paste the entire bitboard because it doesn't matter
-            if (Move.SpecialMoveCaptureLike(specialType))
+            if (Move.SpecialMoveCaptureLike(specialType) && mbt != null)
             {
                 mbt.Set(x, y, moveBitboard);
             }
@@ -9689,7 +9700,7 @@ internal static class MoveGenerator
         }
 
         //just paste the entire bitboard because it doesn't matter
-        if (Move.SpecialMoveCaptureLike(specialType))
+        if (Move.SpecialMoveCaptureLike(specialType) && mbt != null)
         {
             mbt.Set(x, y, moveBitboard);
         }
@@ -9729,7 +9740,7 @@ internal static class MoveGenerator
         {
             //can return early
             //just paste the entire bitboard because it doesn't matter
-            if (Move.SpecialMoveCaptureLike(specialType))
+            if (Move.SpecialMoveCaptureLike(specialType) && mbt != null)
             {
                 mbt.Set(x, y, moveBitboard);
             }
@@ -9802,7 +9813,7 @@ internal static class MoveGenerator
         }
 
         //just paste the entire bitboard because it doesn't matter
-        if (Move.SpecialMoveCaptureLike(specialType))
+        if (Move.SpecialMoveCaptureLike(specialType) && mbt != null)
         {
             mbt.Set(x, y, moveBitboard);
         }

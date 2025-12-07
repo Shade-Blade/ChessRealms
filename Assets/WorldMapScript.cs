@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Net;
 using UnityEngine;
 using static Piece;
 
@@ -90,127 +91,62 @@ public class WorldMapScript : MonoBehaviour
 
         Piece.PieceClass pc = lastRealm;
         MapNodeScript mns = MakeMapNodeScript(startPos, pc, Mathf.Min(500, baseDifficulty), 2, MapNodeScript.MapNodeType.Start);
-        MapNodeScript pastMNS = mns;
+        //todo: find better way to do stuff to have branching paths and generated layouts
 
-        //todo: find better way to do stuff to have branching paths
+        MapNodeScript a = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.2f) + delta * Random.Range(-0.3f, 0.3f), 0, 0, pc, baseDifficulty, MapNodeScript.MapNodeType.WorldNode);
+        MapNodeScript b1 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(-1.5f, -1.3f), 0, 0, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 2f)), MapNodeScript.MapNodeType.WorldNode);
+        MapNodeScript b2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.6f) + delta * Random.Range(-0.2f, 0.2f), 0, 0, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 4.25f)), MapNodeScript.MapNodeType.WorldNode);
+        MapNodeScript b3 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(1.3f, 1.5f), 0, 0, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 3.75f)), MapNodeScript.MapNodeType.WorldNode);
+        MapNodeScript c1 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(-1f, -0.8f), 0, 0, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 5.7f)), MapNodeScript.MapNodeType.WorldNode);
+        MapNodeScript c2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(0.8f, 1f), 0, 0, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 6.5f)), MapNodeScript.MapNodeType.WorldNode);
 
-        //randomly decide
-        int oldTier = GlobalPieceManager.GetPieceClassEntry(pc).tier;
-        localPool = new List<PieceClass>();
-        for (int i = 0; i < pieceClasses.Count; i++)
-        {
-            int newTier = GlobalPieceManager.GetPieceClassEntry(pieceClasses[i]).tier;
-            if (newTier < oldTier + 1 || newTier > oldTier + 1)
-            {
-                if (oldTier + 1 <= 7)
-                {
-                    continue;
-                }
-            }
+        mns.children.Add(a);
 
-            localPool.Add(pieceClasses[i]);
-        }
-        for (int i = 0; i < GlobalPieceManager.GetPieceClassEntry(pieceClasses[i]).nearbyRealms.Length; i++)
-        {
-            localPool.Add(GlobalPieceManager.GetPieceClassEntry(pieceClasses[i]).nearbyRealms[i]);
-        }
-        pc = RandomTable<Piece.PieceClass>.ChooseRandom(localPool);
-        if (localPool.Count == 0)
-        {
-            pc = RandomTable<Piece.PieceClass>.ChooseRandom(pieceClasses);
-        }
-        pieceClasses.Remove(pc);
-        mns = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.2f) + delta * Random.Range(-0.2f, 0.2f), pc, baseDifficulty, (int)Mathf.Clamp(4 + (baseDifficulty / 10f), 4, 7), MapNodeScript.MapNodeType.WorldNode);
-        pastMNS.children.Add(mns);
-        pastMNS = mns;
+        a.children.Add(b1);
+        a.children.Add(b2);
+        a.children.Add(b3);
 
-        oldTier = GlobalPieceManager.GetPieceClassEntry(pc).tier;
-        localPool = new List<PieceClass>();
-        for (int i = 0; i < pieceClasses.Count; i++)
-        {
-            int newTier = GlobalPieceManager.GetPieceClassEntry(pieceClasses[i]).tier;
-            if (newTier < oldTier + 1 || newTier > oldTier + 1)
-            {
-                if (oldTier + 1 <= 7)
-                {
-                    continue;
-                }
-            }
+        b1.children.Add(c1);
+        b2.children.Add(c1);
+        b2.children.Add(c2);
+        b3.children.Add(c2);
 
-            localPool.Add(pieceClasses[i]);
-        }
-        for (int i = 0; i < GlobalPieceManager.GetPieceClassEntry(pieceClasses[i]).nearbyRealms.Length; i++)
-        {
-            localPool.Add(GlobalPieceManager.GetPieceClassEntry(pieceClasses[i]).nearbyRealms[i]);
-        }
-        pc = RandomTable<Piece.PieceClass>.ChooseRandom(localPool);
-        if (localPool.Count == 0)
-        {
-            pc = RandomTable<Piece.PieceClass>.ChooseRandom(pieceClasses);
-        }
-        pieceClasses.Remove(pc);
-        mns = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(-0.4f, 0.4f), pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 2.5f)), 3, MapNodeScript.MapNodeType.WorldNode);
-        pastMNS.children.Add(mns);
-        pastMNS = mns;
-
-        oldTier = GlobalPieceManager.GetPieceClassEntry(pc).tier;
-        localPool = new List<PieceClass>();
-        for (int i = 0; i < pieceClasses.Count; i++)
-        {
-            int newTier = GlobalPieceManager.GetPieceClassEntry(pieceClasses[i]).tier;
-            if (newTier < oldTier + 1 || newTier > oldTier + 2)
-            {
-                if (oldTier + 1 <= 7)
-                {
-                    continue;
-                }
-            }
-
-            localPool.Add(pieceClasses[i]);
-        }
-        for (int i = 0; i < GlobalPieceManager.GetPieceClassEntry(pieceClasses[i]).nearbyRealms.Length; i++)
-        {
-            localPool.Add(GlobalPieceManager.GetPieceClassEntry(pieceClasses[i]).nearbyRealms[i]);
-        }
-        pc = RandomTable<Piece.PieceClass>.ChooseRandom(localPool);
-        if (localPool.Count == 0)
-        {
-            pc = RandomTable<Piece.PieceClass>.ChooseRandom(pieceClasses);
-        }
-        pieceClasses.Remove(pc);
-        mns = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.6f) + delta * Random.Range(-0.4f, 0.4f), pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 5f)), 4, MapNodeScript.MapNodeType.WorldNode);
-        pastMNS.children.Add(mns);
-        pastMNS = mns;
-
-        oldTier = GlobalPieceManager.GetPieceClassEntry(pc).tier;
-        localPool = new List<PieceClass>();
-        for (int i = 0; i < pieceClasses.Count; i++)
-        {
-            int newTier = GlobalPieceManager.GetPieceClassEntry(pieceClasses[i]).tier;
-            if (newTier < oldTier + 1 || newTier > oldTier + 3)
-            {
-                if (oldTier + 1 <= 7)
-                {
-                    continue;
-                }
-            }
-
-            localPool.Add(pieceClasses[i]);
-        }
-        for (int i = 0; i < GlobalPieceManager.GetPieceClassEntry(pieceClasses[i]).nearbyRealms.Length; i++)
-        {
-            localPool.Add(GlobalPieceManager.GetPieceClassEntry(pieceClasses[i]).nearbyRealms[i]);
-        }
-        pc = RandomTable<Piece.PieceClass>.ChooseRandom(localPool);
-        if (localPool.Count == 0)
-        {
-            pc = RandomTable<Piece.PieceClass>.ChooseRandom(pieceClasses);
-        }
-        pieceClasses.Remove(pc);
-        mns = MakeMapNodeScript(endPos, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 7.5f)), 5, MapNodeScript.MapNodeType.WorldNode);
-        pastMNS.children.Add(mns);
-
+        mns = MakeWorldNode(pieceClasses, endPos, 4, 6, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 8f)), MapNodeScript.MapNodeType.WorldNode);
+        c1.children.Add(mns);
+        c2.children.Add(mns);
         lastNode = mns;
+    }
+
+    MapNodeScript MakeWorldNode(List<PieceClass> pieceClasses, Vector3 position, int tierLow, int tierHigh, PieceClass pc, float difficulty, MapNodeScript.MapNodeType nodeType)
+    {
+        int oldTier = GlobalPieceManager.GetPieceClassEntry(pc).tier;
+        List<PieceClass> localPool = new List<PieceClass>();
+        for (int i = 0; i < pieceClasses.Count; i++)
+        {
+            int newTier = GlobalPieceManager.GetPieceClassEntry(pieceClasses[i]).tier;
+            if (newTier < tierLow || newTier > tierHigh)
+            {
+                continue;
+            }
+
+            localPool.Add(pieceClasses[i]);
+        }
+        PieceClass[] nearby = GlobalPieceManager.GetPieceClassEntry(pc).nearbyRealms;
+        for (int i = 0; i < nearby.Length; i++)
+        {
+            if (!pieceClasses.Contains(nearby[i]))
+            {
+                continue;
+            }
+            localPool.Add(nearby[i]);
+        }
+        pc = RandomTable<Piece.PieceClass>.ChooseRandom(localPool);
+        if (localPool.Count == 0)
+        {
+            pc = RandomTable<Piece.PieceClass>.ChooseRandom(pieceClasses);
+        }
+        pieceClasses.Remove(pc);
+        return MakeMapNodeScript(position, pc, difficulty, 0, MapNodeScript.MapNodeType.WorldNode);
     }
 
     MapNodeScript MakeMapNodeScript(Vector3 position, Piece.PieceClass pc, float difficulty, int types, MapNodeScript.MapNodeType nodeType)

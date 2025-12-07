@@ -99,7 +99,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Normal Realm
+  m_text: World Map
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6f10f5d5c961b364a87876ce9d8c6076, type: 2}
   m_sharedMaterial: {fileID: 2100000, guid: 0eabe1fb7af7ffe4a8c2bb223750e2bc, type: 2}
@@ -220,7 +220,7 @@ MonoBehaviour:
   mapNodeTemplate: {fileID: 8386964201161001328, guid: 6c9a418fb38157942851f4194a715cbf, type: 3}
   os: {fileID: 0}
   init: 0
-  baseDifficulty: 7
+  baseDifficulty: 8
   lastRealm: 0
   current: {fileID: 0}
   lastNode: {fileID: 0}
