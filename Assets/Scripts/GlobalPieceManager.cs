@@ -876,6 +876,7 @@ public sealed class MoveGeneratorInfoEntry
         fh = f | h,
         bv = b | v,
         bh = b | h,
+        vh = v | h,
 
         DirectionModifiers = f | b | v | h,     //All directions bitmask
         Flippable = f | b,
@@ -1218,6 +1219,88 @@ public sealed class MoveGeneratorInfoEntry
         }
 
         return false;
+    }
+
+    public static string GetSpecialMoveText(MoveGeneratorAtom m)
+    {
+        switch (m)
+        {
+            case MoveGeneratorAtom.Null:
+            case MoveGeneratorAtom.W:
+            case MoveGeneratorAtom.R:
+            case MoveGeneratorAtom.F:
+            case MoveGeneratorAtom.B:
+            case MoveGeneratorAtom.K:
+            case MoveGeneratorAtom.Q:
+            case MoveGeneratorAtom.Z:
+            case MoveGeneratorAtom.C:
+            case MoveGeneratorAtom.I:
+            case MoveGeneratorAtom.G:
+            case MoveGeneratorAtom.M:
+            case MoveGeneratorAtom.A:
+            case MoveGeneratorAtom.D:
+            case MoveGeneratorAtom.J:
+            case MoveGeneratorAtom.E:
+            case MoveGeneratorAtom.S:
+            case MoveGeneratorAtom.Leaper:
+            case MoveGeneratorAtom.Castling:
+                return null;
+            case MoveGeneratorAtom.H:
+                return "[Special] Move around the rings of the board.";
+            case MoveGeneratorAtom.O:
+                return "[Special] Orbit around any adjacent piece (moving in a circle around it).";
+            case MoveGeneratorAtom.P:
+                return "[Special] Orbit around a piece in a radius 2 circle (The radius 2 circle contains all distance 2 squares except the 4 corners).";
+            case MoveGeneratorAtom.AllyKingTeleport:
+                return "[Special] Teleport Move to a square adjacent to an ally King.";
+            case MoveGeneratorAtom.EnemyKingTeleport:
+                return "[Special] Teleport Move to a square adjacent to an ally King.";
+            case MoveGeneratorAtom.PawnSwapTeleport:
+                return "[Special] Teleport Swap with an ally pawn.";
+            case MoveGeneratorAtom.AllySwapTeleport:
+                return "[Special] Teleport Swap with an ally piece.";
+            case MoveGeneratorAtom.AllyBehindTeleport:
+                return "[Special] Teleport Move to a square behind an ally piece.";
+            case MoveGeneratorAtom.EnemyBehindTeleport:
+                return "[Special] Teleport Move to a square in front of an enemy piece.";
+            case MoveGeneratorAtom.AnywhereTeleport:
+                break;
+            case MoveGeneratorAtom.AnywhereAdjacentTeleport:
+                return "[Special] Teleport Move to a square adjacent to any piece.";
+            case MoveGeneratorAtom.AnywhereNonAdjacentTeleport:
+                return "[Special] Teleport Move to a square not adjacent to any piece.";
+            case MoveGeneratorAtom.AnywhereSameColorTeleport:
+                break;
+            case MoveGeneratorAtom.AnywhereOppositeColorTeleport:
+                break;
+            case MoveGeneratorAtom.KingSwapTeleport:
+                return "[Special] Teleport Swap with an ally King.";
+            case MoveGeneratorAtom.HomeRangeTeleport:
+                return "[Special] Teleport Move to a square in the first two rows.";
+            case MoveGeneratorAtom.MirrorTeleport:
+                return "[Special] Teleport Move or Capture to the mirrored square.";
+            case MoveGeneratorAtom.MirrorTeleportSwap:
+                return "[Special] Teleport Move, Capture or Swap with an ally on the mirrored square.";
+            case MoveGeneratorAtom.VerticalMirrorTeleport:
+                return "[Special] Teleport Move, Capture or Swap with an ally on the vertical mirrored square.";
+            case MoveGeneratorAtom.ForestTeleport:
+                return "[Special] Teleport Move to a square with at least 4 ally pieces adjacent to it.";
+            case MoveGeneratorAtom.BlossomTeleport:
+                return "[Special] Teleport Move or Capture to a square with at least 3 ally pieces adjacent to it.";
+            case MoveGeneratorAtom.DiplomatTeleport:
+                return "[Special] Teleport Move to a square adjacent to an ally and an enemy.";
+            case MoveGeneratorAtom.EchoTeleport:
+                return "[Special] Teleport Move to the square that the enemy last moved from.";
+            case MoveGeneratorAtom.CoastTeleport:
+                return "[Special] Teleport Move to anywhere on the 4 edges of the board.";
+            case MoveGeneratorAtom.AimMover:
+                return "[Special] Move or Capture to the aimed at square.";
+            case MoveGeneratorAtom.LensRook:
+                return "[Special] Can teleport to the 180 degree rotated square or move like a Rook from that square.";
+            case MoveGeneratorAtom.Recall:
+                return "[Special] Teleport backwards as far as possible to an empty square or swap with allies.";
+        }
+        return null;
     }
 }
 

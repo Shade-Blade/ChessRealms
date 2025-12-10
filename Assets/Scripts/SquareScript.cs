@@ -12,6 +12,10 @@ public class SquareScript : MonoBehaviour
 
     public BoardScript bs;
 
+    public GameObject auraTemplate;
+    public List<GameObject> auraList;
+    public List<SpriteRenderer> auraListSprites;
+
     public SpriteRenderer image;
     public SpriteRenderer lastMovedHighlight;
     public SpriteRenderer moveHighlight;
@@ -40,6 +44,10 @@ public class SquareScript : MonoBehaviour
     public bool czhBlack;
 
     public Square sq;
+    public Piece.Aura wAura;
+    public Piece.Aura bAura;
+
+    public float lifetime;
 
     public void Setup(int x, int y, Square sq)
     {
@@ -58,6 +66,7 @@ public class SquareScript : MonoBehaviour
 
     public void Update()
     {
+        lifetime += Time.deltaTime;
         if (lastIsHover ^ isHover)
         {
             if (isHover)
@@ -77,6 +86,15 @@ public class SquareScript : MonoBehaviour
         {
             image.color = isBlack ? bs.squareColorBlack : bs.squareColorWhite;
         }
+
+        for (int i = 0; i < auraListSprites.Count; i++)
+        {
+            Color c = auraListSprites[i].color;
+            //add in a bit of offset so multiple auras can be distinguished from one that happens to be the same color
+            //Future thing to add is aura textures but this will also make those stand out better
+            c.a = 0.5f + 0.15f * Mathf.Sin(lifetime + i);
+            auraListSprites[i].color = c;
+        }
     }
 
     public void HoverStart()
@@ -92,8 +110,63 @@ public class SquareScript : MonoBehaviour
 
     }
 
+    public void ResetAura()
+    {
+        for (int i = 0; i < auraList.Count; i++)
+        {
+            Destroy(auraList[i]);
+        }
+        auraList = new List<GameObject>();
+        auraListSprites = new List<SpriteRenderer>();
+
+        for (int i = 0; i < 32; i++)
+        {
+            int bitIndex = 1 << i;
+
+            if (((int)wAura & bitIndex) != 0)
+            {
+                GameObject auraObject = Instantiate(auraTemplate, transform);
+                Color c = Piece.GetAuraColor((Piece.Aura)bitIndex);
+                c = Color.Lerp(c, new Color(0.8f, 1, 1, 1), 0.4f);
+                SpriteRenderer auraSprite = auraObject.GetComponent<SpriteRenderer>();
+                c.a = 0.25f;
+                auraSprite.color = c;
+                auraObject.transform.localPosition = new Vector3(0, 0, -0.15f + (0.001f) * auraList.Count);
+                auraListSprites.Add(auraSprite);
+                auraList.Add(auraObject);
+            }
+            if (((int)bAura & bitIndex) != 0)
+            {
+                GameObject auraObject = Instantiate(auraTemplate, transform);
+                Color c = Piece.GetAuraColor((Piece.Aura)bitIndex);
+                c = Color.Lerp(c, new Color(0.2f, 0, 0, 1), 0.4f);
+                SpriteRenderer auraSprite = auraObject.GetComponent<SpriteRenderer>();
+                c.a = 0.25f;
+                auraSprite.color = c;
+                auraObject.transform.localPosition = new Vector3(0, 0, -0.15f + (0.001f) * auraList.Count);
+                auraListSprites.Add(auraSprite);
+                auraList.Add(auraObject);
+            }
+        }
+
+        for (int i = 0; i < auraListSprites.Count; i++)
+        {
+            Color c = auraListSprites[i].color;
+            c.a = 0.5f + 0.1f * Mathf.Sin(lifetime);
+            auraListSprites[i].color = c;
+        }
+    }
+    public void SetAura(Piece.Aura wAura, Piece.Aura bAura) 
+    {
+        this.wAura = wAura;
+        this.bAura = bAura;
+        ResetAura();
+    }
+
     public void ResetSquareColor()
     {
+        ResetAura();
+
         switch (sq.type)
         {
             case Square.SquareType.Hole:

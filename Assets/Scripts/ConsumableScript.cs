@@ -61,7 +61,7 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
         backSprite.enabled = true;
         bc.enabled = true;
 
-        text.text = cmt.ToString();
+        text.text = Board.GetConsumableName(cmt);
     }
 
     public virtual void ForceDeselect()
@@ -99,7 +99,7 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
 
     public int GetCost()
     {
-        return 5;
+        return Board.GetConsumableCost(cmt);
     }
 
     public void OnDragStart()

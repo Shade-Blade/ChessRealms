@@ -14,6 +14,7 @@ public class MapNodeScript : MonoBehaviour
         FreePiece,
         Event,
         BossBattle,
+        FinalBossBattle,
         WorldNode,  //world map node
     }
     public MapNodeType nodeType;
@@ -32,10 +33,13 @@ public class MapNodeScript : MonoBehaviour
     public List<MapNodeScript> parents;
     public List<MapNodeScript> children;
     public List<LineRenderer> childrenLines;
+    public List<LineRenderer> parentLines;
 
     public bool debugRegenerate;
 
     public TMPro.TMP_Text text;
+
+    public int nodeSeed;
 
     public void Start()
     {
@@ -51,6 +55,10 @@ public class MapNodeScript : MonoBehaviour
         {
             childrenLines = new List<LineRenderer>();
         }
+        if (parentLines == null)
+        {
+            parentLines = new List<LineRenderer>();
+        }
 
         if (os == null)
         {
@@ -65,6 +73,7 @@ public class MapNodeScript : MonoBehaviour
                 break;
             case MapNodeType.Battle:
             case MapNodeType.BossBattle:
+            case MapNodeType.FinalBossBattle:
                 //generate an army
                 GenerateArmy();
                 break;
@@ -79,12 +88,12 @@ public class MapNodeScript : MonoBehaviour
         for (int i = 0; i < children.Count; i++)
         {
             GameObject lineObject = Instantiate(Resources.Load<GameObject>("Map/MapTrail"), transform);
-            lineObject.transform.position = transform.position + Vector3.forward * -0.1f;
+            lineObject.transform.position = transform.position + Vector3.forward * 0.2f;
             childrenLines.Add(lineObject.GetComponent<LineRenderer>());
-            childrenLines[childrenLines.Count - 1].SetPositions(new Vector3[] { lineObject.transform.position, children[i].transform.position });
-            childrenLines[childrenLines.Count - 1].startColor = new Color(0, 1, 0, 0.6f);
-            childrenLines[childrenLines.Count - 1].endColor = new Color(0, 1, 0, 0.6f);
-
+            childrenLines[childrenLines.Count - 1].SetPositions(new Vector3[] { lineObject.transform.position, children[i].transform.position + Vector3.forward * 0.2f });
+            childrenLines[childrenLines.Count - 1].startColor = new Color(0, 0, 0, 0.6f);
+            childrenLines[childrenLines.Count - 1].endColor = new Color(0, 0, 0, 0.6f);
+            children[i].parentLines.Add(childrenLines[childrenLines.Count - 1]);
             children[i].AddParent(this);
         }
         UpdateColor();
@@ -112,7 +121,6 @@ public class MapNodeScript : MonoBehaviour
     {
         done = true;
         active = false;
-        UpdateColor();
         for (int i = 0; i < children.Count; i++)
         {
             if (!children[i].done)
@@ -121,6 +129,11 @@ public class MapNodeScript : MonoBehaviour
             }
         }
         UpdateChildren();
+        UpdateColor();
+        for (int i = 0; i < parents.Count; i++)
+        {
+            parents[i].UpdateState();
+        }
     }
 
     public void UpdateColor()
@@ -128,6 +141,37 @@ public class MapNodeScript : MonoBehaviour
         if (done)
         {
             backSprite.color = Color.cyan;
+
+            for (int i = 0; i < parentLines.Count; i++)
+            {
+                if (parents[i].done)
+                {
+                    parentLines[i].startColor = new Color(0, 1, 1, 0.6f);
+                    parentLines[i].endColor = new Color(0, 1, 1, 0.6f);
+                }
+            }
+
+            for (int i = 0; i < childrenLines.Count; i++)
+            {
+                if (children[i].done)
+                {
+                    childrenLines[i].startColor = new Color(0, 1, 1, 0.6f);
+                    childrenLines[i].endColor = new Color(0, 1, 1, 0.6f);
+                }
+                else
+                {
+                    if (children[i].active)
+                    {
+                        childrenLines[i].startColor = new Color(0, 1, 0, 0.6f);
+                        childrenLines[i].endColor = new Color(0, 1, 0, 0.6f);
+                    }
+                    else
+                    {
+                        childrenLines[i].startColor = new Color(0, 0, 0, 0.6f);
+                        childrenLines[i].endColor = new Color(0, 0, 0, 0.6f);
+                    }
+                }
+            }
         } else if (active)
         {
             backSprite.color = Color.green;
@@ -135,13 +179,25 @@ public class MapNodeScript : MonoBehaviour
             {
                 backSprite.color = GlobalPieceManager.GetPieceClassEntry(pieceClass).backgroundColorLight;
             }
+
+            for (int i = 0; i < childrenLines.Count; i++)
+            {
+                childrenLines[i].startColor = new Color(0, 0, 0, 0.6f);
+                childrenLines[i].endColor = new Color(0, 0, 0, 0.6f);
+            }
         }
         else
         {
-            backSprite.color = new Color(0, 0.5f, 0, 0.75f);
+            backSprite.color = new Color(0, 0.5f, 0, 1f);
             if (nodeType == MapNodeType.WorldNode)
             {
-                backSprite.color = GlobalPieceManager.GetPieceClassEntry(pieceClass).backgroundColorDark;
+                backSprite.color = GlobalPieceManager.GetPieceClassEntry(pieceClass).squareColorDark;
+            }
+
+            for (int i = 0; i < childrenLines.Count; i++)
+            {
+                childrenLines[i].startColor = new Color(0, 0, 0, 0.6f);
+                childrenLines[i].endColor = new Color(0, 0, 0, 0.6f);
             }
         }
     }
@@ -155,9 +211,13 @@ public class MapNodeScript : MonoBehaviour
     {
         if (nodeType == MapNodeType.BossBattle)
         {
-            int i = Random.Range(1, 25);
+            int i = Random.Range(1, 24);
 
             em = (Board.EnemyModifier)(1 << i);
+        }
+        if (nodeType == MapNodeType.FinalBossBattle)
+        {
+            em = Board.EnemyModifier.Zenith;
         }
         army = ArmyGenerator.GenerateArmy(truePieceValueTotal, pieceTypes, truePieceValueTotal > 15f ? 0.5f + ((10f * 0.25f) / (truePieceValueTotal - 5)) : 0.75f, 0.5f, pieceClass, em);
         //Recount piece value because it could be off by 1 or something

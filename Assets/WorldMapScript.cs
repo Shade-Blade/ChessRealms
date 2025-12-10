@@ -35,6 +35,7 @@ public class WorldMapScript : MonoBehaviour
 
     public void GenerateMap()
     {
+        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(1253));
         //realmText.text = GlobalPieceManager.GetPieceClassEntry(pieceClass).name + " Realm";
 
         //-3, 3.5
@@ -90,15 +91,26 @@ public class WorldMapScript : MonoBehaviour
         }
 
         Piece.PieceClass pc = lastRealm;
-        MapNodeScript mns = MakeMapNodeScript(startPos, pc, Mathf.Min(500, baseDifficulty), 2, MapNodeScript.MapNodeType.Start);
+        MapNodeScript mns = MakeMapNodeScript(startPos + Vector3.up * 0.1f, pc, Mathf.Min(500, baseDifficulty), 2, MapNodeScript.MapNodeType.Start);
         //todo: find better way to do stuff to have branching paths and generated layouts
 
-        MapNodeScript a = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.2f) + delta * Random.Range(-0.3f, 0.3f), 0, 0, pc, baseDifficulty, MapNodeScript.MapNodeType.WorldNode);
-        MapNodeScript b1 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(-1.5f, -1.3f), 0, 0, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 2f)), MapNodeScript.MapNodeType.WorldNode);
-        MapNodeScript b2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.6f) + delta * Random.Range(-0.2f, 0.2f), 0, 0, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 4.25f)), MapNodeScript.MapNodeType.WorldNode);
-        MapNodeScript b3 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(1.3f, 1.5f), 0, 0, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 3.75f)), MapNodeScript.MapNodeType.WorldNode);
-        MapNodeScript c1 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(-1f, -0.8f), 0, 0, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 5.7f)), MapNodeScript.MapNodeType.WorldNode);
-        MapNodeScript c2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(0.8f, 1f), 0, 0, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 6.5f)), MapNodeScript.MapNodeType.WorldNode);
+        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(1, 71253));
+        MapNodeScript a = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.25f) + delta * Random.Range(-0.3f, 0.3f), 0, 0, pc, baseDifficulty, MapNodeScript.MapNodeType.WorldNode);
+        pc = a.pieceClass;
+        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(2, 71253));
+        MapNodeScript b1 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(-1.2f, -1f), 1, 1, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 2f)), MapNodeScript.MapNodeType.WorldNode);
+        pc = a.pieceClass;
+        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(3, 71253));
+        MapNodeScript b2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.6f) + delta * Random.Range(-0.2f, 0.2f), 2, 2, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 3.5f)), MapNodeScript.MapNodeType.WorldNode);
+        pc = a.pieceClass;
+        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(4, 71253));
+        MapNodeScript b3 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(1f, 1.2f), 1, 2, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 2.5f)), MapNodeScript.MapNodeType.WorldNode);
+        pc = b1.pieceClass;
+        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(5, 71253));
+        MapNodeScript c1 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(-0.8f, -0.7f), 3, 4, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 4.5f)), MapNodeScript.MapNodeType.WorldNode);
+        pc = b3.pieceClass;
+        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(6, 71253));
+        MapNodeScript c2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(0.7f, 0.8f), 3, 4, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 5.5f)), MapNodeScript.MapNodeType.WorldNode);
 
         mns.children.Add(a);
 
@@ -111,7 +123,8 @@ public class WorldMapScript : MonoBehaviour
         b2.children.Add(c2);
         b3.children.Add(c2);
 
-        mns = MakeWorldNode(pieceClasses, endPos, 4, 6, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 8f)), MapNodeScript.MapNodeType.WorldNode);
+        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(7, 71253));
+        mns = MakeWorldNode(pieceClasses, endPos, 4, 8, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 7.5f)), MapNodeScript.MapNodeType.WorldNode);
         c1.children.Add(mns);
         c2.children.Add(mns);
         lastNode = mns;
@@ -146,6 +159,9 @@ public class WorldMapScript : MonoBehaviour
             pc = RandomTable<Piece.PieceClass>.ChooseRandom(pieceClasses);
         }
         pieceClasses.Remove(pc);
+
+        difficulty = (int)(10 * difficulty) / 10f;
+
         return MakeMapNodeScript(position, pc, difficulty, 0, MapNodeScript.MapNodeType.WorldNode);
     }
 
@@ -160,7 +176,6 @@ public class WorldMapScript : MonoBehaviour
         mns.truePieceValueTotal = difficulty;
         mns.pieceTypes = types;
         mns.nodeType = nodeType;
-        mns.GenerateArmy();
         return mns;
     }
 
@@ -168,20 +183,14 @@ public class WorldMapScript : MonoBehaviour
     {
         for (int i = 0; i < mapNodes.Count; i++)
         {
+            //note: avoiding the float conversion because I am suspicious of possible float rounding differences across platforms
+            mapNodes[i].nodeSeed = MainManager.ConvertSeedNodeOffset(776579 ^ (int)(mapNodes[i].truePieceValueTotal * 10000));
+            UnityEngine.Random.InitState(mapNodes[i].nodeSeed);
             //mapNodes[i].pieceClass = pieceClass;
 
             if (mapNodes[i].nodeType == MapNodeScript.MapNodeType.Start)
             {
                 current = mapNodes[i];
-            }
-
-            if (mapNodes[i].nodeType == MapNodeScript.MapNodeType.Battle)
-            {
-                mapNodes[i].GenerateArmy();
-            }
-            if (mapNodes[i].nodeType == MapNodeScript.MapNodeType.BossBattle)
-            {
-                mapNodes[i].GenerateArmy();
             }
         }
 

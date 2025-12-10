@@ -53,10 +53,23 @@ public static class ArmyGenerator
         List<PieceTableEntry> hardcodeTable = pieceTable.GetAllOutput();
 
         List<Piece.PieceType> extraPieces = Board.EnemyModifierExtraPieces(em);
+
+        /*
         float maxValue = tryValue / 2;
         for (int i = 0; i < extraPieces.Count; i++)
         {
             tryValue -= GlobalPieceManager.GetPieceTableEntry(extraPieces[i]).pieceValueX2 / 2f;
+        }
+        if (tryValue < maxValue)
+        {
+            tryValue = maxValue;
+        }
+        */
+        float maxValue = tryValue / 2;
+        if (em != 0)
+        {
+            float power = Board.GetEnemyModifierPower(em);
+            tryValue -= power;
         }
         if (tryValue < maxValue)
         {
@@ -1245,7 +1258,7 @@ public static class ArmyGenerator
             debug += reducedPool[i].type.ToString();
             debug += " ";
         }
-        Debug.Log(debug);
+        //Debug.Log(debug);
 
         pieceTable = new RandomTable<PieceTableEntry>(reducedTable);
         return pieceTable;

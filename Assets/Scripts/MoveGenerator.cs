@@ -364,7 +364,7 @@ internal static class MoveGenerator
                     }
                     break;
                 case Piece.PieceType.Aquarius:
-                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ROOK2, index, -3, -3);
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_ROOK2, index, -2, -2);
                     if (ipa == Piece.PieceAlignment.White)
                     {
                         b.globalData.bitboard_waterWhite |= pattern;
@@ -764,6 +764,16 @@ internal static class MoveGenerator
 
                 if ((1uL << (xy) & a2Bitboard) != 0)  //3 because it counts Arcana Lovers itself as one of the neighbors
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
                         GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
@@ -810,6 +820,16 @@ internal static class MoveGenerator
 
                 if ((entry & ~allyBitboard) == 0)
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     //because this generates in a suboptimal order the PFC movers have to not use mbt
                     if (pte.enhancedMoveType == Piece.EnhancedMoveType.PartialForcedCapture)
                     {
@@ -845,6 +865,16 @@ internal static class MoveGenerator
                 ulong allyBitboardB = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesBlack : b.globalData.bitboard_piecesWhite;
                 if ((entry & ~allyBitboardB) != 0)
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
                         GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
@@ -854,6 +884,16 @@ internal static class MoveGenerator
             case Piece.EnhancedMoveType.SwitchMover:
                 if (((x + y) & 1) == 0)
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
                         GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
@@ -875,6 +915,16 @@ internal static class MoveGenerator
                 ulong enemyBitboardAdjacent = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesWhiteAdjacent : b.globalData.bitboard_piecesBlackAdjacent;
                 if (((1uL << xy) & enemyBitboardAdjacent) != 0)
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
                         GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
@@ -889,6 +939,16 @@ internal static class MoveGenerator
                 ulong enemyBitboardAdjacentB = pa == Piece.PieceAlignment.Black ? b.globalData.bitboard_piecesWhiteAdjacent : b.globalData.bitboard_piecesBlackAdjacent;
                 if (((1uL << xy) & enemyBitboardAdjacentB) != 0)
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
                         GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
@@ -903,6 +963,16 @@ internal static class MoveGenerator
                 //MainManager.PrintBitboard(allyBitboard);
                 if ((allyBitboardD & (1uL << xy)) == 0)
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
                         GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
@@ -932,6 +1002,16 @@ internal static class MoveGenerator
                 }
                 else
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
                         GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
@@ -946,6 +1026,16 @@ internal static class MoveGenerator
 
                 if (pa == Piece.PieceAlignment.Black ? (b.whitePerPlayerInfo.capturedLastTurn) : b.blackPerPlayerInfo.capturedLastTurn)
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
                         GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
@@ -965,6 +1055,16 @@ internal static class MoveGenerator
 
                 if (lastPieceLocation == xy)
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
                         GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
@@ -986,6 +1086,16 @@ internal static class MoveGenerator
 
                 if (b.blackPerPlayerInfo.capturedLastTurn || b.whitePerPlayerInfo.capturedLastTurn)
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
                         GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
@@ -1000,6 +1110,16 @@ internal static class MoveGenerator
 
                 if (!(b.blackPerPlayerInfo.capturedLastTurn || b.whitePerPlayerInfo.capturedLastTurn))
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
                         GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
@@ -1014,6 +1134,16 @@ internal static class MoveGenerator
 
                 if (pa == Piece.PieceAlignment.Black ? y < 4 : y >= 4)
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
                         GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
@@ -1028,6 +1158,16 @@ internal static class MoveGenerator
 
                 if (pa == Piece.PieceAlignment.White ? y < 4 : y >= 4)
                 {
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            b.globalData.bitboard_enhancedWhite |= (1uL << xy);
+                            break;
+                        case PieceAlignment.Black:
+                            b.globalData.bitboard_enhancedBlack |= (1uL << xy);
+                            break;
+                    }
+
                     foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
                     {
                         GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, pte, pse, pm, piece, x, y, mgie, blockerBitboard, mbt, moveMetadata);
@@ -1046,6 +1186,16 @@ internal static class MoveGenerator
     //To do: Move these to a MoveGeneration class
     public static void GenerateMovesForPlayer(List<uint> moves, ref Board b, Piece.PieceAlignment pa, Dictionary<uint, MoveMetadata> moveMetadata)
     {
+        switch (pa)
+        {
+            case PieceAlignment.White:
+                b.globalData.bitboard_enhancedWhite = 0;
+                break;
+            case PieceAlignment.Black:
+                b.globalData.bitboard_enhancedBlack = 0;
+                break;
+        }
+
         //Debug.Log("Generate for " + pa);
         //Future thing to do: pieces need to cast ability ranges with a third move range pass before the first 2 (for passive ability ranges)
         GenerateAreaBitboards(ref b);
@@ -3439,6 +3589,12 @@ internal static class MoveGenerator
         {
             bitboardIncompatible = true;
         }
+        switch (pte.type)
+        {
+            case PieceType.RabbitCourier:
+                bitboardIncompatible = true;
+                break;
+        }
 
         bool flip = false;
 
@@ -5438,11 +5594,8 @@ internal static class MoveGenerator
                         (deltaX, deltaY) = (aX, 0); //Move.TransformBasedOnAlignment(pa, 1, 0, flip);
                         (deltaXB, deltaYB) = (0, aY); //Move.TransformBasedOnAlignment(pa, 0, 1, flip);
                         GenerateRayMovesDual(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 0, 1);
-                    }
-                    //ray up left
-                    //Allowed if F set
-                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.f) != 0)
-                    {
+                        //ray up left
+                        //Allowed if F set
                         (deltaX, deltaY) = (-aX, 0); //Move.TransformBasedOnAlignment(pa, -1, 0, flip);
                         (deltaXB, deltaYB) = (0, aY); //Move.TransformBasedOnAlignment(pa, 0, 1, flip);
                         GenerateRayMovesDual(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 2, 3);
@@ -5454,11 +5607,8 @@ internal static class MoveGenerator
                         (deltaX, deltaY) = (aX, 0); //Move.TransformBasedOnAlignment(pa, 1, 0, flip);
                         (deltaXB, deltaYB) = (0, -aY); //Move.TransformBasedOnAlignment(pa, 0, -1, flip);
                         GenerateRayMovesDual(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 4, 5);
-                    }
-                    //ray down left
-                    //Allowed if B set
-                    if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.b) != 0)
-                    {
+                        //ray down left
+                        //Allowed if B set
                         (deltaX, deltaY) = (-aX, 0); //Move.TransformBasedOnAlignment(pa, -1, 0, flip);
                         (deltaXB, deltaYB) = (0, -aY); //Move.TransformBasedOnAlignment(pa, 0, -1, flip);
                         GenerateRayMovesDual(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 6, 7);
@@ -5483,10 +5633,7 @@ internal static class MoveGenerator
                         (deltaX, deltaY) = (0, aY); //Move.TransformBasedOnAlignment(pa, 0, 1, flip);
                         (deltaXB, deltaYB) = (aX, aY); //Move.TransformBasedOnAlignment(pa, 1, 1, flip);
                         GenerateRayMovesDual(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 0, 1);
-                    }
-                    //ray up left
-                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.bh) == 0))
-                    {
+                        //ray up left
                         (deltaX, deltaY) = (0, aY); //Move.TransformBasedOnAlignment(pa, 0, 1, flip);
                         (deltaXB, deltaYB) = (-aX, aY); //Move.TransformBasedOnAlignment(pa, -1, 1, flip);
                         GenerateRayMovesDual(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 2, 3);
@@ -5497,10 +5644,7 @@ internal static class MoveGenerator
                         (deltaX, deltaY) = (0, -aY); //Move.TransformBasedOnAlignment(pa, 0, -1, flip);
                         (deltaXB, deltaYB) = (aX, -aY); //Move.TransformBasedOnAlignment(pa, 1, -1, flip);
                         GenerateRayMovesDual(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 4, 5);
-                    }
-                    //ray down left
-                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.fh) == 0))
-                    {
+                        //ray down left
                         (deltaX, deltaY) = (0, -aY); //Move.TransformBasedOnAlignment(pa, 0, -1, flip);
                         (deltaXB, deltaYB) = (-aX, -aY); //Move.TransformBasedOnAlignment(pa, -1, -1, flip);
                         GenerateRayMovesDual(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 6, 7);
@@ -5513,10 +5657,7 @@ internal static class MoveGenerator
                         (deltaX, deltaY) = (aX, 0); //Move.TransformBasedOnAlignment(pa, 1, 0, flip);
                         (deltaXB, deltaYB) = (aX, aY);  //Move.TransformBasedOnAlignment(pa, 1, 1, flip);
                         GenerateRayMovesDual(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 8, 9);
-                    }
-                    //ray up left
-                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.bv) == 0))
-                    {
+                        //ray up left
                         (deltaX, deltaY) = (-aX, 0); //Move.TransformBasedOnAlignment(pa, -1, 0, flip);
                         (deltaXB, deltaYB) = (-aX, aY); //Move.TransformBasedOnAlignment(pa, -1, 1, flip);
                         GenerateRayMovesDual(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 10, 11);
@@ -5527,10 +5668,7 @@ internal static class MoveGenerator
                         (deltaX, deltaY) = (aX, 0); //Move.TransformBasedOnAlignment(pa, 1, 0, flip);
                         (deltaXB, deltaYB) = (aX, -aY); //Move.TransformBasedOnAlignment(pa, 1, -1, flip);
                         GenerateRayMovesDual(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 12, 13);
-                    }
-                    //ray down left
-                    if (!directionRestricted || ((mgie.modifier & MoveGeneratorPreModifier.fv) == 0))
-                    {
+                        //ray down left
                         (deltaX, deltaY) = (-aX, 0); //Move.TransformBasedOnAlignment(pa, -1, 0, flip);
                         (deltaXB, deltaYB) = (-aX, -aY); //Move.TransformBasedOnAlignment(pa, -1, -1, flip);
                         GenerateRayMovesDual(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, deltaX, deltaY, deltaXB, deltaYB, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 14, 15);
@@ -5745,10 +5883,6 @@ internal static class MoveGenerator
                                 //up right
                                 (deltaX, deltaY) = (aX, aY); //Move.TransformBasedOnAlignment(pa, 1, 1, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 0);
-                            }
-
-                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
-                            {
                                 //up left
                                 (deltaX, deltaY) = (-aX, aY); //Move.TransformBasedOnAlignment(pa, -1, 1, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 1);
@@ -5787,10 +5921,6 @@ internal static class MoveGenerator
                                 //down right
                                 (deltaX, deltaY) = (aX, -aY); //Move.TransformBasedOnAlignment(pa, 1, -1, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 2);
-                            }
-
-                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
-                            {
                                 //down left
                                 (deltaX, deltaY) = (-aX, -aY); //Move.TransformBasedOnAlignment(pa, -1, -1, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 3);
@@ -5920,10 +6050,6 @@ internal static class MoveGenerator
                                 //up then left
                                 (deltaX, deltaY) = (-aX, 0); //Move.TransformBasedOnAlignment(pa, -1, 0, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 0);
-                            }
-
-                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
-                            {
                                 //up then right
                                 (deltaX, deltaY) = (aX, 0); //Move.TransformBasedOnAlignment(pa, 1, 0, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 1);
@@ -5971,10 +6097,6 @@ internal static class MoveGenerator
                                 //down then left
                                 (deltaX, deltaY) = (-aX, 0); //Move.TransformBasedOnAlignment(pa, -1, 0, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 3);
-                            }
-
-                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.v) == 0)
-                            {
                                 //down then right
                                 (deltaX, deltaY) = (aX, 0); //Move.TransformBasedOnAlignment(pa, 1, 0, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 4);
@@ -6023,10 +6145,6 @@ internal static class MoveGenerator
                                 //left then up
                                 (deltaX, deltaY) = (0, aY); //Move.TransformBasedOnAlignment(pa, 0, 1, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 6);
-                            }
-
-                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
-                            {
                                 //left then down
                                 (deltaX, deltaY) = (0, -aY); //Move.TransformBasedOnAlignment(pa, 0, -1, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 7);
@@ -6073,10 +6191,6 @@ internal static class MoveGenerator
                                 //right then up
                                 (deltaX, deltaY) = (0, aY); //Move.TransformBasedOnAlignment(pa, 0, 1, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 9);
-                            }
-
-                            if (!directionRestricted || (mgie.modifier & MoveGeneratorPreModifier.h) == 0)
-                            {
                                 //right then down
                                 (deltaX, deltaY) = (0, -aY); //Move.TransformBasedOnAlignment(pa, 0, -1, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 10);
@@ -6131,14 +6245,14 @@ internal static class MoveGenerator
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 0);
                             }
 
-                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.f)) == 0)
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.fv)) == 0)
                             {
                                 //UL then DL
                                 (deltaX, deltaY) = (-aX, -aY); //Move.TransformBasedOnAlignment(pa, -1, -1, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 1);
                             }
 
-                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.h)) == 0)
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.vh)) == 0)
                             {
                                 //UL then UL
                                 (deltaX, deltaY) = (-aX, aY); //Move.TransformBasedOnAlignment(pa, -1, 1, flip);
@@ -6182,14 +6296,14 @@ internal static class MoveGenerator
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 3);
                             }
 
-                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.f)) == 0)
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.fv)) == 0)
                             {
                                 //UR then DR
                                 (deltaX, deltaY) = (aX, -aY); //Move.TransformBasedOnAlignment(pa, 1, -1, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 4);
                             }
 
-                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.h)) == 0)
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.vh)) == 0)
                             {
                                 //UR then UR
                                 (deltaX, deltaY) = (aX, aY); //Move.TransformBasedOnAlignment(pa, 1, 1, flip);
@@ -6233,14 +6347,14 @@ internal static class MoveGenerator
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 6);
                             }
 
-                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.b)) == 0)
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.bv)) == 0)
                             {
                                 //DL then UL
                                 (deltaX, deltaY) = (-aX, aY); //Move.TransformBasedOnAlignment(pa, -1, 1, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 7);
                             }
 
-                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.h)) == 0)
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.vh)) == 0)
                             {
                                 //DL then DL
                                 (deltaX, deltaY) = (-aX, -aY); //Move.TransformBasedOnAlignment(pa, -1, -1, flip);
@@ -6284,14 +6398,14 @@ internal static class MoveGenerator
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 9);
                             }
 
-                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.b)) == 0)
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.bv)) == 0)
                             {
                                 //DR then UR
                                 (deltaX, deltaY) = (aX, aY); //Move.TransformBasedOnAlignment(pa, 1, 1, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, targetX, targetY, 1, deltaX, deltaY, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, 10);
                             }
 
-                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.v | MoveGeneratorPreModifier.h)) == 0)
+                            if (!directionRestricted || (mgie.modifier & (MoveGeneratorPreModifier.vh)) == 0)
                             {
                                 //DR then DR
                                 (deltaX, deltaY) = (aX, -aY); //Move.TransformBasedOnAlignment(pa, 1, -1, flip);
@@ -6745,10 +6859,7 @@ internal static class MoveGenerator
                             {
                                 //(deltaX, deltaY) = (aX * ch, 0); //Move.TransformBasedOnAlignment(pa, ch, cl, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * ch, 0, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8) + 2);
-                            }
-                            //left
-                            if ((mgie.modifier & MoveGeneratorPreModifier.h) != 0)
-                            {
+                                //left
                                 //(deltaX, deltaY) = (aX * -ch, 0); //Move.TransformBasedOnAlignment(pa, -ch, cl, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * -ch, 0, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8) + 3);
                             }
@@ -6771,10 +6882,7 @@ internal static class MoveGenerator
                             {
                                 //(deltaX, deltaY) = (aX * ch, aY * cl); //Move.TransformBasedOnAlignment(pa, ch, cl, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * ch, aY * cl, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8));
-                            }
-                            //ray up left
-                            if ((mgie.modifier & MoveGeneratorPreModifier.f) != 0)
-                            {
+                                //ray up left
                                 //(deltaX, deltaY) = (aX * -ch, aY * cl); //Move.TransformBasedOnAlignment(pa, -ch, cl, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * -ch, aY * cl, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8) + 1);
                             }
@@ -6783,10 +6891,7 @@ internal static class MoveGenerator
                             {
                                 //(deltaX, deltaY) = (aX * ch, aY * -cl); //Move.TransformBasedOnAlignment(pa, ch, -cl, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * ch, aY * -cl, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8) + 2);
-                            }
-                            //ray down left
-                            if ((mgie.modifier & MoveGeneratorPreModifier.b) != 0)
-                            {
+                                //ray down left
                                 //(deltaX, deltaY) = (aX * -ch, aY * -cl); //Move.TransformBasedOnAlignment(pa, -ch, -cl, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * -ch, aY * -cl, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8) + 3);
                             }
@@ -6829,52 +6934,40 @@ internal static class MoveGenerator
                         }
                         else
                         {
-                            if (((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                            if (((mgie.modifier & MoveGeneratorPreModifier.bh) == 0))
                             {
                                 //(deltaX, deltaY) = (aX * cl, aY * ch); //Move.TransformBasedOnAlignment(pa, cl, ch, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * cl, aY * ch, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8));
-                            }
-                            //ray up left
-                            if (((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
-                            {
+                                //ray up left
                                 //(deltaX, deltaY) = (aX * -cl, aY * ch); //Move.TransformBasedOnAlignment(pa, -cl, ch, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * -cl, aY * ch, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8) + 1);
                             }
                             //ray down right
-                            if (((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
+                            if (((mgie.modifier & MoveGeneratorPreModifier.fh) == 0))
                             {
                                 //(deltaX, deltaY) = (aX * cl, aY * -ch); //Move.TransformBasedOnAlignment(pa, cl, -ch, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * cl, aY * -ch, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8) + 2);
-                            }
-                            //ray down left
-                            if (((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.h) == 0))
-                            {
+                                //ray down left
                                 //(deltaX, deltaY) = (aX * -cl, aY * -ch); //Move.TransformBasedOnAlignment(pa, -cl, -ch, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * -cl, aY * -ch, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8) + 3);
                             }
 
                             //Horizontal 4
                             //ray up right
-                            if (((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                            if (((mgie.modifier & MoveGeneratorPreModifier.bv) == 0))
                             {
                                 //(deltaX, deltaY) = (aX * ch, aY * cl); //Move.TransformBasedOnAlignment(pa, ch, cl, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * ch, aY * cl, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8) + 4);
-                            }
-                            //ray up left
-                            if (((mgie.modifier & MoveGeneratorPreModifier.b) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
-                            {
+                                //ray up left
                                 //(deltaX, deltaY) = (aX * -ch, aY * cl); //Move.TransformBasedOnAlignment(pa, -ch, cl, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * -ch, aY * cl, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8) + 5);
                             }
                             //ray down right
-                            if (((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
+                            if (((mgie.modifier & MoveGeneratorPreModifier.fv) == 0))
                             {
                                 //(deltaX, deltaY) = (aX * ch, aY * -cl); //Move.TransformBasedOnAlignment(pa, ch, -cl, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * ch, aY * -cl, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8) + 6);
-                            }
-                            //ray down left
-                            if (((mgie.modifier & MoveGeneratorPreModifier.f) == 0 && (mgie.modifier & MoveGeneratorPreModifier.v) == 0))
-                            {
+                                //ray down left
                                 //(deltaX, deltaY) = (aX * -ch, aY * -cl); //Move.TransformBasedOnAlignment(pa, -ch, -cl, flip);
                                 GenerateOffsetRayMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, x, y, 0, aX * -ch, aY * -cl, specialType, pte, blockerBitboard, mgie, mbt, moveMetadata, (uint)((ch + (cl << 3)) << 8) + 7);
                             }
@@ -6935,7 +7028,7 @@ internal static class MoveGenerator
                         }
                     } else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, allyKingBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, allyKingBitboard, Dir.Null, pa, SpecialType.MoveOnly, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.EnemyKingTeleport:
@@ -6970,7 +7063,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, enemyKingBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, enemyKingBitboard, Dir.Null, pa, SpecialType.MoveOnly, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.PawnSwapTeleport:
@@ -7003,7 +7096,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, allyPawnsBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, allyPawnsBitboard, Dir.Null, pa, SpecialType.AllySwap, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.AllySwapTeleport:
@@ -7036,7 +7129,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, allyBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, allyBitboard, Dir.Null, pa, SpecialType.AllySwap, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.AllyBehindTeleport:
@@ -7061,7 +7154,7 @@ internal static class MoveGenerator
                             int pieceIndex = MainManager.PopBitboardLSB1(allyBBitboard, out allyBBitboard);
 
                             //Plop a move down
-                            bool wasGenerated = GenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, pieceIndex & 7, (pieceIndex & 56) >> 3, Dir.Null, pa, SpecialType.AllySwap, pte, mbt);
+                            bool wasGenerated = GenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, pieceIndex & 7, (pieceIndex & 56) >> 3, Dir.Null, pa, SpecialType.MoveOnly, pte, mbt);
                             if (wasGenerated)
                             {
                                 uint key = Move.PackMove((byte)x, (byte)y, (byte)(pieceIndex & 7), (byte)(pieceIndex >> 3));
@@ -7073,7 +7166,7 @@ internal static class MoveGenerator
                         }
                     } else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, allyBBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, allyBBitboard, Dir.Null, pa, SpecialType.MoveOnly, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.EnemyBehindTeleport:
@@ -7111,7 +7204,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, enemyBBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, enemyBBitboard, Dir.Null, pa, SpecialType.MoveOnly, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.AnywhereTeleport:
@@ -7136,7 +7229,7 @@ internal static class MoveGenerator
                         }
                     } else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, anywhereBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, anywhereBitboard, Dir.Null, pa, SpecialType.MoveOnly, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.AnywhereAdjacentTeleport:
@@ -7161,7 +7254,7 @@ internal static class MoveGenerator
                         }
                     } else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, anywhereAdjacentBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, anywhereAdjacentBitboard, Dir.Null, pa, SpecialType.MoveOnly, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.AnywhereNonAdjacentTeleport:
@@ -7188,7 +7281,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, anywhereNonAdjacentBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, anywhereNonAdjacentBitboard, Dir.Null, pa, SpecialType.MoveOnly, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.AnywhereSameColorTeleport:
@@ -7214,7 +7307,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, anywhereSameBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, anywhereSameBitboard, Dir.Null, pa, SpecialType.MoveOnly, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.AnywhereOppositeColorTeleport:
@@ -7240,7 +7333,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, anywhereOppositeBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, anywhereOppositeBitboard, Dir.Null, pa, SpecialType.MoveOnly, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.HomeRangeTeleport:
@@ -7273,7 +7366,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, homeRangeBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, homeRangeBitboard, Dir.Null, pa, SpecialType.MoveOnly, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.KingSwapTeleport:
@@ -7306,7 +7399,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, allyKingBitboardB, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, allyKingBitboardB, Dir.Null, pa, SpecialType.AllySwap, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.MirrorTeleport:
@@ -7352,7 +7445,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, blossomTeleportBitboard, Dir.Null, pa, SpecialType.Normal, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.ForestTeleport:
@@ -7373,20 +7466,20 @@ internal static class MoveGenerator
                             int index = MainManager.PopBitboardLSB1(forestTeleportBitboard, out forestTeleportBitboard);
 
                             //Plop a move down
-                            bool wasGenerated = GenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, index & 7, (index & 56) >> 3, Dir.Null, pa, SpecialType.Normal, pte, mbt);
+                            bool wasGenerated = GenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, index & 7, (index & 56) >> 3, Dir.Null, pa, SpecialType.MoveOnly, pte, mbt);
                             if (wasGenerated)
                             {
                                 uint key = Move.PackMove((byte)x, (byte)y, (byte)(index & 7), (byte)(index >> 3));
                                 if (!moveMetadata.ContainsKey(key))
                                 {
-                                    moveMetadata.Add(key, new MoveMetadata(piece, index & 7, index >> 3, MoveMetadata.PathType.Teleport, SpecialType.Normal, MoveMetadata.MakePathTag(mgie.atom, 0)));
+                                    moveMetadata.Add(key, new MoveMetadata(piece, index & 7, index >> 3, MoveMetadata.PathType.Teleport, SpecialType.MoveOnly, MoveMetadata.MakePathTag(mgie.atom, 0)));
                                 }
                             }
                         }
                     }
                     else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, forestTeleportBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, forestTeleportBitboard, Dir.Null, pa, SpecialType.MoveOnly, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.DiplomatTeleport:
@@ -7411,7 +7504,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, diplomatBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, diplomatBitboard, Dir.Null, pa, SpecialType.MoveOnly, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.EchoTeleport:
@@ -7466,7 +7559,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, coastBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
+                        GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, coastBitboard, Dir.Null, pa, SpecialType.MoveOnly, pte, mgie, mbt);
                     }
                     break;
                 case MoveGeneratorAtom.AimMover:
@@ -9213,8 +9306,14 @@ internal static class MoveGenerator
 
         bool canMove = true;
         int moveIndex = index;
+        int iterations = 0;
         while (true)
         {
+            iterations++;
+            if (iterations >= 8)
+            {
+                break;
+            }
             lastTempX = tempX;
             lastTempY = tempY;
             //tempX += deltaX;

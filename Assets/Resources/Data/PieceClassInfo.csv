@@ -58,7 +58,7 @@ OldIndex,Class,Realm Index,Name,Climate category,SquareColorLight,SquareColorDar
 56,Troupe,-1,Carnival,Islands,#FFE6B2,#664C26,#E6B3FF,#C758FF,-1,Teleporters|Royalist,Entrancer|Hypnotist|Pisces|Aquarius|CapSpirit|Imitator|ArcanaFool
 57,Teleporters,-1,Warped,Desert,#FFE6B2,#664C26,#E6B3FF,#C758FF,-1,,FloatMage|CapSpirit|GlassSpirit|Infiltrator|Assassin|RoyalDouble|RoyalMaid|EchoSoldier|ChargeWarper
 58,Icy,51,Icy,Icy,#E5FBFF,#5493B2,#CCFFFF,#58FFFF,4,Planets,Europa|FreezeMage|ArcanaHermit|Missionary|AceOfCups|PageOfCups|QueenOfCups|WinterQueen|WinterBishop|WinterPawn|Immobilizer
-59,Poison,52,Toxic,Swamp,#FFE6B2,#664C26,#B1FFB1,#58FF58,4,Undead|Monster|Lycanthrope,PoisonMage|SparkMage|HealerMage|WaterElemental|WaterWisp|Gluttony|Werechimera|Plaguebearer|BottleSpirit
+59,Poison,52,Toxic,Swamp,#FFE6B2,#664C26,#B1FFB1,#58FF58,4,Undead|Monster|Lycanthropes,PoisonMage|SparkMage|HealerMage|WaterElemental|WaterWisp|Gluttony|Werechimera|Plaguebearer|BottleSpirit
 60,StatusMages,53,Magic,Desert,#FFE6B2,#664C26,#B1B1FF,#7A58FF,6,Enchanter,PoisonElemental|IceElemental|MatchPawn|Temperance|Immobilizer|Virgo|Hag|Harpy
 61,Skip,54,Skip,Forest,#FFE6B2,#664C26,#B1B1FF,#7A58FF,3,Swift,Balloon|CrookedBishop|Runner|Skipper|Locust|NarrowRook|NarrowPawn|SwiftRook|SwiftBishop
 62,Seasonal,55,Seasonal,Forest,#FFE6B2,#664C26,#B1FFB1,#58FF58,4,Fire|Icy,DayPawn|NightPawn|Vestal|SnowQueen|Warden|ArcanaEmpress|AceOfWands|PageOfWands|QueenOfWands

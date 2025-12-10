@@ -54,7 +54,22 @@ public class MoveTrailScript : MonoBehaviour
     public void Setup(int startX, int startY, List<MoveMetadata> trail)
     {
         this.trail = trail;
+        List<Vector3> pointList = MakeTrailPoints(startX, startY, trail);
+        switch (trail[0].path)
+        {
+            case MoveMetadata.PathType.SliderGiant:
+            case MoveMetadata.PathType.LeaperGiant:
+            case MoveMetadata.PathType.TeleportGiant:
+                MakePathGiant(pointList);
+                break;
+        }
 
+        lr.positionCount = pointList.Count;
+        lr.SetPositions(pointList.ToArray());
+    }
+
+    public static List<Vector3> MakeTrailPoints(int startX, int startY, List<MoveMetadata> trail)
+    {
         List<Vector3> pointList = new List<Vector3>();
 
         int pastX = startX;
@@ -115,17 +130,7 @@ public class MoveTrailScript : MonoBehaviour
             pastY = trail[i].y;
         }
 
-        switch (trail[0].path)
-        {
-            case MoveMetadata.PathType.SliderGiant:
-            case MoveMetadata.PathType.LeaperGiant:
-            case MoveMetadata.PathType.TeleportGiant:
-                MakePathGiant(pointList);
-                break;
-        }
-
-        lr.positionCount = pointList.Count;
-        lr.SetPositions(pointList.ToArray());
+        return pointList;
     }
 
     public void Setup(int startX, int startY, int endX, int endY)
@@ -136,7 +141,7 @@ public class MoveTrailScript : MonoBehaviour
         lr.SetPositions(pointList);
     }
 
-    public void CylinderWrapAroundSegment(List<Vector3> pointList, Vector3 pointA, Vector3 pointB)
+    public static void CylinderWrapAroundSegment(List<Vector3> pointList, Vector3 pointA, Vector3 pointB)
     {
         Vector3 pastPos = pointA;
         Vector3 futurePos = pointB;
@@ -177,7 +182,7 @@ public class MoveTrailScript : MonoBehaviour
             pointList.Add(midLeft);
         }
     }
-    public void TubularWrapAroundSegment(List<Vector3> pointList, Vector3 pointA, Vector3 pointB)
+    public static void TubularWrapAroundSegment(List<Vector3> pointList, Vector3 pointA, Vector3 pointB)
     {
         Vector3 pastPos = pointA;
         Vector3 futurePos = pointB;
@@ -212,7 +217,7 @@ public class MoveTrailScript : MonoBehaviour
         }
     }
 
-    public void AddTeleportSegment(List<Vector3> pointList, Vector3 pointA, Vector3 pointB)
+    public static void AddTeleportSegment(List<Vector3> pointList, Vector3 pointA, Vector3 pointB)
     {
         int zigzags = Mathf.CeilToInt((pointA - pointB).magnitude / BoardScript.SQUARE_SIZE);
 
@@ -229,7 +234,7 @@ public class MoveTrailScript : MonoBehaviour
         }
     }
 
-    public void AddLeaperSegment(List<Vector3> pointList, Vector3 pointA, Vector3 pointB)
+    public static void AddLeaperSegment(List<Vector3> pointList, Vector3 pointA, Vector3 pointB)
     {
         int segments = Mathf.CeilToInt(5 * ((pointA - pointB).magnitude / BoardScript.SQUARE_SIZE));
 
@@ -252,7 +257,7 @@ public class MoveTrailScript : MonoBehaviour
             }
         }
     }
-    public void AddLeaperSegmentCylinder(List<Vector3> pointList, Vector3 pointA, Vector3 pointB)
+    public static void AddLeaperSegmentCylinder(List<Vector3> pointList, Vector3 pointA, Vector3 pointB)
     {
         int segments = Mathf.CeilToInt(5 * ((pointA - pointB).magnitude / BoardScript.SQUARE_SIZE));
 
@@ -314,7 +319,7 @@ public class MoveTrailScript : MonoBehaviour
         }
     }
 
-    public void AddLeaperSegmentTubular(List<Vector3> pointList, Vector3 pointA, Vector3 pointB)
+    public static void AddLeaperSegmentTubular(List<Vector3> pointList, Vector3 pointA, Vector3 pointB)
     {
         int segments = Mathf.CeilToInt(5 * ((pointA - pointB).magnitude / BoardScript.SQUARE_SIZE));
 
@@ -387,5 +392,44 @@ public class MoveTrailScript : MonoBehaviour
         {
             pointList[i] += new Vector3(offset, offset, 0);
         }
+    }
+
+    public static float GetTrailDistance(List<Vector3> list)
+    {
+        float dist = 0;
+        for (int i = 0; i < list.Count - 1; i++)
+        {
+            if (list[i].z < -1 || list[i + 1].z < -1)
+            {
+                continue;
+            }
+
+            dist += (list[i + 1] - list[i]).magnitude;
+        }
+        return dist;
+    }
+    public static Vector3 LerpList(List<Vector3> list, float value)
+    {
+        float targetDist = value * GetTrailDistance(list);
+
+        for (int i = 0; i < list.Count - 1; i++)
+        {
+            if (list[i].z < -1 || list[i + 1].z < -1)
+            {
+                continue;
+            }
+
+            float dist = (list[i + 1] - list[i]).magnitude;
+            if (targetDist > dist)
+            {
+                targetDist -= dist;
+            } else
+            {
+                //lerp
+                return Vector3.Lerp(list[i], list[i + 1], targetDist / dist);
+            }
+        }
+
+        return list[list.Count - 1];
     }
 }

@@ -119,7 +119,7 @@ ArcanaHierophant,6,fR2bRhR2,,,TRUE,,TarotMajor,3
 ArcanaLovers,4,"Fbh(0,2)","(1,2)bh(0,3)fW",,FALSE,,TarotMajor,3
 ArcanaChariot,7,R-G-,,,FALSE,,TarotMajor,3
 ArcanaJustice,6,WF,cR2+cB2+,JusticeMover,FALSE,,TarotMajor,3
-ArcanaHermit,8.5,"W(0,2)",RG,NoAllyMover,FALSE,,TarotMajor,3
+ArcanaHermit,8.5,"W(0,2)",R3+G,NoAllyMover,FALSE,,TarotMajor,3
 ArcanaFortune,4,HW,,,FALSE,,TarotMajor,3
 ArcanaStrength,10.5,"WF(1,2)(0,2)(2,0)",,,FALSE,,TarotMajor,1
 ArcanaHanged,5.5,"W(0,2)F",,,TRUE,,TarotMajor,3
@@ -155,7 +155,7 @@ Uranus,7,"WFm(1,2)",,,TRUE,,Planets,4
 Neptune,6,"WFm(0,2)",,Cylindrical|PassivePush,TRUE,,Planets,3
 Moon,3.5,WO,,,FALSE,,Planets,3
 Asteroid,1.5,"vWh(0,2)",,,FALSE,Jupiter,Planets,1
-Comet,4,cfR-mfRcF,,IceExplode|WaterImmune,FALSE,Neptune,Planets,2
+Comet,4,FfR-,,IceExplode|WaterImmune,FALSE,Neptune,Planets,2
 Io,6,WO,,FireCapture,FALSE,,Planets,3.5
 Europa,4.5,WO,,InflictFreeze,FALSE,,Planets,3.5
 Ganymede,8.5,WP,,,TRUE,,Planets,4
@@ -175,7 +175,7 @@ Aquarius,5.5,WF,,,TRUE,,Zodiac,3
 Pisces,6.5,"WFh(0,2)bBbR",,Cylindrical,FALSE,,Elemental,2
 AirElemental,6,mR3mB3,,PassivePushStrong,TRUE,,Elemental,3
 FireElemental,10,R2B2,,FireCapture|WaterImmune,FALSE,,Elemental,2
-EarthElemental,8,R3-,,ShiftImmune,TRUE,,Elemental,3
+EarthElemental,8,R3,,ShiftImmune,TRUE,,Elemental,3
 WaterElemental,6.5,B2,,Cylindrical|FireImmune,TRUE,,Elemental,3
 VoidElemental,6.5,WF,,Sneaky|PassivePull,TRUE,,Elemental,3
 LightElemental,6,WmB,,Reflecter|EnchantImmune|RelayImmune,TRUE,,Elemental,3
@@ -229,7 +229,7 @@ ElephantCrusher,4.5,"(1,2)",,Giant|InvinciblePawns|StatusImmune,FALSE,,Giant,1.5
 ElephantCharger,7,"R(1,2)",,Giant|InvinciblePawns|StatusImmune,FALSE,,Giant,1.5
 ElephantQueen,9,"RB(1,2)",,Giant|InvinciblePawns|StatusImmune,FALSE,,Giant,1.5
 ElephantBulwark,9,R2F,,Giant|InvinciblePawns|InvincibleClose|StatusImmune,FALSE,,Giant,2.5
-RabbitQueen,9,mR3mB3cR3cB3eR2eB2,,MorphImmune,TRUE,,Rabbit,2.5
+RabbitQueen,9,"mR3mB3cR3cB3e(1,2)",,MorphImmune,TRUE,,Rabbit,2.5
 RabbitCourier,5,RB,,MorphImmune,TRUE,,Rabbit,2.5
 RabbitDiplomat,4.5,"mWmFe(0,2)",,MorphImmune,TRUE,,Rabbit,2.5
 RabbitKnight,5,"v(1,2)h(0,2)mWev(0,2)",,MorphImmune,TRUE,,Rabbit,2.5
@@ -237,7 +237,7 @@ Rabbit,1,"f(2,2)b(0,2)mbW",,MorphImmune,TRUE,RabbitQueen,Rabbit,2
 Blackguard,5,"(1,2)omRomB",,SlipMove,FALSE,,Dark,2
 Spy,5,WF,,Sneaky,FALSE,,Dark,2
 Infiltrator,7,R2,,EnemyKingTeleport,FALSE,,Dark,3
-Disguiser,5.5,mRmB,,,TRUE,,Dark,4
+Disguiser,5.5,mRmB,,MorphImmune,TRUE,,Dark,4
 Assassin,6,vWF,,Deadly|EnemyBehindTeleport,FALSE,,Dark,3
 SlipPawn,1.5,mifR2=mfWcfFomfR2=,,SlipMove,FALSE,,Dark,2
 Diplomat,5,,,Invincible|Unique|DiplomatTeleport,TRUE,,Royalist,4

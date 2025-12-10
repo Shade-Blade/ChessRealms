@@ -1,472 +1,472 @@
-Index
-Rock
-King
-Queen
-Rook
-Bishop
-Knight
-Pawn
-Squire
-Dragoon
-Lancer
-Cataphract
-Marshall
-Priest
-Missionary
-Inquisitor
-Archbishop
-Cardinal
-Anchorite
-Rammer
-Turret
-Trebuchet
-Fortress
-Shielder
-Amazon
-Guard
-Ranger
-Warden
-Princess
-Pegasus
-Pontiff
-Stronghold
-Empress
-SuperPawn
-DivineProgenitor
-DivineProtector
-DivineAvenger
-DivineBeacon
-DivineApothecary
-DivineCourier
-DivineArtisan
-DivineSquire
-DivinePage
-DivineMusician
-DivineMaid
-DivineUsurper
-DivineGardener
-DivineApprentice
-DivineHerald
-SnailQueen
-Crab
-Lobster
-Shrimp
-Tardigrade
-BigBomb
-Bomb
-XBomb
-PiercingCharge
-MiniBomb
-RelayKnight
-RelayBishop
-RelayRook
-RelayQueen
-Runner
-SwiftBishop
-SwiftRook
-SwiftQueen
-FastPawn
-CoastGuard
-Boat
-Skipper
-Raft
-Warship
-Canoe
-Submarine
-Pusher
-PushBishop
-PushRook
-PushQueen
-PushPawn
-StickyMan
-StickyBishop
-StickyRook
-StickyQueen
-StickyPawn
-Lanterner
-Candler
-Torcher
-Vestal
-MatchPawn
-Hypnotist
-Attractor
-Repulser
-Immobilizer
-Entrancer
-Charmer
-Wrath
-Greed
-Gluttony
-Sloth
-Lust
-Envy
-Pride
-Imp
-Patience
-Charity
-Temperance
-Diligence
-Chastity
-Kindness
-Humility
-Monk
-ArcanaFool
-ArcanaMagician
-ArcanaPriestess
-ArcanaEmpress
-ArcanaEmperor
-ArcanaHierophant
-ArcanaLovers
-ArcanaChariot
-ArcanaJustice
-ArcanaHermit
-ArcanaFortune
-ArcanaStrength
-ArcanaHanged
-ArcanaDeath
-ArcanaTemperance
-ArcanaDevil
-ArcanaTower
-ArcanaStar
-ArcanaMoon
-MoonIllusion
-ArcanaSun
-ArcanaJudgement
-ArcanaWorld
-AceOfWands
-AceOfSwords
-AceOfPentacles
-AceOfCups
-PageOfWands
-PageOfSwords
-PageOfPentacles
-PageOfCups
-QueenOfWands
-QueenOfSwords
-QueenOfPentacles
-QueenOfCups
-Mercury
-Venus
-Earth
-Mars
-Jupiter
-Saturn
-Uranus
-Neptune
-Moon
-Asteroid
-Comet
-Io
-Europa
-Ganymede
-Callisto
-Aries
-Taurus
-Gemini
-GeminiTwin
-Cancer
-Leo
-Virgo
-Libra
-Scorpio
-Sagittarius
-Capricorn
-Aquarius
-Pisces
-AirElemental
-FireElemental
-EarthElemental
-WaterElemental
-VoidElemental
-LightElemental
-AirWisp
-FireWisp
-EarthWisp
-WaterWisp
-VoidWisp
-LightWisp
-Vulture
-Falcon
-Hawk
-Eagle
-Fledgling
-SwitchPaladin
-SwitchTower
-SwitchFrog
-SwitchKnight
-SwitchSquire
-WarQueen
-WarRook
-WarBishop
-WarKnight
-BerserkerPawn
-Hopper
-Locust
-KingHopper
-Checker
-Revenant
-Abomination
-Necromancer
-Vampire
-Skeleton
-Zombie
-Bat
-Banshee
-Harpy
-Hag
-Frog
-Toad
-Sludge
-SludgeTrail
-Plaguebearer
-Werewolf
-Werebear
-Werechimera
-Werefox
-ElephantCalf
-Elephant
-ElephantCrusher
-ElephantCharger
-ElephantQueen
-ElephantBulwark
-RabbitQueen
-RabbitCourier
-RabbitDiplomat
-RabbitKnight
-Rabbit
-Blackguard
-Spy
-Infiltrator
-Disguiser
-Assassin
-SlipPawn
-Diplomat
-RoyalDouble
-RoyalGuard
-RoyalMaid
-RoyalCastle
-RoyalRecruit
-ShadowQueen
-EchoSoldier
-MirrorQueen
-LensRook
-ReflectionBishop
-MirrorKnight
-MirrorPawn
-Pincer
-Bolter
-Shocker
-Magnet
-LightningElemental
-ElectroPawn
-HornSpirit
-TorchSpirit
-RingSpirit
-BottleSpirit
-CapSpirit
-GlassSpirit
-FeatherSpirit
-SwordSpirit
-ShieldSpirit
-GrailSpirit
-DaggerSpirit
-Paladin
-CrookedBishop
-CrookedRook
-CrookedQueen
-CrookedPawn
-ClockworkTurtle
-ClockworkTowerB
-ClockworkTowerR
-ClockworkLeaper
-ClockworkWalker
-BladeBeast
-ClockworkSnapper
-Leafling
-Gardener
-Rootwalker
-Burrower
-Blossom
-FlowerPawn
-Gargoyle
-Pillar
-Arch
-Wall
-Statue
-EliteMilitia
-EdgeRook
-CornerlessBishop
-CenterQueen
-Militia
-KangarooQueen
-KangarooPrincess
-Triknight
-Tribishop
-Birook
-TrojanHorse
-PawnStack
-BigSlime
-Slime
-Duelist
-Fencer
-FlankingKnight
-FlankingBishop
-FlankingPawn
-FrontQueen
-FrontRook
-FrontBishop
-FrontKnight
-FrontPawn
-Marshqueen
-Brook
-Bishight
-Knishop
-TailPawn
-NarrowQueen
-NarrowRook
-NarrowBishop
-NarrowKnight
-NarrowPawn
-FlatQueen
-FlatRook
-FlatBishop
-FlatKnight
-AxePawn
-GlassQueen
-GlassRook
-GlassBishop
-GlassKnight
-GlassPawn
-QuickKnight
-QuickHog
-Hummingbird
-QuickSlug
-QuickPawn
-LavaGolem
-IceGolem
-SlothQueen
-VolcanoTower
-FlameObelisk
-HeavyFrog
-HeavyPawn
-SoulCannon
-Lich
-SoulDevourer
-QueenLeech
-Leech
-ChargeBeast
-ChargeCannon
-ChargeWarper
-ChargeKnight
-ChargePawn
-Ghoul
-GhoulMarshall
-GhoulAmazon
-GhoulPawn
-PufferfishQueen
-PufferfishPawn
-Robber
-Enforcer
-Smuggler
-Mercenary
-Outlaw
-WarpWeaver
-WarpMage
-Mirrorer
-Recaller
-Flipper
-Conductor
-Harlequin
-Jester
-Dancer
-Penguin
-IceElemental
-EmperorPenguin
-SnowBomb
-SnowQueen
-Snowman
-PythonQueen
-PoisonElemental
-PoisonBomb
-PoisonFrog
-Snake
-Phantom
-HealerMage
-PoisonMage
-FreezeMage
-SparkMage
-SplashMage
-FloatMage
-GravityMage
-SkipQueen
-SkipRook
-SkipBishop
-SkipGuard
-SkipPawn
-SummerQueen
-WinterQueen
-SummerRook
-WinterBishop
-SpringKnight
-FallKnight
-SummerPawn
-WinterPawn
-SpringPawn
-FallPawn
-DayQueen
-NightQueen
-DayBishop
-NightKnight
-DayPawn
-NightPawn
-HoneybeeQueen
-HoneybeeLieutenant
-Honeybee
-WaxQueen
-WaxSoldier
-WaxPawn
-HoneyBomb
-HoneyPuddle
-SteelGolem
-MegaCannon
-Cannon
-MetalFox
-SteelPuppet
-RollerQueen
-ReboundRook
-BounceBishop
-Roller
-Balloon
-GliderQueen
-Capybara
-Beaver
-Squirrel
-GliderPawn
-AmoebaCitadel
-AmoebaGryphon
-AmoebaRaven
-AmoebaArchbishop
-AmoebaKnight
-AmoebaPawn
-RockEgg
-MountainTurtle
-WaveEgg
-OceanSerpent
-FlameEgg
-Dragon
-Suprema
-Bastion
-Augur
-RoseKnight
-Traverser
-Bunker
-Tunnel
-Fan
-Watchtower
-Train
-Carrier
-Airship
-Imitator
-Peasant
-Prince
-Yeoman
+Index,Name,SpecialText
+Rock,Rock,
+King,King,"If you have multiple Kings, you can't be Checkmated unless the enemy can destroy all your Kings in one move."
+Queen,Queen,
+Rook,Rook,
+Bishop,Bishop,
+Knight,Knight,
+Pawn,Pawn,
+Squire,Squire,
+Dragoon,Dragoon,
+Lancer,Lancer,
+Cataphract,Cataphract,
+Marshall,Marshall,
+Priest,Priest,
+Missionary,Missionary,
+Inquisitor,Inquisitor,
+Archbishop,Archbishop,
+Cardinal,Cardinal,
+Anchorite,Anchorite,
+Rammer,Rammer,
+Turret,Turret,
+Trebuchet,Trebuchet,
+Fortress,Fortress,
+Shielder,Shielder,
+Amazon,Amazon,
+Guard,Guard,
+Ranger,Ranger,
+Warden,Warden,
+Princess,Princess,
+Pegasus,Pegasus,
+Pontiff,Pontiff,
+Stronghold,Stronghold,
+Empress,Empress,
+SuperPawn,Super Pawn,
+DivineProgenitor,Divine Progenitor,
+DivineProtector,Divine Protector,
+DivineAvenger,Divine Avenger,
+DivineBeacon,Divine Beacon,
+DivineApothecary,Divine Apothecary,
+DivineCourier,Divine Courier,
+DivineArtisan,Divine Artisan,
+DivineSquire,Divine Squire,
+DivinePage,Divine Page,
+DivineMusician,Divine Musician,
+DivineMaid,Divine Maid,
+DivineUsurper,Divine Usurper,
+DivineGardener,Divine Gardener,
+DivineApprentice,Divine Apprentice,
+DivineHerald,Divine Herald,
+SnailQueen,Snail Queen,
+Crab,Crab,
+Lobster,Lobster,
+Shrimp,Shrimp,
+Tardigrade,Tardigrade,
+BigBomb,Big Bomb,
+Bomb,Bomb,
+XBomb,X Bomb,
+PiercingCharge,Piercing Charge,
+MiniBomb,Mini Bomb,
+RelayKnight,Relay Knight,
+RelayBishop,Relay Bishop,
+RelayRook,Relay Rook,
+RelayQueen,Relay Queen,
+Runner,Runner,
+SwiftBishop,Swift Bishop,
+SwiftRook,Swift Rook,
+SwiftQueen,Swift Queen,
+FastPawn,Fast Pawn,
+CoastGuard,Coast Guard,
+Boat,Boat,
+Skipper,Skipper,
+Raft,Raft,
+Warship,Warship,
+Canoe,Canoe,
+Submarine,Submarine,
+Pusher,Pusher,
+PushBishop,Push Bishop,
+PushRook,Push Rook,
+PushQueen,Push Queen,
+PushPawn,Push Pawn,
+StickyMan,Sticky Guard,
+StickyBishop,Sticky Bishop,
+StickyRook,Sticky Rook,
+StickyQueen,Sticky Queen,
+StickyPawn,Sticky Pawn,
+Lanterner,Lanterner,
+Candler,Candler,
+Torcher,Torcher,
+Vestal,Vestal,
+MatchPawn,Match Pawn,
+Hypnotist,Hypnotist,
+Attractor,Attractor,
+Repulser,Repulser,
+Immobilizer,Immobilizer,
+Entrancer,Entrancer,
+Charmer,Charmer,
+Wrath,Wrath,
+Greed,Greed,
+Gluttony,Gluttony,
+Sloth,Sloth,
+Lust,Lust,
+Envy,Envy,
+Pride,Pride,
+Imp,Imp,
+Patience,Patience,
+Charity,Charity,
+Temperance,Temperance,
+Diligence,Diligence,
+Chastity,Chastity,
+Kindness,Kindness,
+Humility,Humility,
+Monk,Monk,
+ArcanaFool,Arcana Fool,
+ArcanaMagician,Arcana Magician,
+ArcanaPriestess,Arcana Priestess,
+ArcanaEmpress,Arcana Empress,
+ArcanaEmperor,Arcana Emperor,
+ArcanaHierophant,Arcana Hierophant,
+ArcanaLovers,Arcana Lovers,
+ArcanaChariot,Arcana Chariot,
+ArcanaJustice,Arcana Justice,
+ArcanaHermit,Arcana Hermit,
+ArcanaFortune,Arcana Fortune,
+ArcanaStrength,Arcana Strength,
+ArcanaHanged,Arcana Hanged,
+ArcanaDeath,Arcana Death,
+ArcanaTemperance,Arcana Temperance,
+ArcanaDevil,Arcana Devil,
+ArcanaTower,Arcana Tower,
+ArcanaStar,Arcana Star,
+ArcanaMoon,Arcana Moon,
+MoonIllusion,Moon Illusion,
+ArcanaSun,Arcana Sun,
+ArcanaJudgement,Arcana Judgement,
+ArcanaWorld,Arcana World,
+AceOfWands,Ace of Wands,
+AceOfSwords,Ace of Swords,
+AceOfPentacles,Ace of Pentacles,
+AceOfCups,Ace of Cups,
+PageOfWands,Page of Wands,
+PageOfSwords,Page of Swords,
+PageOfPentacles,Page of Pentacles,
+PageOfCups,Page of Cups,
+QueenOfWands,Queen of Wands,
+QueenOfSwords,Queen of Swords,
+QueenOfPentacles,Queen of Pentacles,
+QueenOfCups,Queen of Cups,
+Mercury,Mercury,
+Venus,Venus,
+Earth,Earth,
+Mars,Mars,
+Jupiter,Jupiter,
+Saturn,Saturn,
+Uranus,Uranus,
+Neptune,Neptune,
+Moon,Moon,
+Asteroid,Asteroid,
+Comet,Comet,
+Io,Io,
+Europa,Europa,
+Ganymede,Ganymede,
+Callisto,Callisto,
+Aries,Aries,
+Taurus,Taurus,
+Gemini,Gemini,
+GeminiTwin,Gemini Twin,
+Cancer,Cancer,
+Leo,Leo,
+Virgo,Virgo,
+Libra,Libra,
+Scorpio,Scorpio,
+Sagittarius,Sagittarius,
+Capricorn,Capricorn,
+Aquarius,Aquarius,
+Pisces,Pisces,
+AirElemental,Air Elemental,
+FireElemental,Fire Elemental,
+EarthElemental,Earth Elemental,
+WaterElemental,Water Elemental,
+VoidElemental,Void Elemental,
+LightElemental,Light Elemental,
+AirWisp,Air Wisp,
+FireWisp,Fire Wisp,
+EarthWisp,Earth Wisp,
+WaterWisp,Water Wisp,
+VoidWisp,VoidWisp ,
+LightWisp,Light Wisp,
+Vulture,Vulture,
+Falcon,Falcon,
+Hawk,Hawk,
+Eagle,Eagle,
+Fledgling,Fledgling,
+SwitchPaladin,Switch Paladin,
+SwitchTower,Switch Tower,
+SwitchFrog,Switch Frog,
+SwitchKnight,Switch Knight,
+SwitchSquire,Switch Squire,
+WarQueen,War Queen,
+WarRook,War Rook,
+WarBishop,War Bishop,
+WarKnight,War Knight,
+BerserkerPawn,Berserker Pawn,
+Hopper,Hopper,
+Locust,Locust,
+KingHopper,King Hopper,
+Checker,Checker,
+Revenant,Revenant,
+Abomination,Abomination,
+Necromancer,Necromancer,
+Vampire,Vampire,
+Skeleton,Skeleton,
+Zombie,Zombie,
+Bat,Bat,
+Banshee,Banshee,
+Harpy,Harpy,
+Hag,Hag,
+Frog,Frog,
+Toad,Toad,
+Sludge,Sludge,
+SludgeTrail,Sludge Trail,
+Plaguebearer,Plaguebearer,
+Werewolf,Werewolf,
+Werebear,Werebear,
+Werechimera,Werechimera,
+Werefox,Werefox,
+ElephantCalf,Elephant Calf,
+Elephant,Elephant,
+ElephantCrusher,Elephant Crusher,
+ElephantCharger,Elephant Charger,
+ElephantQueen,Elephant Queen,
+ElephantBulwark,Elephant Bulwark,
+RabbitQueen,Rabbit Queen,
+RabbitCourier,Rabbit Courier,
+RabbitDiplomat,Rabbit Diplomat,
+RabbitKnight,Rabbit Knight,
+Rabbit,Rabbit,
+Blackguard,Blackguard,
+Spy,Spy,
+Infiltrator,Infiltrator,
+Disguiser,Disguiser,
+Assassin,Assassin,
+SlipPawn,Slip Pawn,
+Diplomat,Diplomat,
+RoyalDouble,Royal Double,
+RoyalGuard,Royal Guard,
+RoyalMaid,Royal Maid,
+RoyalCastle,Royal Castle,
+RoyalRecruit,Royal Recruit,
+ShadowQueen,Shadow Queen,
+EchoSoldier,Echo Soldier,
+MirrorQueen,Mirror Queen,
+LensRook,Lens Rook,
+ReflectionBishop,Reflection Bishop,
+MirrorKnight,Mirror Knight,
+MirrorPawn,Mirror Pawn,
+Pincer,Pincer,
+Bolter,Bolter,
+Shocker,Shocker,
+Magnet,Magnet,
+LightningElemental,Lightning Elemental,
+ElectroPawn,Electro Pawn,
+HornSpirit,Horn Spirit,
+TorchSpirit,Torch Spirit,
+RingSpirit,Ring Spirit,
+BottleSpirit,Bottle Spirit,
+CapSpirit,Cap Spirit,
+GlassSpirit,Glass Spirit,
+FeatherSpirit,Feather Spirit,
+SwordSpirit,Sword Spirit,
+ShieldSpirit,Shield Spirit,
+GrailSpirit,Grail Spirit,
+DaggerSpirit,Dagger Spirit,
+Paladin,Paladin,
+CrookedBishop,Crooked Bishop,
+CrookedRook,Crooked Rook,
+CrookedQueen,Crooked Queen,
+CrookedPawn,Crooked Pawn,
+ClockworkTurtle,Clockwork Turtle,
+ClockworkTowerB,Clockwork TowerB,
+ClockworkTowerR,Clockwork TowerR,
+ClockworkLeaper,Clockwork Leaper,
+ClockworkWalker,Clockwork Walker,
+BladeBeast,Blade Beast,
+ClockworkSnapper,Clockwork Snapper,
+Leafling,Leafling,
+Gardener,Gardener,
+Rootwalker,Rootwalker,
+Burrower,Burrower,
+Blossom,Blossom,
+FlowerPawn,Flower Pawn,
+Gargoyle,Gargoyle,
+Pillar,Pillar,
+Arch,Arch,
+Wall,Wall,
+Statue,Statue,
+EliteMilitia,Elite Militia,
+EdgeRook,Edge Rook,
+CornerlessBishop,Cornerless Bishop,
+CenterQueen,Center Queen,
+Militia,Militia,
+KangarooQueen,Kangaroo Queen,
+KangarooPrincess,Kangaroo Princess,
+Triknight,Triknight,
+Tribishop,Tribishop,
+Birook,Birook,
+TrojanHorse,Trojan Horse,
+PawnStack,Pawn Stack,
+BigSlime,Big Slime,
+Slime,Slime,
+Duelist,Duelist,
+Fencer,Fencer,
+FlankingKnight,Flanking Knight,
+FlankingBishop,FlankingBishop ,
+FlankingPawn,Flanking Pawn,
+FrontQueen,Front Queen,
+FrontRook,Front Rook,
+FrontBishop,Front Bishop,
+FrontKnight,Front Knight,
+FrontPawn,Front Pawn,
+Marshqueen,Marshqueen,
+Brook,Brook,
+Bishight,Bishight,
+Knishop,Knishop,
+TailPawn,Tail Pawn,
+NarrowQueen,Narrow Queen,
+NarrowRook,Narrow Rook,
+NarrowBishop,Narrow Bishop,
+NarrowKnight,Narrow Knight,
+NarrowPawn,Narrow Pawn,
+FlatQueen,Flat Queen,
+FlatRook,Flat Rook,
+FlatBishop,Flat Bishop,
+FlatKnight,Flat Knight,
+AxePawn,Axe Pawn,
+GlassQueen,Glass Queen,
+GlassRook,Glass Rook,
+GlassBishop,Glass Bishop,
+GlassKnight,Glass Knight,
+GlassPawn,Glass Pawn,
+QuickKnight,Quick Knight,
+QuickHog,Quick Hog,
+Hummingbird,Hummingbird,
+QuickSlug,Quick Slug,
+QuickPawn,Quick Pawn,
+LavaGolem,Lava Golem,
+IceGolem,Ice Golem,
+SlothQueen,Sloth Queen,
+VolcanoTower,Volcano Tower,
+FlameObelisk,Flame Obelisk,
+HeavyFrog,Heavy Frog,
+HeavyPawn,Heavy Pawn,
+SoulCannon,Soul Cannon,
+Lich,Lich,
+SoulDevourer,Soul Devourer,
+QueenLeech,Queen Leech,
+Leech,Leech,
+ChargeBeast,Charge Beast,
+ChargeCannon,Charge Cannon,
+ChargeWarper,Charge Warper,
+ChargeKnight,Charge Knight,
+ChargePawn,Charge Pawn,
+Ghoul,Ghoul,
+GhoulMarshall,Ghoul Marshall,
+GhoulAmazon,GhoulAmazon ,
+GhoulPawn,GhoulPawn ,
+PufferfishQueen,Pufferfish Queen,
+PufferfishPawn,Pufferfish Pawn,
+Robber,Robber,
+Enforcer,Enforcer,
+Smuggler,Smuggler,
+Mercenary,Mercenary,
+Outlaw,Outlaw,
+WarpWeaver,Warp Weaver,
+WarpMage,Warp Mage,
+Mirrorer,Mirrorer,
+Recaller,Recaller,
+Flipper,Flipper,
+Conductor,Conductor,
+Harlequin,Harlequin,
+Jester,Jester,
+Dancer,Dancer,
+Penguin,Penguin,
+IceElemental,Ice Elemental,
+EmperorPenguin,Emperor Penguin,
+SnowBomb,Snow Bomb,
+SnowQueen,Snow Queen,
+Snowman,Snowman,
+PythonQueen,Python Queen,
+PoisonElemental,Poison Elemental,
+PoisonBomb,Poison Bomb,
+PoisonFrog,Poison Frog,
+Snake,Snake,
+Phantom,Phantom,
+HealerMage,Healer Mage,
+PoisonMage,Poison Mage,
+FreezeMage,Freeze Mage,
+SparkMage,Spark Mage,
+SplashMage,Splash Mage,
+FloatMage,Float Mage,
+GravityMage,Gravity Mage,
+SkipQueen,Skip Queen,
+SkipRook,Skip Rook,
+SkipBishop,Skip Bishop,
+SkipGuard,Skip Guard,
+SkipPawn,Skip Pawn,
+SummerQueen,Summer Queen,
+WinterQueen,Winter Queen,
+SummerRook,Summer Rook,
+WinterBishop,Winter Bishop,
+SpringKnight,Spring Knight,
+FallKnight,Fall Knight,
+SummerPawn,Summer Pawn,
+WinterPawn,Winter Pawn,
+SpringPawn,Spring Pawn,
+FallPawn,Fall Pawn,
+DayQueen,Day Queen,
+NightQueen,Night Queen,
+DayBishop,Day Bishop,
+NightKnight,Night Knight,
+DayPawn,Day Pawn,
+NightPawn,Night Pawn,
+HoneybeeQueen,Honeybee Queen,
+HoneybeeLieutenant,Honeybee Lieutenant,
+Honeybee,Honeybee,
+WaxQueen,Wax Queen,
+WaxSoldier,Wax Soldier,
+WaxPawn,Wax Pawn,
+HoneyBomb,Honey Bomb,
+HoneyPuddle,Honey Puddle,
+SteelGolem,Steel Golem,
+MegaCannon,Mega Cannon,
+Cannon,Cannon,
+MetalFox,Metal Fox,
+SteelPuppet,Steel Puppet,
+RollerQueen,Roller Queen,
+ReboundRook,Rebound Rook,
+BounceBishop,Bounce Bishop,
+Roller,Roller,
+Balloon,Balloon,
+GliderQueen,Glider Queen,
+Capybara,Capybara,
+Beaver,Beaver,
+Squirrel,Squirrel,
+GliderPawn,Glider Pawn,
+AmoebaCitadel,Amoeba Citadel,
+AmoebaGryphon,Amoeba Gryphon,
+AmoebaRaven,Amoeba Raven,
+AmoebaArchbishop,Amoeba Archbishop,
+AmoebaKnight,Amoeba Knight,
+AmoebaPawn,Amoeba Pawn,
+RockEgg,Rock Egg,
+MountainTurtle,Mountain Turtle,
+WaveEgg,Wave Egg,
+OceanSerpent,Ocean Serpent,
+FlameEgg,Flame Egg,
+Dragon,Dragon,
+Suprema,Suprema,
+Bastion,Bastion,
+Augur,Augur,
+RoseKnight,Rose Knight,
+Traverser,Traverser,
+Bunker,Bunker,
+Tunnel,Tunnel,
+Fan,Fan,
+Watchtower,Watchtower,
+Train,Train,
+Carrier,Carrier,
+Airship,Airship,
+Imitator,Imitator,
+Peasant,Peasant,
+Prince,Prince,
+Yeoman,Yeoman,

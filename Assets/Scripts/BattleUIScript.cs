@@ -12,26 +12,39 @@ using UnityEngine.UIElements;
 public class BattleUIScript : MonoBehaviour
 {
     public BoardScript bs;
-    public TMPro.TMP_Text difficultyText;
     public ConsumableBadgePanelScript cps;
 
-    public ConsumableScript debugConsumable;
-    public SetupPieceScript debugSetupPiece;
-    public BadgeScript debugBadge;
-
-    public Scrollbar difficultySlider;
+    public GameObject battleOnlyUI;
 
     public TMPro.TMP_Text thinkingText;
     public TMPro.TMP_Text turnText;
-    public TMPro.TMP_Text scoreText;
+    //public TMPro.TMP_Text scoreText;
     public TMPro.TMP_Text pieceText;
-    public TMPro.TMP_Text moneyText;
-    public TMPro.TMP_Text valueText;
+    public PieceMovePanelScript pmps;
 
+    public TMPro.TMP_Text moneyText;
+    public TMPro.TMP_Text whiteValueText;
+    public TMPro.TMP_Text blackValueText;
+    public TMPro.TMP_Text deltaValueText;
+
+    public TMPro.TMP_Text undoButtonText;
+    public TMPro.TMP_Text retryText;
+
+    public TMPro.TMP_Text realmCountText;
+    public TMPro.TMP_Text battleCountText;
+
+    public SpriteRenderer backgroundA;
+    public SpriteRenderer backgroundB;
+
+    //debug panel values
+    public TMPro.TMP_Text difficultyText;
+    public ConsumableScript debugConsumable;
+    public SetupPieceScript debugSetupPiece;
+    public BadgeScript debugBadge;
+    public Scrollbar difficultySlider;
     public TMPro.TMP_InputField valueField;
     public TMPro.TMP_InputField typeField;
     public TMPro.TMP_InputField classField;
-
     public Board.PlayerModifier pm;
     public Board.EnemyModifier em;
 
@@ -48,14 +61,16 @@ public class BattleUIScript : MonoBehaviour
         {
             bbs.thinkingText = thinkingText;
             bbs.turnText = turnText;
-            bbs.scoreText = scoreText;
-            bbs.pieceInfoText = pieceText;
+            //bbs.scoreText = scoreText;
+            bbs.pmps = pmps;
+            battleOnlyUI.SetActive(true);
         }
         if (bs is SetupBoardScript sbs)
         {
-            sbs.pieceInfoText = pieceText;
+            sbs.pmps = pmps;
+            battleOnlyUI.SetActive(false);
         }
-        valueText.text = "Value: " + (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - 5);
+        whiteValueText.text = "" + (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - 5);
     }
 
     public void Undo()
@@ -142,6 +157,7 @@ public class BattleUIScript : MonoBehaviour
 
             Piece.PieceType[] army = ArmyGenerator.GenerateArmy(tryValue, typeValue, 0.5f, 0.5f, classValue, em);
 
+            MainManager.Instance.playerData.GenerateSeed();
             bbs.ResetBoard(MainManager.Instance.playerData.army, army, pm, em);
         }
     }
@@ -161,13 +177,59 @@ public class BattleUIScript : MonoBehaviour
 
             Piece.PieceType[] army = ArmyGenerator.GenerateArmy(tryValue, typeValue, 0.5f, 0.5f, classValue, em);
 
+            MainManager.Instance.playerData.GenerateSeed();
             bbs.ResetBoard(army, pm, em);
         }
     }
 
     public void Update()
     {
+        backgroundA.color = Color.Lerp(Color.black, Color.Lerp(bs.backgroundA.color, bs.backgroundB.color, 0.2f), 0.9f);
+        backgroundB.color = Color.Lerp(Color.black, Color.Lerp(bs.backgroundA.color, bs.backgroundB.color, 0.8f), 0.9f);
+
+        undoButtonText.text = "Undo\n<size=75%><color=#ff8080>(" + MainManager.Instance.playerData.undosLeft + ")</color></size>";
+
+        if (MainManager.Instance.playerData.retriesLeft == 1)
+        {
+            retryText.text = MainManager.Instance.playerData.retriesLeft + " retry left.";
+        }
+        else
+        {
+            if (MainManager.Instance.playerData.retriesLeft == 0)
+            {
+                retryText.text = "<color=#ff8080>" + MainManager.Instance.playerData.retriesLeft + " retries left.</color>";
+            }
+            else
+            {
+                retryText.text = MainManager.Instance.playerData.retriesLeft + " retries left.";
+            }
+        }
+
+        float timeValue = Time.time * 0.2f;
+        backgroundB.transform.localPosition = Vector3.up * 0.25f * (timeValue - Mathf.Ceil(timeValue));
+
         moneyText.text = "$" + MainManager.Instance.playerData.coins;
-        valueText.text = "Value: " + (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - 5);
+        whiteValueText.text = "" + (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - 5);
+        blackValueText.text = "" + (((bs.board.blackPerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - 5);
+        float delta = (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - ((bs.board.blackPerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f));
+        if (delta > 0)
+        {
+            deltaValueText.text = "(+" + delta + ")";
+            deltaValueText.color = new Color(1, 1, 1, 1);
+        }
+        else
+        {
+            deltaValueText.text = "(" + delta + ")";
+            if (delta == 0)
+            {
+                deltaValueText.color = new Color(0.7f, 0.7f, 0.7f, 1);
+            }
+            else
+            {
+                deltaValueText.color = new Color(0.4f, 0.4f, 0.4f, 1);
+            }
+        }
+        realmCountText.text = "Realm " + (MainManager.Instance.playerData.realmsComplete + 1);
+        battleCountText.text = "Battle " + (MainManager.Instance.playerData.realmBattlesComplete + 1);
     }
 }

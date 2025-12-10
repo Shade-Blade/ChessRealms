@@ -43,8 +43,8 @@ public class BattleBoardScript : BoardScript
 
     public TMPro.TMP_Text thinkingText;
     public TMPro.TMP_Text turnText;
-    public TMPro.TMP_Text scoreText;
-    public TMPro.TMP_Text pieceInfoText;
+    //public TMPro.TMP_Text scoreText;
+    //public TMPro.TMP_Text pieceInfoText;
 
     public float moveThinkTime = 1f;
     public float moveDelayValue = 0.05f;
@@ -337,6 +337,11 @@ public class BattleBoardScript : BoardScript
 
         selectedPiece = null;
         selectedConsumable = cs;
+
+        if (pmps != null)
+        {
+            pmps.SetText(selectedConsumable.text.text);
+        }
     }
     public override void SelectPiece(PieceScript piece)
     {
@@ -494,6 +499,9 @@ public class BattleBoardScript : BoardScript
         }
 
         selectedPiece = piece;
+        //PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(selectedPiece.piece);
+
+        pmps.SetMove(selectedPiece.piece);
     }
     public void DestroyLastMovedTrail()
     {
@@ -535,6 +543,16 @@ public class BattleBoardScript : BoardScript
         {
             squares[i].ResetColor();
         }
+        /*
+        if (pieceInfoText != null)
+        {
+            pieceInfoText.text = "";
+        }
+        if (pmps != null)
+        {
+            pmps.ResetAll();
+        }
+        */
 
         if (board.GetLastMove() != 0)
         {
@@ -1474,6 +1492,11 @@ public class BattleBoardScript : BoardScript
     }
     public void DoubleUndo()
     {
+        if (historyIndex <= 0)
+        {
+            return;
+        }
+        /*
         if (historyIndex <= 1)
         {
             return;
@@ -1490,6 +1513,18 @@ public class BattleBoardScript : BoardScript
         RegenerateMoveList();
         ResetSelected();
         FixBoardBasedOnPosition();
+        */
+        bool blackToMove = board.blackToMove;
+        int turn = board.turn;
+        while (board.blackToMove != blackToMove || turn == board.turn || board.bonusPly > 0)
+        {
+            Undo();
+            if (historyIndex == 0)
+            {
+                break;
+            }
+        }
+        blackIsAI = true;
     }
 
     public void Undo()
@@ -1544,12 +1579,16 @@ public class BattleBoardScript : BoardScript
             pieces[i] = null;
         }
 
+        Piece.Aura[] wAura = board.GetAuraBitboards(false);
+        Piece.Aura[] bAura = board.GetAuraBitboards(true);
+
         //fix the pieces to match the board state
         for (int i = 0; i < pieces.Count; i++)
         {
             //also fix squares
             squares[i].sq = board.globalData.squares[i];
             squares[i].ResetSquareColor();
+            squares[i].SetAura(wAura[i], bAura[i]);
 
             bool needRecreate = false;
 
@@ -1778,21 +1817,20 @@ public class BattleBoardScript : BoardScript
             yield break;
         }
 
+        Vector3 startPos = ps.transform.position;
+        startPos.z = -1.1f;
         Vector3 targetPos = GetSpritePositionFromCoordinates(otx, oty, -1.1f);
 
-        while (targetPiece.transform.position != targetPos)
+        float animationDuration = 3.6f / animationSpeed;
+        float time = 0;
+
+        while (time < animationDuration)
         {
-            Vector3 delta = (targetPos - targetPiece.transform.position).normalized * animationSpeed * Time.deltaTime;
-
-            if ((targetPos - targetPiece.transform.position).magnitude < animationSpeed * Time.deltaTime)
-            {
-                targetPiece.transform.position = targetPos;
-                break;
-            }
-
-            targetPiece.transform.position += delta;
+            time += Time.deltaTime;
+            targetPiece.transform.position = Vector3.Lerp(startPos, targetPos, MainManager.EasingQuadratic(time / animationDuration, 1));
             yield return null;
         }
+        targetPiece.transform.position = targetPos;
 
         if (pieces[ps.x + (ps.y << 3)] != null)
         {
@@ -1818,21 +1856,19 @@ public class BattleBoardScript : BoardScript
 
         mps.transform.position = GetSpritePositionFromCoordinates(ofx, ofy, -1.1f);
 
+        Vector3 startPos = GetSpritePositionFromCoordinates(ofx, ofy, -1.1f);
         Vector3 targetPos = GetSpritePositionFromCoordinates(otx, oty, -1.1f);
 
-        while (mps.transform.position != targetPos)
+        float animationDuration = 3.6f / animationSpeed;
+        float time = 0;
+
+        while (time < animationDuration)
         {
-            Vector3 delta = (targetPos - mps.transform.position).normalized * animationSpeed * Time.deltaTime;
-
-            if ((targetPos - mps.transform.position).magnitude < animationSpeed * Time.deltaTime)
-            {
-                mps.transform.position = targetPos;
-                break;
-            }
-
-            mps.transform.position += delta;
+            time += Time.deltaTime;
+            mps.transform.position = Vector3.Lerp(startPos, targetPos, MainManager.EasingQuadratic(time / animationDuration, 1));
             yield return null;
         }
+        mps.transform.position = targetPos;
     }
     public IEnumerator AnimatePieceMove(MoveParticleScript mps, int ofx, int ofy, List<MoveMetadata> moveTrail)
     {
@@ -1843,11 +1879,23 @@ public class BattleBoardScript : BoardScript
         }
         mps.transform.position = GetSpritePositionFromCoordinates(ofx, ofy, -1.1f);
 
-        Vector3 targetPos;
-
         int sx = ofx;
         int sy = ofy;
 
+        List<Vector3> pathList = MoveTrailScript.MakeTrailPoints(ofx, ofy, moveTrail);
+
+        float animationDuration = 3.6f / animationSpeed;
+        float time = 0;
+
+        while (time < animationDuration)
+        {
+            time += Time.deltaTime;
+            mps.transform.position = MoveTrailScript.LerpList(pathList, MainManager.EasingQuadratic(time / animationDuration, 1));
+            yield return null;
+        }
+        mps.transform.position = pathList[pathList.Count - 1];
+
+        /*
         foreach (MoveMetadata m in moveTrail)
         {
             int mx = m.x;
@@ -1913,6 +1961,7 @@ public class BattleBoardScript : BoardScript
             }
             yield return null;
         }
+        */
     }
 
     public IEnumerator AnimatePieceMove(int ofx, int ofy, int otx, int oty)
@@ -1930,21 +1979,19 @@ public class BattleBoardScript : BoardScript
 
         targetPiece.transform.position = GetSpritePositionFromCoordinates(ofx, ofy, -1.1f);
 
+        Vector3 startPos = GetSpritePositionFromCoordinates(ofx, ofy, -1.1f);
         Vector3 targetPos = GetSpritePositionFromCoordinates(otx, oty, -1.1f);
 
-        while (targetPiece.transform.position != targetPos)
+        float animationDuration = 3.6f / animationSpeed;
+        float time = 0;
+
+        while (time < animationDuration)
         {
-            Vector3 delta = (targetPos - targetPiece.transform.position).normalized * animationSpeed * Time.deltaTime;
-
-            if ((targetPos - targetPiece.transform.position).magnitude < animationSpeed * Time.deltaTime)
-            {
-                targetPiece.transform.position = targetPos;
-                break;
-            }
-
-            targetPiece.transform.position += delta;
+            time += Time.deltaTime;
+            targetPiece.transform.position = Vector3.Lerp(startPos, targetPos, MainManager.EasingQuadratic(time / animationDuration, 1));
             yield return null;
         }
+        targetPiece.transform.position = targetPos;
 
         //other functions reset the position so fix it here?
         //      (Resets because it calls Setup which sets piece positions)
@@ -1961,76 +2008,21 @@ public class BattleBoardScript : BoardScript
         }
         targetPiece.transform.position = GetSpritePositionFromCoordinates(ofx, ofy, -1.1f);
 
-        Vector3 targetPos;
-
         int sx = ofx;
         int sy = ofy;
 
-        foreach (MoveMetadata m in moveTrail)
+        List<Vector3> pathList = MoveTrailScript.MakeTrailPoints(ofx, ofy, moveTrail);
+
+        float animationDuration = 3.6f / animationSpeed;
+        float time = 0;
+
+        while (time < animationDuration)
         {
-            int mx = m.x;
-            int my = m.y;
-
-            if (m.path != MoveMetadata.PathType.Teleport && m.path != MoveMetadata.PathType.TeleportGiant)
-            {
-                if (mx - sx > 4)
-                {
-                    mx -= 8;
-                }
-                if (sx - mx > 4)
-                {
-                    mx += 8;
-                }
-                if (my - sy > 4)
-                {
-                    my -= 8;
-                }
-                if (sy - my > 4)
-                {
-                    my += 8;
-                }
-            }
-            targetPos = GetSpritePositionFromCoordinates(mx, my, -1.1f);
-            sx = m.x;
-            sy = m.y;
-
-            while (targetPiece.transform.position != targetPos)
-            {
-                Vector3 delta = (targetPos - targetPiece.transform.position).normalized * animationSpeed * Time.deltaTime;
-
-                if ((targetPos - targetPiece.transform.position).magnitude < animationSpeed * Time.deltaTime)
-                {
-                    targetPiece.transform.position = targetPos;
-                    break;
-                }
-
-                targetPiece.transform.position += delta;
-
-                if (targetPiece.transform.position.x > SQUARE_SIZE * 4)
-                {
-                    targetPiece.transform.position -= Vector3.right * SQUARE_SIZE * 8;
-                    targetPos -= Vector3.right * SQUARE_SIZE * 8;
-                }
-                if (targetPiece.transform.position.x < -SQUARE_SIZE * 4)
-                {
-                    targetPiece.transform.position += Vector3.right * SQUARE_SIZE * 8;
-                    targetPos += Vector3.right * SQUARE_SIZE * 8;
-                }
-                if (targetPiece.transform.position.y > SQUARE_SIZE * 4)
-                {
-                    targetPiece.transform.position -= Vector3.up * SQUARE_SIZE * 8;
-                    targetPos -= Vector3.up * SQUARE_SIZE * 8;
-                }
-                if (targetPiece.transform.position.y < -SQUARE_SIZE * 4)
-                {
-                    targetPiece.transform.position += Vector3.up * SQUARE_SIZE * 8;
-                    targetPos += Vector3.up * SQUARE_SIZE * 8;
-                }
-
-                yield return null;
-            }
+            time += Time.deltaTime;
+            targetPiece.transform.position = MoveTrailScript.LerpList(pathList, MainManager.EasingQuadratic(time / animationDuration, 1));
             yield return null;
         }
+        targetPiece.transform.position = pathList[pathList.Count - 1];
 
         //other functions reset the position so fix it here?
         //      (Resets because it calls Setup which sets piece positions)
@@ -2274,11 +2266,11 @@ public class BattleBoardScript : BoardScript
             {
                 if (copy.blackToMove)
                 {
-                    squares[i].czhWhite = true;
+                    squares[i].czhBlack = true;
                 }
                 else
                 {
-                    squares[i].czhBlack = true;
+                    squares[i].czhWhite = true;
                 }
             }
 
@@ -2335,143 +2327,10 @@ public class BattleBoardScript : BoardScript
         turnText.text = "Turn " + (board.turn + (board.blackToMove ? 0.5f : 0)) + "\n<size=50%>" + (board.blackToMove ? "Black" : "White") + " to move</size>";
         if (board.bonusPly > 0)
         {
-            turnText.text += "\n<size=50%> " + board.bonusPly + " bonus</size>";
+            turnText.text += "\n<size=50%>Bonus Move</size>";
         }
 
-        pieceInfoText.text = "";
-        string propertyText = "";
-        string moveText = "";
-        if (selectedPiece != null)
-        {
-            PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(selectedPiece.piece);
-
-            pieceInfoText.text += pte.type + "\n";
-            pieceInfoText.text += "Value: " + (pte.pieceValueX2 / 2f) + "\n";
-            pieceInfoText.text += "Move: ";
-            for (int i = 0; i < pte.moveInfo.Length; i++)
-            {
-                MoveGeneratorInfoEntry mgie = pte.moveInfo[i];
-                if (mgie.atom > MoveGeneratorInfoEntry.MoveGeneratorAtom.SpecialMoveDivider)
-                {
-                    propertyText += mgie.atom + "\n";
-                    continue;
-                }
-                for (int j = 0; j < 15; j++)
-                {
-                    if (((int)mgie.modifier & (1 << j)) != 0)
-                    {
-                        moveText += (MoveGeneratorInfoEntry.MoveGeneratorPreModifier)(1 << j);
-                    }
-                }
-
-                if (mgie.atom == MoveGeneratorInfoEntry.MoveGeneratorAtom.Leaper)
-                {
-                    moveText += "(" + mgie.x + ", " + mgie.y + ")";
-                }
-                else
-                {
-                    moveText += mgie.atom;
-                }
-
-                if (mgie.range > 1)
-                {
-                    moveText += mgie.range;
-                }
-
-                switch (mgie.rangeType)
-                {
-                    case MoveGeneratorInfoEntry.RangeType.Exact:
-                        moveText += "=";
-                        break;
-                    case MoveGeneratorInfoEntry.RangeType.AntiRange:
-                        moveText += "-";
-                        break;
-                    case MoveGeneratorInfoEntry.RangeType.Minimum:
-                        moveText += "+";
-                        break;
-                }
-
-                moveText += " ";
-            }
-            pieceInfoText.text += moveText + "\n";
-            moveText = "";
-            if (pte.enhancedMoveInfo.Length > 0)
-            {
-                pieceInfoText.text += "Bonus Type: " + pte.enhancedMoveType + "\n";
-
-                pieceInfoText.text += "Bonus Move: ";
-                for (int i = 0; i < pte.enhancedMoveInfo.Length; i++)
-                {
-                    MoveGeneratorInfoEntry mgie = pte.enhancedMoveInfo[i];
-                    if (mgie.atom > MoveGeneratorInfoEntry.MoveGeneratorAtom.SpecialMoveDivider)
-                    {
-                        propertyText += mgie.atom + "\n";
-                        continue;
-                    }
-                    for (int j = 0; j < 15; j++)
-                    {
-                        if (((int)mgie.modifier & (1 << j)) != 0)
-                        {
-                            moveText += (MoveGeneratorInfoEntry.MoveGeneratorPreModifier)(1 << j);
-                        }
-                    }
-
-                    if (mgie.atom == MoveGeneratorInfoEntry.MoveGeneratorAtom.Leaper)
-                    {
-                        moveText += "(" + mgie.x + ", " + mgie.y + ")";
-                    }
-                    else
-                    {
-                        moveText += mgie.atom;
-                    }
-
-                    if (mgie.range > 1)
-                    {
-                        moveText += mgie.range;
-                    }
-
-                    switch (mgie.rangeType)
-                    {
-                        case MoveGeneratorInfoEntry.RangeType.Exact:
-                            moveText += "=";
-                            break;
-                        case MoveGeneratorInfoEntry.RangeType.AntiRange:
-                            moveText += "-";
-                            break;
-                        case MoveGeneratorInfoEntry.RangeType.Minimum:
-                            moveText += "+";
-                            break;
-                    }
-
-                    moveText += " ";
-                }
-                pieceInfoText.text += moveText + "\n";
-            }
-
-            if (pte.promotionType != 0)
-            {
-                pieceInfoText.text += "Promotes to " + pte.promotionType + "\n";
-            }
-
-            if (pte.pieceProperty != 0 || pte.piecePropertyB != 0 || propertyText.Length > 0)
-            {
-                pieceInfoText.text += "Properties:\n" + propertyText;
-                ulong propertiesA = (ulong)pte.pieceProperty;
-
-                while (propertiesA != 0)
-                {
-                    int index = MainManager.PopBitboardLSB1(propertiesA, out propertiesA);
-                    pieceInfoText.text += (Piece.PieceProperty)(1uL << index) + "\n";
-                }
-                propertiesA = (ulong)pte.piecePropertyB;
-                while (propertiesA != 0)
-                {
-                    int index = MainManager.PopBitboardLSB1(propertiesA, out propertiesA);
-                    pieceInfoText.text += (Piece.PiecePropertyB)(1uL << index) + "\n";
-                }
-            }
-        }
-
+        /*
         float kingValue = (GlobalPieceManager.GetPieceTableEntry(PieceType.King).pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE);
         scoreText.text = "Pieces (" + (board.whitePerPlayerInfo.pieceCount - board.blackPerPlayerInfo.pieceCount) + ")\n" + (board.whitePerPlayerInfo.pieceCount) + "\n<color=#000000>" + (board.blackPerPlayerInfo.pieceCount) + "</color>";
         scoreText.text += "\n\nValues (" + (((board.whitePerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) - (board.blackPerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) + ")\n" + (((board.whitePerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) - kingValue) / 2f) + "\n" + (board.whitePerPlayerInfo.pieceValueSumX2 / GlobalPieceManager.KING_VALUE_BONUS) + " king(s)\n<color=#000000>" + (((board.blackPerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) - kingValue) / 2f) + "\n" + (board.blackPerPlayerInfo.pieceValueSumX2 / GlobalPieceManager.KING_VALUE_BONUS) + " king(s)\n</color>";
@@ -2491,6 +2350,7 @@ public class BattleBoardScript : BoardScript
         scoreText.text += "\n\nMoves Available";
         scoreText.text += "\n" + whiteMoves;
         scoreText.text += "\n<color=#000000>" + blackMoves + "</color>";
+        */
 
         if (gameOver)
         {

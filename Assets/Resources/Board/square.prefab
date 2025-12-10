@@ -273,6 +273,8 @@ MonoBehaviour:
   x: 0
   y: 0
   bs: {fileID: 0}
+  auraTemplate: {fileID: 2134516260512476145, guid: a779fc5a407fb4a4cb29e9f29fea6eb2, type: 3}
+  auraList: []
   image: {fileID: 1018461051981835089}
   lastMovedHighlight: {fileID: 6529000220840055662}
   moveHighlight: {fileID: 3837621756321383553}
@@ -294,6 +296,8 @@ MonoBehaviour:
   czhBlack: 0
   sq:
     type: 0
+  wAura: 0
+  bAura: 0
 --- !u!65 &2283867815508020015
 BoxCollider:
   m_ObjectHideFlags: 0

@@ -53,6 +53,7 @@ public class OverworldScript : MonoBehaviour
 
             MainManager.Instance.currentSelected = null;
 
+            UnityEngine.Random.InitState(ms.nodeSeed);
             switch (ms.nodeType)
             {
                 case MapNodeScript.MapNodeType.WorldNode:
@@ -64,7 +65,7 @@ public class OverworldScript : MonoBehaviour
 
                     GameObject newMap = Instantiate(realmMapTemplate, transform);
                     realmMap = newMap.GetComponent<RealmMapScript>();
-                    realmMap.baseDifficulty = ms.pieceValueTotal;
+                    realmMap.baseDifficulty = ms.truePieceValueTotal;
                     realmMap.pieceClass = ms.pieceClass;
                     realmMap.os = this;
                     realmMap.Init();
@@ -80,10 +81,12 @@ public class OverworldScript : MonoBehaviour
 
             MainManager.Instance.currentSelected = null;
 
+            UnityEngine.Random.InitState(ms.nodeSeed);
             switch (ms.nodeType)
             {
                 case MapNodeScript.MapNodeType.Battle:
                 case MapNodeScript.MapNodeType.BossBattle:
+                case MapNodeScript.MapNodeType.FinalBossBattle:
                     setupBoard.gameObject.SetActive(false);
                     mapNodeSubobject = BattleBoardScript.CreateBoard(ms.army, MainManager.Instance.playerData.GetPlayerModifier(), ms.em).gameObject;
                     mapNodeSubobject.GetComponent<BattleBoardScript>().SetTheme(realmMap.pieceClass);
@@ -118,13 +121,17 @@ public class OverworldScript : MonoBehaviour
         MainManager.Instance.currentSelected = null;
 
         bus.turnText.text = "";
-        bus.scoreText.text = "";
+        //bus.scoreText.text = "";
         bus.pieceText.text = "";
+        bus.pmps.ResetAll();
         bus.thinkingText.text = "";
     }
 
     public void ReturnFromRealmMap()
     {
+        MainManager.Instance.playerData.realmsComplete++;
+        MainManager.Instance.playerData.realmBattlesComplete = 0;
+
         //reopen world map
         //use ms to do stuff
         if (mapNodeSubobject != null)
@@ -142,8 +149,9 @@ public class OverworldScript : MonoBehaviour
         MainManager.Instance.currentSelected = null;
 
         bus.turnText.text = "";
-        bus.scoreText.text = "";
+        //bus.scoreText.text = "";
         bus.pieceText.text = "";
+        bus.pmps.ResetAll();
         bus.thinkingText.text = "";
     }
 

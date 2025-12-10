@@ -1,6 +1,8 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static Move;
+using static Piece;
 
 public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListener
 {
@@ -24,6 +26,9 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
     public TrashCanScript trashCan;
     public bool canDelete;
+
+    public TMPro.TMP_Text specialText;
+    public TMPro.TMP_Text statusText;
 
     public virtual void Start()
     {
@@ -52,6 +57,147 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         }
 
         isGiant = (GlobalPieceManager.GetPieceTableEntry(piece).piecePropertyB & Piece.PiecePropertyB.Giant) != 0;
+
+        Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
+        if (specialText != null)
+        {
+            specialText.text = "";
+
+            Piece.PieceType pt = Piece.GetPieceType(piece);
+            ushort specialData = Piece.GetPieceSpecialData(piece);
+            //■
+            //special types
+            Board b = bs.board;
+
+            if (((b.globalData.bitboard_enhancedWhite | b.globalData.bitboard_enhancedBlack) & (1uL << (x + (y << 3)))) != 0)
+            {
+                switch (GlobalPieceManager.GetPieceTableEntry(piece).enhancedMoveType)
+                {
+                    case EnhancedMoveType.PartialForcedMoves:
+                        specialText.text = "■";
+                        break;
+                    case EnhancedMoveType.InverseForcedMoves:
+                        specialText.text = "■";
+                        break;
+                    case EnhancedMoveType.PartialForcedCapture:
+                        specialText.text = "■";
+                        break;
+                    case EnhancedMoveType.SwitchMover:
+                        specialText.text = "□";
+                        break;
+                    case EnhancedMoveType.WarMover:
+                        specialText.text = "■";
+                        break;
+                    case EnhancedMoveType.ShyMover:
+                        specialText.text = "■";
+                        break;
+                    case EnhancedMoveType.NoAllyMover:
+                        specialText.text = "□";
+                        break;
+                    case EnhancedMoveType.AllyMover:
+                        specialText.text = "□";
+                        break;
+                    case EnhancedMoveType.JusticeMover:
+                        specialText.text = "■";
+                        break;
+                    case EnhancedMoveType.DiligenceMover:
+                        specialText.text = "□";
+                        break;
+                    case EnhancedMoveType.VampireMover:
+                        specialText.text = "■";
+                        break;
+                    case EnhancedMoveType.FearfulMover:
+                        specialText.text = "■";
+                        break;
+                    case EnhancedMoveType.FarHalfMover:
+                        specialText.text = "■";
+                        break;
+                    case EnhancedMoveType.CloseHalfMover:
+                        specialText.text = "■";
+                        break;
+                    default:
+                        if (pt == PieceType.ArcanaLovers)
+                        {
+                            specialText.text = "■";
+                        }
+                        break;
+                }
+            }
+
+            switch (pt)
+            {
+                case Piece.PieceType.Revenant:
+                    if (specialData != 0)
+                    {
+                        specialText.text = "X";
+                    }
+                    break;
+                case Piece.PieceType.ChargeWarper:
+                case Piece.PieceType.ChargePawn:
+                case Piece.PieceType.ChargeCannon:
+                case Piece.PieceType.ChargeBeast:
+                case Piece.PieceType.ChargeKnight:
+                case Piece.PieceType.QueenLeech:
+                case Piece.PieceType.SoulDevourer:
+                case Piece.PieceType.SoulCannon:
+                case Piece.PieceType.Lich:
+                    if (specialData != 0)
+                    {
+                        specialText.text = specialData + "";
+                    }
+                    break;
+                case Piece.PieceType.MegaCannon:
+                    if (specialData != 0)
+                    {
+                        ushort squareData = (ushort)(specialData & 63);
+                        specialText.text = Move.FileToLetter(squareData & 7) + "" + ((squareData >> 3) + 1);
+
+                        specialText.text = specialText.text + "," + (8 - (specialData >> 6));
+                    }
+                    break;
+                case PieceType.WarpWeaver:
+                case Piece.PieceType.Cannon:
+                case Piece.PieceType.SteelGolem:
+                case Piece.PieceType.SteelPuppet:
+                case Piece.PieceType.MetalFox:
+                    if (specialData != 0)
+                    {
+                        specialText.text = Move.FileToLetter(specialData & 7) + "" + ((specialData >> 3) + 1);
+                    }
+                    break;
+                case Piece.PieceType.Tunnel:
+                case Piece.PieceType.Bunker:
+                case Piece.PieceType.Carrier:
+                case Piece.PieceType.Airship:
+                case Piece.PieceType.Train:
+                    if (specialData != 0)
+                    {
+                        specialText.text = Piece.GetPieceName((Piece.PieceType)specialData) + "";
+                    }
+                    break;
+                case Piece.PieceType.Roller:
+                case Piece.PieceType.RollerQueen:
+                case Piece.PieceType.BounceBishop:
+                case Piece.PieceType.ReboundRook:
+                    if (specialData != 0)
+                    {
+                        specialText.text = (Dir)specialData + "";
+                    }
+                    break;
+            }
+        }
+
+        if (statusText != null)
+        {
+            if (Piece.GetPieceStatusDuration(piece) != 0)
+            {
+                statusText.text = Piece.GetPieceStatusDuration(piece) + "";
+            }
+            else
+            {
+                statusText.text = "";
+            }
+        }
 
         text.enabled = true;
         backSprite.enabled = true;
@@ -86,7 +232,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         }
 
 
-        text.text = Piece.GetPieceType(piece).ToString();
+        text.text = Piece.GetPieceName(Piece.GetPieceType(piece)); //Piece.GetPieceType(piece).ToString();
 
         if (Piece.GetPieceModifier(piece) != 0)
         {
@@ -95,15 +241,16 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
         if (Piece.GetPieceStatusEffect(piece) != 0)
         {
-            text.text = text.text + "\n" + Piece.GetPieceStatusEffect(piece) + " " + (Piece.GetPieceStatusDuration(piece));
+            text.text = text.text + "\n" + Piece.GetPieceStatusEffect(piece); // + " " + (Piece.GetPieceStatusDuration(piece));
         }
 
+        /*
         if (Piece.GetPieceSpecialData(piece) != 0)
         {
             text.text = text.text + "\n(" + Piece.GetPieceSpecialData(piece) + ")";
         }
+        */
 
-        Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
         Color color = Piece.GetPieceColor(pa);
 
         backSprite.color = color;
@@ -112,13 +259,6 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         this.x = x;
         this.y = y;
         transform.position = BoardScript.GetSpritePositionFromCoordinates(x, y, -0.5f);
-    }
-
-    public void Setup(string pieceType, Color color)
-    {
-        text.text = pieceType;
-        backSprite.color = color;
-        text.color = color;
     }
 
     public virtual void Update()

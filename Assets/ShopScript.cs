@@ -60,6 +60,23 @@ public class ShopScript : MonoBehaviour
                     continue;
                 }
 
+                if ((GlobalPieceManager.GetPieceTableEntry(GlobalPieceManager.pieceTable[i].type).pieceProperty & Piece.PieceProperty.Unique) != 0)
+                {
+                    bool noAdd = false;
+                    for (int j = 0; j < MainManager.Instance.playerData.army.Length; j++)
+                    {
+                        if (MainManager.Instance.playerData.army[j] == GlobalPieceManager.pieceTable[i].type)
+                        {
+                            noAdd = true;
+                            break;
+                        }
+                    }
+                    if (noAdd)
+                    {
+                        continue;
+                    }
+                }
+
                 pieces.Add(GlobalPieceManager.pieceTable[i].type);
             }
         }

@@ -58,7 +58,7 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         backSprite.enabled = true;
         bc.enabled = true;
 
-        text.text = pm.ToString();
+        text.text = Board.GetPlayerModifierName(pm);
     }
 
     public virtual void ForceDeselect()
@@ -99,7 +99,7 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
     public int GetCost()
     {
-        return 5;
+        return Board.GetPlayerModifierCost(pm);
     }
 
     public void OnDragStart()

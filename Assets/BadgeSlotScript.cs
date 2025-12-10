@@ -38,7 +38,7 @@ public class BadgeSlotScript : MonoBehaviour
     {
         if (!highlighted)
         {
-            sprite.color = new Color(0.9f, 0.9f, 1f, 1);
+            sprite.color = new Color(0.4f, 0.4f, 0.7f, 0.75f);
         }
         else
         {

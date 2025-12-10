@@ -253,8 +253,7 @@ public class ChessAI
         //Extra thing for the board cache
         moveHashes = new ulong[32];
 
-        UnityEngine.Random.State s = UnityEngine.Random.state;
-        //UnityEngine.Random.InitState(12345);
+        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(5));
         //problem: currently randomization of the AI is done using hash values so this would make it deterministic?
 
         //32 bit depth?
@@ -294,8 +293,6 @@ public class ChessAI
 
             zobristSupplemental[i] = newRandom;
         }
-
-        UnityEngine.Random.state = s;
     }
     public void MoveBoardCacheTableInit()
     {

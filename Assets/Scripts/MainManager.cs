@@ -6,6 +6,7 @@ using Unity.Burst.Intrinsics;
 using Unity.VisualScripting;
 using UnityEditor.Search;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using static Unity.Burst.Intrinsics.X86.Bmi1;
 using static Unity.Burst.Intrinsics.X86.Popcnt;
 
@@ -21,8 +22,14 @@ public class PlayerData
 
     public int coins;
     public int realmsComplete;
+    public int realmBattlesComplete;
     public int battlesComplete;
+    public int nodesComplete;
     public List<int> realmRouteChoices;
+    public ulong seed;
+
+    public int undosLeft;
+    public int retriesLeft;
 
     public PlayerData()
     {
@@ -39,8 +46,31 @@ public class PlayerData
 
         coins = 0;
         realmsComplete = 0;
+        realmBattlesComplete = 0;
         battlesComplete = 0;
+        nodesComplete = 0;
         realmRouteChoices = new List<int>();
+
+        undosLeft = 3;
+        retriesLeft = 1;
+    }
+
+    public void GenerateSeed()
+    {
+        //arbitrary thing I guess
+        UnityEngine.Random.InitState(DateTime.UtcNow.ToString().GetHashCode());
+
+        uint randomA = (uint)UnityEngine.Random.Range(0, 256);
+        ulong newRandom = 0;
+
+        //is this good for avoiding correlation?
+        for (int k = 0; k < 8; k++)
+        {
+            newRandom |= randomA;
+            newRandom <<= 8;
+            randomA = (uint)UnityEngine.Random.Range(0, 256);
+        }
+        seed = newRandom;
     }
 
     public bool HasBadge(Board.PlayerModifier pm)
@@ -122,6 +152,7 @@ public class MainManager : MonoBehaviour
     private void Awake()
     {
         intInstance = this;
+        playerData.GenerateSeed();
     }
 
     // Start is called before the first frame update
@@ -188,6 +219,7 @@ public class MainManager : MonoBehaviour
         */
 
         //AI testing
+        /*
         ChessAI cai = new ChessAI();
         Board board = new Board();
         board.Setup(Board.BoardPreset.Normal);
@@ -199,6 +231,7 @@ public class MainManager : MonoBehaviour
         cai.searchTime = 0;
         cai.moveFound = false;
         cai.AlphaBetaAI(null);
+        */
     }
 
     // Update is called once per frame
@@ -289,6 +322,28 @@ public class MainManager : MonoBehaviour
         sameFrameSelected = false;
     }
 
+
+
+    public void EndRun()
+    {
+        //go back to main menu
+        SceneManager.LoadScene("MainMenuScene");
+    }
+
+    public static string FixCapCase(string input)
+    {
+        string output = "";
+
+        for (int i = 0; i < input.Length; i++)
+        {
+            if (output.Length > 0 && ((input[i] + "").ToLowerInvariant() != (input[i] + "")))
+            {
+                output += " ";
+            }
+            output += input[i];
+        }
+        return output;
+    }
 
 
     public static Vector2 XYProject(UnityEngine.Vector3 v)
@@ -574,6 +629,94 @@ public class MainManager : MonoBehaviour
         //Debug.Log(a + " " + output);
 
         return output;
+    }
+
+    public static int ConvertSeed(ulong seed, int value)
+    {
+        ulong subseed = seed << 1;
+        seed = subseed ^ seed;
+
+        //arbitrary number
+        value *= 731371737;
+
+        int output = 0;
+        for (int i = 0; i < 32; i++)
+        {
+            ulong bitIndex = 1ul << (i * 2);
+
+            //seed xor
+            if ((seed ^ bitIndex) != 0)
+            {
+                output += 1 << i;
+            }
+        }
+
+        return output ^ value;
+    }
+    public static int ConvertSeed(ulong seed, int valueA, int valueB)
+    {
+        ulong subseed = seed << 1;
+        seed = subseed ^ seed;
+
+        //arbitrary numbers
+        valueA += valueB * 213232531;
+        valueA *= 731371737;
+
+        seed ^= 0xabcdabcdabcdabcd;
+        seed = seed * (ulong)valueA * 73137173;
+
+        int output = 0;
+        for (int i = 0; i < 32; i++)
+        {
+            ulong bitIndex = 1ul << (i * 2);
+
+            //seed xor
+            if ((seed ^ bitIndex) != 0)
+            {
+                output += 1 << i;
+            }
+        }
+
+        return output ^ valueA;
+    }
+    public static int ConvertSeed(int valueA, int valueB)
+    {
+        ulong seed = Instance.playerData.seed;
+        ulong subseed = seed << 1;
+        seed = subseed ^ seed;
+
+        //arbitrary numbers
+        valueA += valueB * 213232531;
+        valueA *= 731371737;
+
+        seed ^= 0xabcdabcdabcdabcd;
+        seed = seed * (ulong)valueA * 73137173;
+
+        int output = 0;
+        for (int i = 0; i < 32; i++)
+        {
+            ulong bitIndex = 1ul << (i * 2);
+
+            //seed xor
+            if ((seed & bitIndex) != 0)
+            {
+                output += 1 << i;
+            }
+        }
+
+        return output ^ valueA;
+    }
+    public static int ConvertSeedNode(int index)
+    {
+        return ConvertSeed(MainManager.Instance.playerData.realmsComplete, index);
+    }
+    public static int ConvertSeedNodeOffset(int index, int offset)
+    {
+        return ConvertSeed(offset, offset) ^ ConvertSeed(MainManager.Instance.playerData.realmsComplete, index);
+    }
+    public static int ConvertSeedNodeOffset(int offset)
+    {
+        return ConvertSeed(offset, offset) ^ ConvertSeed(MainManager.Instance.playerData.realmsComplete, MainManager.Instance.playerData.battlesComplete);
     }
 
 
@@ -1235,5 +1378,61 @@ public class MainManager : MonoBehaviour
         set <<= startBit;
 
         return (target & bitFilter) + set;
+    }
+
+    //quadratic easing (positive = fast at start, slow at end, negative = slow at start, fast at end. Heaviness values outside [-1, 1] will return values outside [0,1] near the slow end but will rebound)
+    //(graph out the formula for more specifics)
+    public static float EasingQuadratic(float input, float heaviness)
+    {
+        return input * (1 + heaviness) - input * input * heaviness;
+    }
+
+    //Unlike the exponential easings, this one has a set time it will reach the end
+    //Time to target = sqrt(abs(input - target) / force)
+    //Inverse (force) = (abs(input - target) / time^2)
+    //Note: calculating a force from a time value would need to use the starting point
+    //(and my easing functions are specifically designed so that the starting point is unnecessary)
+    public static float EasingQuadraticTime(float input, float target, float force)
+    {
+        force = Mathf.Abs(force);
+
+        //x - offset
+        //the x value is the next value the formula should take (the next input to feed back into this)
+        if (input - target < 0)
+        {
+            force = -force;
+        }
+        float formulaInput = Time.smoothDeltaTime - Mathf.Sqrt(Mathf.Abs((input - target) / force));
+
+        //point where you reach the target is at x = 0
+        if (formulaInput > 0)
+        {
+            return target;
+        }
+
+        float output = force * formulaInput * formulaInput + target;
+
+        return output;
+    }
+    public static float EasingQuadraticForce(float distance, float time)
+    {
+        return distance / (time * time);
+    }
+    public static Vector3 EasingQuadraticTime(Vector3 input, Vector3 target, float force)
+    {
+        //sus code
+        //return new Vector3(EasingQuadraticTime(input.x, target.x, force), EasingQuadraticTime(input.y, target.y, force), EasingQuadraticTime(input.z, target.z, force));
+        //^ Not straight: want something that does straight line stuff
+
+        float distance = (input - target).magnitude;
+        float newDistance = EasingQuadraticTime(distance, 0, force);
+
+        return (target) - (target - input).normalized * newDistance;
+    }
+    public static Quaternion EasingQuadraticTime(Quaternion input, Quaternion target, float force)
+    {
+        //why is the description for the w part different from the x,y,z parts? sus
+        //well interpolating like this works fine anyway
+        return new Quaternion(EasingQuadraticTime(input.x, target.x, force), EasingQuadraticTime(input.y, target.y, force), EasingQuadraticTime(input.z, target.z, force), EasingQuadraticTime(input.w, target.w, force));
     }
 }

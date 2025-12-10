@@ -33,6 +33,8 @@ public class BoardScript : MonoBehaviour
     public Color squareColorBlack;
     public Color backgroundColorWhite;
     public Color backgroundColorBlack;
+    //public TMPro.TMP_Text pieceInfoText;
+    public PieceMovePanelScript pmps;
 
     //debug: later I will make the real background use these colors
     //(Idea: give the board a border that is mid colored?)
@@ -174,27 +176,33 @@ public class BoardScript : MonoBehaviour
 
         selectedPiece = null;
         selectedBadge = null;
+
+        if (pmps != null)
+        {
+            pmps.SetText(selectedConsumable.text.text);
+        }
     }
     public virtual void SelectBadge(BadgeScript bs)
     {
         selectedPiece = null;
         selectedConsumable = null;
         selectedBadge = bs;
+        if (pmps != null)
+        {
+            pmps.SetBadge(bs.pm);
+        }
     }
 
     public virtual void SelectPiece(PieceScript piece)
     {
         ResetSelected(false);
-
-        if (piece is SetupPieceScript)
-        {
-            //It isn't a piece that has legal moves
-
-            selectedPiece = piece;
-            return;
-        }
-
         selectedPiece = piece;
+
+        if (pmps == null)
+        {
+            return;
+        }        
+        pmps.SetMove(selectedPiece.piece);
     }
 
     public virtual void ResetSelected(bool forceDeselect = true)
@@ -203,6 +211,16 @@ public class BoardScript : MonoBehaviour
         {
             squares[i].ResetColor();
         }
+        /*
+        if (pieceInfoText != null)
+        {
+            pieceInfoText.text = "";
+        }
+        if (pmps != null)
+        {
+            pmps.ResetAll();
+        }
+        */
 
         /*
         if (selectedPiece == null || forceDeselect)
@@ -296,12 +314,16 @@ public class BoardScript : MonoBehaviour
             pieces[i] = null;
         }
 
+        Piece.Aura[] wAura = board.GetAuraBitboards(false);
+        Piece.Aura[] bAura = board.GetAuraBitboards(true);
+
         //fix the pieces to match the board state
         for (int i = 0; i < pieces.Count; i++)
         {
             //also fix squares
             squares[i].sq = board.globalData.squares[i];
             squares[i].ResetSquareColor();
+            squares[i].SetAura(wAura[i], bAura[i]);
 
             bool needRecreate = false;
 

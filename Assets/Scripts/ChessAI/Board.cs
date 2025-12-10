@@ -107,6 +107,9 @@ public struct BoardGlobalData
     public ulong bitboard_piecesNeutral;
     public ulong bitboard_piecesCrystal;
 
+    public ulong bitboard_enhancedWhite;
+    public ulong bitboard_enhancedBlack;
+
     public ulong bitboard_piecesMirrored;
 
     public ulong bitboard_piecesWhiteAdjacent;
@@ -446,7 +449,6 @@ public class Board
     public enum EnemyModifier : uint
     {
         None = 0,
-        NoKing = 1,     //~14 are compatible with no king (about half) (so about half are king affecting and half aren't)
 
         Blinking = 1u << 1,    //Pieces you move must alternate starting on black and white squares
         Complacent = 1u << 2,  //Can't capture 2 turns in a row
@@ -454,7 +456,7 @@ public class Board
         Envious = 1u << 4, //King copies the movement of your highest valued piece (Movement copied stays the same over the course of the game)
         Fusion = 1u << 5,  //King has the normal movement of all ally pieces
         Greedy = 1u << 6,  //First X captures the enemy gets Convert instead of capture
-        Hidden = NoKing,    //No king
+        Hidden = 1,     //~14 are compatible with no king (about half) (so about half are king affecting and half aren't)
         Isolated = 1u << 7, //Pieces with enemies and no allies next to them can't move
         Jester = 1u << 8, //Spawn 4 Jesters on the black side
         Knave = 1u << 9, //All enemy pieces are Sneaky (can cross bottom to top without capturing)
@@ -1578,6 +1580,120 @@ public class Board
         }
     }
 
+    public Piece.Aura[] GetAuraBitboards(bool black)
+    {
+        Piece.Aura[] output = new Aura[64];
+        for (int i = 0; i < 64; i++)
+        {
+            ulong bitIndex = 1uL << i;
+
+            if (black)
+            {
+                if ((bitIndex & globalData.bitboard_virgoAuraBlack) != 0)
+                {
+                    output[i] |= Aura.Virgo;
+                }
+                if ((bitIndex & globalData.bitboard_bansheeBlack) != 0)
+                {
+                    output[i] |= Aura.Banshee;
+                }
+                if ((bitIndex & globalData.bitboard_attractorBlack) != 0)
+                {
+                    output[i] |= Aura.Attractor;
+                }
+                if ((bitIndex & globalData.bitboard_repulserBlack) != 0)
+                {
+                    output[i] |= Aura.Repulser;
+                }
+                if ((bitIndex & globalData.bitboard_harpyBlack) != 0)
+                {
+                    output[i] |= Aura.Harpy;
+                }
+                if ((bitIndex & globalData.bitboard_hagBlack) != 0)
+                {
+                    output[i] |= Aura.Hag;
+                }
+                if ((bitIndex & globalData.bitboard_slothBlack) != 0)
+                {
+                    output[i] |= Aura.Sloth;
+                }
+                if ((bitIndex & globalData.bitboard_watchTowerBlack) != 0)
+                {
+                    output[i] |= Aura.Watchtower;
+                }
+                if ((bitIndex & globalData.bitboard_fanBlack) != 0)
+                {
+                    output[i] |= Aura.Fan;
+                }
+                if ((bitIndex & globalData.bitboard_hangedBlack) != 0)
+                {
+                    output[i] |= Aura.Hanged;
+                }
+                if ((bitIndex & globalData.bitboard_roughBlack) != 0)
+                {
+                    output[i] |= Aura.Rough;
+                }
+                if ((bitIndex & globalData.bitboard_waterBlack) != 0)
+                {
+                    output[i] |= Aura.Water;
+                }
+            }
+            else
+            {
+                if ((bitIndex & globalData.bitboard_virgoAuraWhite) != 0)
+                {
+                    output[i] |= Aura.Virgo;
+                }
+                if ((bitIndex & globalData.bitboard_bansheeWhite) != 0)
+                {
+                    output[i] |= Aura.Banshee;
+                }
+                if ((bitIndex & globalData.bitboard_attractorWhite) != 0)
+                {
+                    output[i] |= Aura.Attractor;
+                }
+                if ((bitIndex & globalData.bitboard_repulserWhite) != 0)
+                {
+                    output[i] |= Aura.Repulser;
+                }
+                if ((bitIndex & globalData.bitboard_harpyWhite) != 0)
+                {
+                    output[i] |= Aura.Harpy;
+                }
+                if ((bitIndex & globalData.bitboard_hagWhite) != 0)
+                {
+                    output[i] |= Aura.Hag;
+                }
+                if ((bitIndex & globalData.bitboard_slothWhite) != 0)
+                {
+                    output[i] |= Aura.Sloth;
+                }
+                if ((bitIndex & globalData.bitboard_watchTowerWhite) != 0)
+                {
+                    output[i] |= Aura.Watchtower;
+                }
+                if ((bitIndex & globalData.bitboard_fanWhite) != 0)
+                {
+                    output[i] |= Aura.Fan;
+                }
+                if ((bitIndex & globalData.bitboard_hangedWhite) != 0)
+                {
+                    output[i] |= Aura.Hanged;
+                }
+                if ((bitIndex & globalData.bitboard_roughWhite) != 0)
+                {
+                    output[i] |= Aura.Rough;
+                }
+                if ((bitIndex & globalData.bitboard_waterWhite) != 0)
+                {
+                    output[i] |= Aura.Water;
+                }
+            }
+        }
+
+        return output;
+    }
+
     public uint GetLastMove()
     {
         if (bonusPly > 0)
@@ -1777,6 +1893,7 @@ public class Board
     }
     public Board(Board b)
     {
+        /*
         ply = b.ply;
         bonusPly = b.bonusPly;
         turn = b.turn;
@@ -1792,6 +1909,8 @@ public class Board
 
         whitePerPlayerInfo = b.whitePerPlayerInfo;
         blackPerPlayerInfo = b.blackPerPlayerInfo;
+        */
+        CopyOverwrite(b);
     }
 
     public void SplitGlobalData()
@@ -2145,12 +2264,16 @@ public class Board
 
         //Overtaken victory
         int ylevel = 7;
-        for (int i = 0; i < 8; i++)
+        if ((globalData.enemyModifier & EnemyModifier.Zenith) == 0)
         {
-            uint target = pieces[i + (ylevel << 3)];
-            if (Piece.GetPieceType(target) == PieceType.King && Piece.GetPieceAlignment(target) == PieceAlignment.White)
+            //Not possible with Zenith active (would be dumb if you could cheese the final boss early)
+            for (int i = 0; i < 8; i++)
             {
-                return PieceAlignment.White;
+                uint target = pieces[i + (ylevel << 3)];
+                if (Piece.GetPieceType(target) == PieceType.King && Piece.GetPieceAlignment(target) == PieceAlignment.White)
+                {
+                    return PieceAlignment.White;
+                }
             }
         }
         ylevel = 0;
@@ -3115,7 +3238,7 @@ public class Board
                         pulldx = -pulldx;
                         pulldy = -pulldy;
 
-                        if (fx + pulldx < 0 || fx + pulldx > 7 || fy + pulldy < 0 || fy + pulldy > 7)
+                        if (((((fx + pulldx) | (fy + pulldy)) & -8) != 0))
                         {
                             //Illegal pull
                             //goto case Move.SpecialType.Normal;
@@ -3140,7 +3263,7 @@ public class Board
                         }
 
                         //Rare edge case with Knave + (pull mover)
-                        if (tx + pulldx > 7 || tx + pulldx < 0 || ty + pulldy > 7 || ty + pulldy < 0)
+                        if (((((tx + pulldx) | (ty + pulldy)) & -8) != 0))
                         {
                             break;
                         }
@@ -3399,7 +3522,7 @@ public class Board
                     }
 
                     //it is a bug if this happens
-                    if (tempX < 0 || tempX > 7 || tempY < 0 || tempY > 7)
+                    if (((((tempX) | (tempY)) & -8) != 0))
                     {
                         break;
                     }
@@ -3704,7 +3827,7 @@ public class Board
             case Move.SpecialType.AdvancerWithdrawer:
                 //Similar coordinate logic to push
                 (int a2dx, int a2dy) = Move.DirToDelta(dir);
-                if (tx + a2dx < 0 || tx + a2dx > 7 || ty + a2dy < 0 || ty + a2dy > 7)
+                if (((((tx + a2dx) | (ty + a2dy)) & -8) != 0))
                 {
                     //No advancer capture
                     goto case Move.SpecialType.Withdrawer;
@@ -3757,7 +3880,7 @@ public class Board
                 }
                 //Similar coordinate logic to push
                 (int advdx, int advdy) = Move.DirToDelta(dir);
-                if (tx + advdx < 0 || tx + advdx > 7 || ty + advdy < 0 || ty + advdy > 7)
+                if (((((tx + advdx) | (ty + advdy)) & -8) != 0))
                 {
                     //No advancer capture
                     goto case Move.SpecialType.MoveOnly;
@@ -3818,7 +3941,7 @@ public class Board
                 (int withdx, int withdy) = Move.DirToDelta(dir);
                 withdx = -withdx;
                 withdy = -withdy;
-                if (fx + withdx < 0 || fx + withdx > 7 || fy + withdy < 0 || fy + withdy > 7)
+                if (((((fx + withdx) | (fy + withdy)) & -8) != 0))
                 {
                     //No withdraw capture
                     goto case Move.SpecialType.MoveOnly;
@@ -4137,7 +4260,7 @@ public class Board
                         int oy = (fy - ty) + fy;
 
                         bool dospawn = true;
-                        if (ox < 0 || ox > 7 || oy < 0 || oy > 7)
+                        if (((((ox) | (oy)) & -8) != 0))
                         {
                             dospawn = false;
                         }
@@ -5412,7 +5535,7 @@ public class Board
                     tempX += sdx;
                     tempY += sdy;
                     //it is a bug if this happens
-                    if (tempX < 0 || tempX > 7 || tempY < 0 || tempY > 7)
+                    if (((((tempX) | (tempY)) & -8) != 0))
                     {
                         break;
                     }
@@ -6031,11 +6154,7 @@ public class Board
                     int vdx = GlobalPieceManager.orbiterDeltas[i][0];
                     int vdy = GlobalPieceManager.orbiterDeltas[i][1];
 
-                    if (x + vdx < 0 || x + vdx > 7)
-                    {
-                        continue;
-                    }
-                    if (y + vdy < 0 || y + vdy > 7)
+                    if (((((x + vdx) | (y + vdy)) & -8) != 0))
                     {
                         continue;
                     }
@@ -6045,11 +6164,7 @@ public class Board
                         TryPiecePull(x + vdx, y + vdy, vdx, vdy, GlobalPieceManager.GetPieceTableEntry(pieces[x + vdx + (y + vdy) * 8]), boardUpdateMetadata);
                     }
 
-                    if (x + vdx * 2 < 0 || x + vdx * 2 > 7)
-                    {
-                        continue;
-                    }
-                    if (y + vdy * 2 < 0 || y + vdy * 2 > 7)
+                    if (((((x + vdx * 2) | (y + vdy * 2)) & -8) != 0))
                     {
                         continue;
                     }
@@ -6067,11 +6182,7 @@ public class Board
                 {
                     for (int fdx = -1; fdx <= 1; fdx++)
                     {
-                        if (x + fdx < 0 || x + fdx > 7)
-                        {
-                            continue;
-                        }
-                        if (y + fdy < 0 || y + fdy > 7)
+                        if (((((x + fdx) | (y + fdy)) & -8) != 0))
                         {
                             continue;
                         }
@@ -6692,7 +6803,7 @@ public class Board
                 break;
         }
 
-        if (y + dy < 0 || y + dy > 7 || x + dx < 0 || x + dx > 7)
+        if (((((x + dx) | (y + dy)) & -8) != 0))
         {
             return;
         }
@@ -6721,7 +6832,7 @@ public class Board
             blackPerPlayerInfo.pieceCount++;
         }
 
-        if (y + dy * 2 < 0 || y + dy * 2 > 7 || x + dx * 2 < 0 || x + dx * 2 > 7)
+        if ((((x + dx * 2) | (y + dy * 2)) & -8) != 0)
         {
             return;
         }
@@ -6774,7 +6885,7 @@ public class Board
                 break;
         }
 
-        if (y + dy < 0 || y + dy > 7 || x + dx < 0 || x + dx > 7)
+        if (((((x + dx) | (y + dy)) & -8) != 0))
         {
             return;
         }
@@ -7023,6 +7134,7 @@ public class Board
     public void ApplyAutoMovers(bool black, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
         //hope the memcpy stuff isn't bad
+        /*
         if (black)
         {
             if ((bitboard_auto & globalData.bitboard_piecesBlack) == 0)
@@ -7036,6 +7148,14 @@ public class Board
                 return;
             }
         }
+        */
+        if (bitboard_auto == 0)
+        {
+            return;
+        }
+
+        //MainManager.PrintBitboard(bitboard_auto);
+        //MainManager.PrintBitboard(globalData.bitboard_piecesBlack);
 
         /*
         globalData.bitboard_zombieBlack;
@@ -7074,6 +7194,11 @@ public class Board
             warpWeaver = globalData.bitboard_warpWeaver & globalData.bitboard_piecesBlack;
             megacannon = globalData.bitboard_megacannon & globalData.bitboard_piecesWhite;       //Mega Cannon ticks up on your turn so it can destroy Kings without wrong King Capture attribution
             momentum = globalData.bitboard_momentum & globalData.bitboard_piecesBlack;
+
+            if (!moveZombies && (clockworksnapper | bladebeast | metalFox | warpWeaver | megacannon | momentum) == 0)
+            {
+                return;
+            }
         }
         else
         {
@@ -7175,7 +7300,7 @@ public class Board
                 bool attackSuccessful = false;
                 tx = fx;
                 ty = fy + 1;
-                if (tx > 7 || tx < 0 || ty > 7 || ty < 0)
+                if (((((tx) | (ty)) & -8) != 0))
                 {
                     continue;
                 }
@@ -7188,7 +7313,7 @@ public class Board
                 }
                 tx = fx + 1;
                 ty = fy;
-                if (tx > 7 || tx < 0 || ty > 7 || ty < 0)
+                if (((((tx) | (ty)) & -8) != 0))
                 {
                     continue;
                 }
@@ -7201,7 +7326,7 @@ public class Board
                 }
                 tx = fx;
                 ty = fy - 1;
-                if (tx > 7 || tx < 0 || ty > 7 || ty < 0)
+                if (((((tx) | (ty)) & -8) != 0))
                 {
                     continue;
                 }
@@ -7214,7 +7339,7 @@ public class Board
                 }
                 tx = fx - 1;
                 ty = fy;
-                if (tx > 7 || tx < 0 || ty > 7 || ty < 0)
+                if (((((tx) | (ty)) & -8) != 0))
                 {
                     continue;
                 }
@@ -7530,7 +7655,7 @@ public class Board
                 int tx = data & 7;
                 int ty = (data & 56) >> 3;
 
-                if (ty > 7 || ty < 0 || tx < 0 || tx > 7)
+                if (((((tx) | (ty)) & -8) != 0))
                 {
                     continue;
                 }
@@ -7573,7 +7698,7 @@ public class Board
             int ty = (data & 56) >> 3;
             //Debug.Log(fx + " " + fy + " " + tx + " " + ty);
 
-            if (ty > 7 || ty < 0 || tx < 0 || tx > 7)
+            if (((((tx) | (ty)) & -8) != 0))
             {
                 continue;
             }
@@ -7621,12 +7746,12 @@ public class Board
             if (data > 0)
             {
                 data += 64;
-                pieces[index] = Piece.SetPieceSpecialData(data, oldPiece);
 
                 //Time to shoot
                 //Note: because I don't have many bits it's a 7 turn delay
                 //448 + 63 = 511 (maximum storable value right now)
-                if (data >= 448)
+                //change: 
+                if (data >= 512)
                 {
                     int fx = index & 7;
                     int fy = index >> 3;
@@ -7690,6 +7815,9 @@ public class Board
                             }
                         }
                     }
+                } else
+                {
+                    pieces[index] = Piece.SetPieceSpecialData(data, oldPiece);
                 }
             }
         }
@@ -7727,13 +7855,13 @@ public class Board
 
             globalData.bitboard_updatedPieces |= (1uL << (index));
 
-            if (fx + dx < 0 || fx + dx > 7 || fy + dy < 0 || fy + dy > 7 || (pieces[(fx + dx) + ((fy + dy) << 3)] != 0))
+            if (((((fx + dx) | (fy + dy)) & -8) != 0) || (pieces[(fx + dx) + ((fy + dy) << 3)] != 0))
             {
                 //Bonk
                 if (bounce)
                 {
                     //Try to move in opposite dir
-                    if (fx - dx < 0 || fx - dx > 7 || fy - dy < 0 || fy - dy > 7 || (pieces[(fx - dx) + ((fy - dy) << 3)] != 0))
+                    if (((((fx - dx) | (fy - dy)) & -8) != 0) || (pieces[(fx - dx) + ((fy - dy) << 3)] != 0))
                     {
                         //Bonk again
                         pieces[index] = Piece.SetPieceSpecialData(0, oldPiece);
@@ -7936,7 +8064,7 @@ public class Board
 
         bool immuneZone = (globalData.playerModifier & PlayerModifier.ImmunityZone) != 0;
 
-        piecesToCheck &= ~globalData.bitboard_noStatus & ~globalData.bitboard_EOTPieces;
+        piecesToCheck &= (~globalData.bitboard_noStatus | globalData.bitboard_EOTPieces);
 
         //MainManager.PrintBitboard(~globalData.bitboard_noStatus);
 
@@ -8419,7 +8547,7 @@ public class Board
     }
     public bool TryPiecePushAlly(int x, int y, int dx, int dy, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
-        if (x < 0 || x > 7 || y < 0 || y > 7 || Piece.GetPieceAlignment(pieces[x + y * 8]) != pa)
+        if ((((x | y) & -8) != 0) || Piece.GetPieceAlignment(pieces[x + y * 8]) != pa)
         {
             return false;
         }
@@ -8428,7 +8556,7 @@ public class Board
     }
     public bool TryPiecePushEnemy(int x, int y, int dx, int dy, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
-        if (x < 0 || x > 7 || y < 0 || y > 7 || Piece.GetPieceAlignment(pieces[x + y * 8]) == pa)
+        if ((((x | y) & -8) != 0) || Piece.GetPieceAlignment(pieces[x + y * 8]) == pa)
         {
             return false;
         }
@@ -8450,7 +8578,7 @@ public class Board
         x += dx;
         y += dy;
 
-        if (x < 0 || x > 7 || y < 0 || y > 7)
+        if ((((x | y) & -8) != 0))
         {
             return;
         }
@@ -8459,7 +8587,7 @@ public class Board
         int py = y + dy;
 
         bool pincer = false;
-        if (px < 0 || px > 7 || py < 0 || py > 7)
+        if ((((px | y) & -8) != 0))
         {
             pincer = true;
         } else
@@ -8503,6 +8631,10 @@ public class Board
 
     public bool TryPiecePush(int x, int y, int dx, int dy, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
+        if ((((x | y) & -8) != 0) || pieces[x + (y << 3)] == 0)
+        {
+            return false;
+        }
         return TryPiecePush(x, y, dx, dy, globalData.GetPieceTableEntryFromCache(x + (y << 3), pieces[x + (y << 3)]), boardUpdateMetadata);
     }
     public bool TryPiecePush(int x, int y, int dx, int dy, PieceTableEntry pte, List<BoardUpdateMetadata> boardUpdateMetadata)
@@ -8515,11 +8647,7 @@ public class Board
             return false;
         }
 
-        if (tx < 0 || tx > 7)
-        {
-            return false;
-        }
-        if (ty < 0 || ty > 7)
+        if ((((tx | ty) & -8) != 0))
         {
             return false;
         }
@@ -8552,11 +8680,11 @@ public class Board
     }
     public bool TryPieceSwapEnemy(int x, int y, int x2, int y2, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
-        if (x < 0 || x > 7 || y < 0 || y > 7)
+        if ((((x | y) & -8) != 0))
         {
             return false;
         }
-        if (x2 < 0 || x2 > 7 || y2 < 0 || y2 > 7)
+        if ((((x2 | y2) & -8) != 0))
         {
             return false;
         }
@@ -8598,11 +8726,11 @@ public class Board
     }
     public bool TryPieceSwap(int x, int y, int x2, int y2, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
-        if (x < 0 || x > 7 || y < 0 || y > 7)
+        if ((((x | y) & -8) != 0))
         {
             return false;
         }
-        if (x2 < 0 || x2 > 7 || y2 < 0 || y2 > 7)
+        if ((((x2 | y2) & -8) != 0))
         {
             return false;
         }
@@ -8640,7 +8768,7 @@ public class Board
     }
     public bool TryPiecePull(int x, int y, int dx, int dy, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
-        if (x < 0 || x > 7 || y < 0 || y > 7 || pieces[x + y * 8] == 0)
+        if ((((x | y) & -8) != 0) || pieces[x + y * 8] == 0)
         {
             return false;
         }
@@ -8664,7 +8792,7 @@ public class Board
 
         tx += dx;
         ty += dy;
-        if (tx < 0 || tx > 7 || ty < 0 || ty > 7)
+        if ((((tx | ty) & -8) != 0))
         {
             return false;
         }
@@ -8679,11 +8807,7 @@ public class Board
         {
             tx += dx;
             ty += dy;
-            if (tx < 0 || tx > 7)
-            {
-                return false;
-            }
-            if (ty < 0 || ty > 7)
+            if ((((tx | ty) & -8) != 0))
             {
                 return false;
             }
@@ -8722,7 +8846,7 @@ public class Board
         tx += dx;
         ty += dy;
 
-        if (tx < 0 || tx > 7 || ty < 0 || ty > 7)
+        if ((((tx | ty) & -8) != 0))
         {
             return false;
         }
@@ -8746,11 +8870,7 @@ public class Board
             //Debug.Log(x + " " + y + " " + dx + " " + dy + " " + tx + " " + ty + " " + Piece.GetPieceType(pieces[tx + ty * 8]));
             tx += dx;
             ty += dy;
-            if (tx < 0 || tx > 7)
-            {
-                break;
-            }
-            if (ty < 0 || ty > 7)
+            if ((((tx | ty) & -8) != 0))
             {
                 break;
             }
@@ -8781,11 +8901,7 @@ public class Board
             int dx = GlobalPieceManager.orbiterDeltas[i][0];
             int dy = GlobalPieceManager.orbiterDeltas[i][1];
 
-            if (x + dx < 0 || x + dx > 7)
-            {
-                continue;
-            }
-            if (y + dy < 0 || y + dy > 7)
+            if (((((x + dx) | (y + dy)) & -8) != 0))
             {
                 continue;
             }
@@ -8805,11 +8921,7 @@ public class Board
             int dx = GlobalPieceManager.orbiterDeltas[i][0];
             int dy = GlobalPieceManager.orbiterDeltas[i][1];
 
-            if (x + dx < 0 || x + dx > 7)
-            {
-                continue;
-            }
-            if (y + dy < 0 || y + dy > 7)
+            if (((((x + dx) | (y + dy)) & -8) != 0))
             {
                 continue;
             }
@@ -8854,11 +8966,7 @@ public class Board
             int dx = GlobalPieceManager.orbiterDeltas[i][0];
             int dy = GlobalPieceManager.orbiterDeltas[i][1];
 
-            if (x + dx < 0 || x + dx > 7)
-            {
-                continue;
-            }
-            if (y + dy < 0 || y + dy > 7)
+            if (((((x + dx) | (y + dy)) & -8) != 0))
             {
                 continue;
             }
@@ -8875,11 +8983,7 @@ public class Board
                 int dx = i * 2 - 1;
                 int dy = j * 2 - 1;
 
-                if (x + dx < 0 || x + dx > 7)
-                {
-                    continue;
-                }
-                if (y + dy < 0 || y + dy > 7)
+                if (((((x + dx) | (y + dy)) & -8) != 0))
                 {
                     continue;
                 }
@@ -8902,11 +9006,7 @@ public class Board
                 int dx = i * 2 - 1;
                 int dy = j * 2 - 1;
 
-                if (x + dx < 0 || x + dx > 7)
-                {
-                    continue;
-                }
-                if (y + dy < 0 || y + dy > 7)
+                if (((((x + dx) | (y + dy)) & -8) != 0))
                 {
                     continue;
                 }
@@ -8934,11 +9034,7 @@ public class Board
                     continue;
                 }
 
-                if (x + dx < 0 || x + dx > 7)
-                {
-                    continue;
-                }
-                if (y + dy < 0 || y + dy > 7)
+                if (((((x + dx) | (y + dy)) & -8) != 0))
                 {
                     continue;
                 }
@@ -10282,7 +10378,7 @@ public class Board
         {
             whiteKing = true;
         }
-        if ((globalData.enemyModifier & EnemyModifier.NoKing) != 0)
+        if ((globalData.enemyModifier & EnemyModifier.Hidden) != 0)
         {
             blackKing = true;
         }
@@ -10359,7 +10455,7 @@ public class Board
         {
             whiteKing = true;
         }
-        if ((globalData.enemyModifier & EnemyModifier.NoKing) != 0)
+        if ((globalData.enemyModifier & EnemyModifier.Hidden) != 0)
         {
             blackKing = true;
         }
@@ -10422,7 +10518,7 @@ public class Board
         {
             whiteKing = true;
         }
-        if ((globalData.enemyModifier & EnemyModifier.NoKing) != 0)
+        if ((globalData.enemyModifier & EnemyModifier.Hidden) != 0)
         {
             blackKing = true;
         }
@@ -10694,6 +10790,491 @@ public class Board
 
         Debug.Log(toPrint);
     }
+
+    public static int GetConsumableCost(ConsumableMoveType cmt)
+    {
+        switch (cmt)
+        {
+            case ConsumableMoveType.PocketRock:
+                return 1;
+            case ConsumableMoveType.PocketRockslide:
+                return 7;
+            case ConsumableMoveType.PocketPawn:
+                return 1;
+            case ConsumableMoveType.PocketKnight:
+                return 4;
+            case ConsumableMoveType.Horns:
+                return 4;
+            case ConsumableMoveType.Torch:
+                return 6;
+            case ConsumableMoveType.Ring:
+                return 4;
+            case ConsumableMoveType.Wings:
+                return 6;
+            case ConsumableMoveType.Glass:
+                return 6;
+            case ConsumableMoveType.Bottle:
+                return 3;
+            case ConsumableMoveType.Shield:
+                return 5;
+            case ConsumableMoveType.Cap:
+                return 3;
+            case ConsumableMoveType.Grail:
+                return 5;
+            case ConsumableMoveType.WarpBack:
+                return 2;
+            case ConsumableMoveType.SplashFreeze:
+                return 3;
+            case ConsumableMoveType.SplashPhantom:
+                return 2;
+            case ConsumableMoveType.SplashCure:
+                return 1;
+            case ConsumableMoveType.SplashAir:
+                return 1;
+            case ConsumableMoveType.SplashVortex:
+                return 1;
+            case ConsumableMoveType.Fan:
+                return 4;
+            case ConsumableMoveType.MegaFan:
+                return 6;
+            case ConsumableMoveType.Bag:
+                return 6;
+        }
+        return 5;
+    }
+    public static string GetConsumableName(ConsumableMoveType cmt)
+    {
+        switch (cmt)
+        {
+            case ConsumableMoveType.Horns:
+            case ConsumableMoveType.Torch:
+            case ConsumableMoveType.Ring:
+            case ConsumableMoveType.Wings:
+            case ConsumableMoveType.Glass:
+            case ConsumableMoveType.Bottle:
+            case ConsumableMoveType.Shield:
+            case ConsumableMoveType.Cap:
+            case ConsumableMoveType.Grail:
+            case ConsumableMoveType.Fan:
+            case ConsumableMoveType.Bag:
+                return cmt.ToString();
+            case ConsumableMoveType.PocketRock:
+                return "Pocket Rock";
+            case ConsumableMoveType.PocketRockslide:
+                return "Pocket Rockslide";
+            case ConsumableMoveType.PocketPawn:
+                return "Pocket Pawn";
+            case ConsumableMoveType.PocketKnight:
+                return "Pocket Knight";
+            case ConsumableMoveType.WarpBack:
+                return "Warp Back";
+            case ConsumableMoveType.SplashFreeze:
+                return "Splash Freeze";
+            case ConsumableMoveType.SplashPhantom:
+                return "Splash Phantom";
+            case ConsumableMoveType.SplashCure:
+                return "Splash Cure";
+            case ConsumableMoveType.SplashAir:
+                return "Splash Wind";
+            case ConsumableMoveType.SplashVortex:
+                return "Splash Vortex";
+            case ConsumableMoveType.MegaFan:
+                return "Mega Fan";
+        }
+        return "";
+    }
+    public static string GetConsumableDescription(ConsumableMoveType cmt)
+    {
+        switch (cmt)
+        {
+            case ConsumableMoveType.PocketRock:
+                return "Drop a Rock on the target empty square.";
+            case ConsumableMoveType.PocketRockslide:
+                return "Drop a Rock on the target empty square and all adjacent empty squares.";
+            case ConsumableMoveType.PocketPawn:
+                return "Drop an ally Pawn on the target empty square.";
+            case ConsumableMoveType.PocketKnight:
+                return "Drop an ally Knight on the target empty square.";
+            case ConsumableMoveType.Horns:
+                return "Imbue the target ally with Vengeful for the rest of the battle. (Vengeful: When captured, the capturer is destroyed if it is not a King.)";
+            case ConsumableMoveType.Torch:
+                return "Imbue the target ally with Phoenix for the rest of the battle. (Phoenix: When destroyed, respawn as far back as possible and lose this Modifier.)";
+            case ConsumableMoveType.Ring:
+                return "Imbue the target ally with Radiant for the rest of the battle. (Radiant: When this piece captures, spawn a Pawn as far back as possible.)";
+            case ConsumableMoveType.Wings:
+                return "Imbue the target ally with Winged for the rest of the battle. (Winged: Ignore the first obstacle but can't capture after leaping over the obstacle.)";
+            case ConsumableMoveType.Glass:
+                return "Imbue the target ally with Spectral for the rest of the battle. (Spectral: Ally pieces are not blocked by this piece.)";
+            case ConsumableMoveType.Bottle:
+                return "Imbue the target ally with Immune for the rest of the battle. (Immune: Unaffected by status effects and enchantments. Enemy pieces that are orthogonally adjacent can't capture.)";
+            case ConsumableMoveType.Shield:
+                return "Imbue the target ally with Shielded for the rest of the battle. (Shielded: Invincible, but degrades to Half Shielded if an enemy piece threatens it at the start of their turn. Half Shielded degrades to nothing after 1 turn.)";
+            case ConsumableMoveType.Cap:
+                return "Imbue the target ally with Warped for the rest of the battle. (Warped: Ally pieces can swap places with this piece if they can move onto it.)";
+            case ConsumableMoveType.Grail:
+                return "Promote the target pawnlike ally piece.";
+            case ConsumableMoveType.WarpBack:
+                return "Move the target piece as far back as possible.";
+            case ConsumableMoveType.SplashFreeze:
+                return "Imbue the target enemy and all adjacent enemies with Freeze for 3 turns.";
+            case ConsumableMoveType.SplashPhantom:
+                return "Imbue the target enemy and all adjacent enemies with Phantom for 3 turns.";
+            case ConsumableMoveType.SplashCure:
+                return "Cure the target ally and all adjacent allies of status effects.";
+            case ConsumableMoveType.SplashAir:
+                return "Push all adjacent enemies away 1 square.";
+            case ConsumableMoveType.SplashVortex:
+                return "Pull enemies towards the target square (Enemies from range 2 are pulled towards range 1.)";
+            case ConsumableMoveType.Fan:
+                return "Push the target enemy and all adjacent enemies back 1 square.";
+            case ConsumableMoveType.MegaFan:
+                return "Push all enemies back 1 square.";
+            case ConsumableMoveType.Bag:
+                return "Convert target enemy to be your piece. Only usable if the target is adjacent to one of your pieces.";
+        }
+        return "";
+    }
+    public static string GetPlayerModifierName(PlayerModifier pm)
+    {
+        switch (pm)
+        {
+            case PlayerModifier.Push:
+            case PlayerModifier.Vortex:
+            case PlayerModifier.Sprint:
+            case PlayerModifier.Rough:
+            case PlayerModifier.Defensive:
+            case PlayerModifier.Recall:
+            case PlayerModifier.Tempering:
+            case PlayerModifier.Rockfall:
+            case PlayerModifier.Promoter:
+            case PlayerModifier.Seafaring:
+            case PlayerModifier.Backdoor:
+            case PlayerModifier.Mirror:
+            case PlayerModifier.Forest:
+            case PlayerModifier.Slippery:
+                return pm.ToString();
+            case PlayerModifier.NoKing:
+                return "No King";
+            case PlayerModifier.RelayKing:
+                return "Relay King";
+            case PlayerModifier.BronzeTreasure:
+                return "Bronze Treasure";
+            case PlayerModifier.SilverTreasure:
+                return "Silver Treasure";
+            case PlayerModifier.GoldenTreasure:
+                return "Golden Treasure";
+            case PlayerModifier.TimeBurst:
+                return "Time Burst";
+            case PlayerModifier.FinalVengeance:
+                return "Final Vengeance";
+            case PlayerModifier.PhoenixWing:
+                return "Phoenix Wing";
+            case PlayerModifier.FirstRadiant:
+                return "First Radiant";
+            case PlayerModifier.SideWings:
+                return "Side Wings";
+            case PlayerModifier.SpectralWall:
+                return "Spectral Wall";
+            case PlayerModifier.ImmunityZone:
+                return "Immunity Zone";
+            case PlayerModifier.WarpZone:
+                return "Warp Zone";
+            case PlayerModifier.ShieldZone:
+                return "Shield Zone";
+            case PlayerModifier.FlyingGeneral:
+                return "Flying General";
+        }
+        return "";
+    }
+    public static string GetPlayerModifierDescription(PlayerModifier pm)
+    {
+        switch (pm)
+        {
+            case PlayerModifier.NoKing:
+                return "King disappears on battle start. You can't be Checkmated.";
+            case PlayerModifier.RelayKing:
+                return "King relays its moves to adjacent allies.";
+            case PlayerModifier.Slippery:
+                return "Pieces you move slip 1 square when they move (if they land on normal squares).";
+            case PlayerModifier.Push:
+                return "Pieces you move push enemies away by 1 square.";
+            case PlayerModifier.Vortex:
+                return "Pieces you move pull enemies towards it 1 square.";
+            case PlayerModifier.Sprint:
+                return "For the first 3 turns, you get 2 moves per turn.";
+            case PlayerModifier.Rough:
+                return "Your pieces create rough squares orthogonally adjacent to them. (Rough squares force enemies to stop on them).";
+            case PlayerModifier.Defensive:
+                return "Your pieces can move backwards infinitely.";
+            case PlayerModifier.Recall:
+                return "Your pieces can teleport move or swap back to the home row.";
+            case PlayerModifier.Tempering:
+                return "Capture Only moves now allow movement as well.";
+            case PlayerModifier.Rockfall:
+                return "Spawn 16 rocks on the board.";
+            case PlayerModifier.Promoter:
+                return "Spawn 2 Promotion Squares, which promote your pieces on them on the enemy half of the board.";
+            case PlayerModifier.BronzeTreasure:
+                return "Spawn a Bronze Treasure square, which gives you $2 when you land on it.";
+            case PlayerModifier.SilverTreasure:
+                return "Spawn a Silver Treasure square, which gives you $4 when you land on it.";
+            case PlayerModifier.GoldenTreasure:
+                return "Spawn two Golden Treasure squares, which gives you $6 when you have pieces on all of them simultaneously.";
+            case PlayerModifier.TimeBurst:
+                return "Every 8 turns, you can move twice in one turn.";
+            case PlayerModifier.FinalVengeance:
+                return "When you have 6 pieces or less, your pieces will destroy the pieces that capture them.";
+            case PlayerModifier.PhoenixWing:
+                return "The first piece you lose is respawned as far back as possible.";
+            case PlayerModifier.FirstRadiant:
+                return "The first piece you capture with spawns a Pawn and becomes Radiant.";
+            case PlayerModifier.SideWings:
+                return "Pieces on the outer 4 files can fly over one obstacle (but can't capture after flying over the obstacle).";
+            case PlayerModifier.SpectralWall:
+                return "Your pieces on row 3 do not block movement of ally pieces.";
+            case PlayerModifier.ImmunityZone:
+                return "The center 4 squares on your front row will cure ally pieces of status effects when you move pieces there.";
+            case PlayerModifier.WarpZone:
+                return "Ally pieces in the center 4x4 allow you to move your pieces onto them to swap with them.";
+            case PlayerModifier.ShieldZone:
+                return "Ally pieces on b2, c2, f2 and g2 are Invincible to attackers further than 2 squares away from them.";
+            case PlayerModifier.Seafaring:
+                return "Pieces on the a file and h file can teleport move to the opposite side of the board.";
+            case PlayerModifier.Backdoor:
+                return "Pieces on b1, b8, c1, c8, f1, f8, g1 and g8 can teleport move to the vertical opposite side of the board.";
+            case PlayerModifier.Mirror:
+                return "Pieces can teleport move to the mirrored side of the board.";
+            case PlayerModifier.Forest:
+                return "Pieces can teleport move to any square with at least 4 allies adjacent to them.";
+            case PlayerModifier.FlyingGeneral:
+                return "Your King checks enemy Kings on the same file or rank as it with no obstacles in between (Can capture if the enemy has multiple Kings).";
+        }
+        return "";
+    }
+    public static int GetPlayerModifierCost(PlayerModifier pm)
+    {
+        switch (pm)
+        {
+            case PlayerModifier.NoKing:
+                return 5;
+            case PlayerModifier.RelayKing:
+                return 5;
+            case PlayerModifier.Slippery:
+                return 6;
+            case PlayerModifier.Push:
+                return 6;
+            case PlayerModifier.Vortex:
+                return 6;
+            case PlayerModifier.Sprint:
+                return 6;
+            case PlayerModifier.Rough:
+                return 7;
+            case PlayerModifier.Defensive:
+                return 6;
+            case PlayerModifier.Recall:
+                return 6;
+            case PlayerModifier.Tempering:
+                return 7;
+            case PlayerModifier.Rockfall:
+                return 6;
+            case PlayerModifier.Promoter:
+                return 5;
+            case PlayerModifier.BronzeTreasure:
+                return 6;
+            case PlayerModifier.SilverTreasure:
+                return 8;
+            case PlayerModifier.GoldenTreasure:
+                return 10;
+            case PlayerModifier.TimeBurst:
+                return 4;
+            case PlayerModifier.FinalVengeance:
+                return 6;
+            case PlayerModifier.PhoenixWing:
+                return 8;
+            case PlayerModifier.FirstRadiant:
+                return 7;
+            case PlayerModifier.SideWings:
+                return 5;
+            case PlayerModifier.SpectralWall:
+                return 4;
+            case PlayerModifier.ImmunityZone:
+                return 4;
+            case PlayerModifier.WarpZone:
+                return 4;
+            case PlayerModifier.ShieldZone:
+                return 6;
+            case PlayerModifier.Seafaring:
+                return 3;
+            case PlayerModifier.Backdoor:
+                return 3;
+            case PlayerModifier.Mirror:
+                return 6;
+            case PlayerModifier.Forest:
+                return 7;
+            case PlayerModifier.FlyingGeneral:
+                return 3;
+        }
+        return 8;
+    }
+    public static string GetEnemyModifierDescription(EnemyModifier em)
+    {
+        switch (em)
+        {
+            case EnemyModifier.Blinking:
+                return "Blinking: You must alternate moving to light and dark squares for every turn.";
+            case EnemyModifier.Complacent:
+                return "Complacent: You can't capture twice in to turns.";
+            case EnemyModifier.Defensive:
+                return "Defensive: Enemy pieces can move backwards infinitely.";
+            case EnemyModifier.Envious:
+                return "Envious: Enemy King copies the movement of your highest valued piece at the start.";
+            case EnemyModifier.Fusion:
+                return "Fusion: Enemy King copies the movement of allies adjacent to it.";
+            case EnemyModifier.Greedy:
+                return "Greedy: Until you lose 2 pieces, your enemy can convert pieces to their side instead of capturing or burning your pieces.";
+            case EnemyModifier.Hidden:
+                return "Hidden: No enemy Kings, Immune to Checkmate.";
+            case EnemyModifier.Isolated:
+                return "Isolated: You can't move pieces that are adjacent to enemies and no allies.";
+            case EnemyModifier.Jester:
+                return "Jester: Spawn 3 Jesters.";
+            case EnemyModifier.Knave:
+                return "Knave: Enemy pieces can move between the top and bottom of the board (wwithout capturing).";
+            case EnemyModifier.Lustful:
+                return "Lustful: Pieces on the same rank, file or diagonals as the enemy King can be moved by the enemy";
+            case EnemyModifier.Mesmerizing:
+                return "Mesmerizing: Every 2 turns, the piece you move is pulled forwards after you move.";
+            case EnemyModifier.Numerous:
+                return "Numerous: Spawn 2 extra Kings.";
+            case EnemyModifier.Obelisk:
+                return "Obelisk: The enemy King pulls allies alongside it as it moves.";
+            case EnemyModifier.Prideful:
+                return "Prideful: You can't capture if you have more pieces than your opponent.";
+            case EnemyModifier.Queenly:
+                return "Queenly: Spawn a Queen and a Princess.";
+            case EnemyModifier.Rifter:
+                return "Rifter: Every 2 turns, the piece you move is pulled towards the sides of the board after you move.";
+            case EnemyModifier.Slothful:
+                return "Slothful: Pieces on the enemy King's file are immobilized.";
+            case EnemyModifier.Terror:
+                return "Terror: You can't move pieces within 2 squares of the enemy King unless you are capturing.";
+            case EnemyModifier.Unpredictable:
+                return "Unpredictable: You can't move the same piece twice in two turns.";
+            case EnemyModifier.Voracious:
+                return "Voracious: For every 4 pieces lost, the enemy King gains 1 square of movement range.";
+            case EnemyModifier.Wrathful:
+                return "wrathful: Until you lose 2 pieces, when you capture, your piece gets destroyed.";
+            case EnemyModifier.Xyloid:
+                return "Xyloid: The enemy King can move orthogonally infinitely ignoring obstacles to squares adjacent to its allies.";
+            case EnemyModifier.Youthful:
+                return "Youthful: For the first 5 turns, the enemy gets 2 moves per turn.";
+            case EnemyModifier.Zenith:
+                return "Zenith: Overtaken Victory is not possible. Capturing the enemy King causes an enemy piece to transform into a new enemy King.";
+        }
+        return "";
+    }
+    //estimation
+    public static float GetEnemyModifierPower(EnemyModifier em)
+    {
+        switch (em)
+        {
+            case EnemyModifier.Hidden:
+                return 5;
+            case EnemyModifier.Blinking:
+                return 5;
+            case EnemyModifier.Complacent:
+                return 5;
+            case EnemyModifier.Defensive:
+                return 5;
+            case EnemyModifier.Envious:
+                return 12;
+            case EnemyModifier.Fusion:
+                return 12;
+            case EnemyModifier.Greedy:
+                return 8;
+            case EnemyModifier.Isolated:
+                return 6;
+            case EnemyModifier.Jester:
+                return 6;
+            case EnemyModifier.Knave:
+                return 4;
+            case EnemyModifier.Lustful:
+                return 8;
+            case EnemyModifier.Mesmerizing:
+                return 5;
+            case EnemyModifier.Numerous:
+                return 12;
+            case EnemyModifier.Obelisk:
+                return 5;
+            case EnemyModifier.Prideful:
+                return 5;
+            case EnemyModifier.Queenly:
+                return 12;
+            case EnemyModifier.Rifter:
+                return 5;
+            case EnemyModifier.Slothful:
+                return 8;
+            case EnemyModifier.Terror:
+                return 8;
+            case EnemyModifier.Unpredictable:
+                return 5;
+            case EnemyModifier.Voracious:
+                return 5;
+            case EnemyModifier.Wrathful:
+                return 12;
+            case EnemyModifier.Xyloid:
+                return 7;
+            case EnemyModifier.Youthful:
+                return 12;
+            case EnemyModifier.Zenith:
+                return 12;
+        }
+        return 6;
+    }
+
+    public static string GetSquareTypeDescription(Square.SquareType st)
+    {
+        switch (st)
+        {
+            case Square.SquareType.Hole:
+                return "Hole: Pieces can't land here and are destroyed if pushed here.";
+            case Square.SquareType.Fire:
+                return "Fire: Pieces here are destroyed unless they were moved last turn.";
+            case Square.SquareType.Water:
+                return "Water: Pieces here can't capture.";
+            case Square.SquareType.Rough:
+                return "Rough: Pieces must stop here instead of continuing on.";
+            case Square.SquareType.WindUp:
+                return "Wind (N): Wind that pushes pieces northwards.";
+            case Square.SquareType.WindDown:
+                return "Wind (S): Wind that pushes pieces southwards.";
+            case Square.SquareType.WindLeft:
+                return "Wind (W): Wind that pushes pieces westwards.";
+            case Square.SquareType.WindRight:
+                return "Wind (E): Wind that pushes pieces eastwards.";
+            case Square.SquareType.Slippery:
+                return "Slippery: Pieces that move here slip one square (Does not apply to moves that aren't aligned to the grid or most teleports).";
+            case Square.SquareType.Bouncy:
+                return "Bouncy: Pieces that move here bounce back one square (Does not apply to moves that aren't aligned to the grid or most teleports).";
+            case Square.SquareType.Bright:
+                return "Bright: Pieces here can't be captured by pieces that are more than 2 squares away.";
+            case Square.SquareType.Promotion:
+                return "Promotion: If on the enemy side, your pieces promote when they reach here. If on your side, enemy pieces promote when they reach here.";
+            case Square.SquareType.Cursed:
+                return "Cursed: Pieces here are destroyed if they have no allies adjacent.";
+            case Square.SquareType.CaptureOnly:
+                return "Bloodlust: Pieces here can only capture.";
+            case Square.SquareType.Frost:
+                return "Frost: Pieces here are Frozen for 1 turn.";
+            case Square.SquareType.BronzeTreasure:
+                return "Bronze Treasure: If one of your pieces lands here, you get $2 and this becomes a Normal square.";
+            case Square.SquareType.SilverTreasure:
+                return "Silver Treasure: If one of your pieces lands here, you get $4 and this becomes a Normal square.";
+            case Square.SquareType.GoldTreasure:
+                return "Golden Treasure: If all Golden Treasure squares have your pieces on them, you get $6 and this becomes a Normal square.";
+        }
+        return "";
+    }
 }
 
 [Serializable]
@@ -10756,6 +11337,7 @@ public static class Move
 
     public enum SpecialType : int //byte
     {
+        Null = -1,  //invalid
         Normal,
         MoveOnly,
         CaptureOnly,
@@ -11886,6 +12468,252 @@ public static class Move
             default:
                 return false;
         }
+    }
+
+    public static string GetSpecialTypeDescription(SpecialType st, PieceTableEntry pte)
+    {
+        //todo: text file
+        switch (st)
+        {
+            case SpecialType.Normal:
+                return "Move or Capture.";
+            case SpecialType.MoveOnly:
+                return "Move only.";
+            case SpecialType.CaptureOnly:
+                return "Capture only.";
+            case SpecialType.FlyingMoveOnly:
+                return "Move only.";
+            case SpecialType.ConsumeAllies:
+                return "Move or Capture. Can capture allies to gain charges.";
+            case SpecialType.ConsumeAlliesCaptureOnly:
+                return "Capture only. Can capture allies.";
+            case SpecialType.ChargeMove:
+                return "Move or Capture. Only possible if charged.";
+            case SpecialType.ChargeMoveReset:
+                return "Move or Capture. Only possible if charged. Resets charge to 0 when used.";
+            case SpecialType.SelfMove:
+                return "Stay in place";
+            case SpecialType.Castling:
+                return "Move towards an ally non-pawn piece beyond the square moved to, moving that ally behind you. Only usable once per battle.";
+            case SpecialType.Convert:
+                return "Move or Convert an enemy piece to your side.";
+            case SpecialType.ConvertCaptureOnly:
+                return "Convert an enemy piece to your side.";
+            case SpecialType.ConvertPawn:
+                return "Move or Convert an enemy pawn to your side. Against non pawns, this is a capture.";
+            case SpecialType.Spawn:
+                switch (pte.type)
+                {
+                    case PieceType.Gemini:
+                        return "Split off a Gemini Twin (Become a Gemini Twin).";
+                    case PieceType.Triknight:
+                        return "Split off up to 2 Knights (Second Knight spawns on the opposite side) (Become a Knight).";
+                    case PieceType.Tribishop:
+                        return "Split off up to 2 Bishops (Second Bishop spawns on the opposite side) (Become a Bishop).";
+                    case PieceType.Birook:
+                        return "Split off a Rook (Become a Rook).";
+                    case PieceType.TrojanHorse:
+                        return "Spawn up to 3 pawns behind you and then disappear.";
+                    case PieceType.QueenLeech:
+                        return "(Charge) Spawn up to 2 Leeches (Second Leech spawns on the opposite side).";
+                    case PieceType.AmoebaCitadel:
+                        return "Split off an Amoeba Archbishop (Become an Amoeba Archbishop).";
+                    case PieceType.AmoebaGryphon:
+                        return "Split off an Amoeba Knight (Become an Amoeba Archbishop).";
+                    case PieceType.AmoebaRaven:
+                        return "Split off an Amoeba Knight (Become an Amoeba Knight).";
+                    case PieceType.AmoebaArchbishop:
+                        return "Split off an Amoeba Pawn (Become an Amoeba Knight).";
+                    case PieceType.AmoebaKnight:
+                        return "Split off an Amoeba Pawn (Become an Amoeba Pawn).";
+                }
+                return "Spawn a piece on this square.";
+            case SpecialType.FireCapture:
+                return "Move or Burn an enemy piece.";
+            case SpecialType.FireCaptureOnly:
+                return "Burn an enemy piece.";
+            case SpecialType.LongLeaper:
+                return "(Ignores Obstacles)(Indirect Capture) Leap over pieces, destroying all enemies between the start and endpoint.";
+            case SpecialType.LongLeaperCaptureOnly:
+                return "(Must Leap Over Enemy)(Indirect Capture) Leap over pieces, destroying all enemies between the start and endpoint.";
+            case SpecialType.FireCapturePush:
+                return "Move, Burn an enemy piece, or Push an ally piece.";
+            case SpecialType.PullMove:
+                return "Move or Capture, pulling an ally piece behind you.";
+            case SpecialType.PushMove:
+                return "Move, Capture, or Push an ally piece.";
+            case SpecialType.AdvancerPush:
+                return "(Indirect Capture) Move or Push an ally piece. Enemies 1 square beyond the square moved to are destroyed.";
+            case SpecialType.Advancer:
+                return "(Indirect Capture) Move only. Enemies 1 square beyond the square moved to are destroyed.";
+            case SpecialType.Withdrawer:
+                return "(Indirect Capture) Move only. Enemies 1 square behind the starting square are destroyed.";
+            case SpecialType.AdvancerWithdrawer:
+                return "(Indirect Capture) Move only. Enemies 1 square behind the starting square or 1 square beyond the square moved to are destroyed.";
+            case SpecialType.WrathCapturer:
+                return "(Indirect Capture) Move or Capture. Enemies 1 square beyond the square moved to are also destroyed.";
+            case SpecialType.FlankingCapturer:
+                return "(Indirect Capture) Move only. Enemies adjacent to both the starting and ending squares are destroyed.";
+            case SpecialType.PoisonFlankingAdvancer:
+                return "(Indirect Capture) Move only. Enemies adjacent to both the starting and ending squares are destroyed. Enemies 1 square beyond the square moved to are Poisoned for 3 turns.";
+            case SpecialType.AllySwap:
+                return "Move or Swap with an ally (non Shift Immune) piece.";
+            case SpecialType.AnyoneSwap:
+                return "Move or Swap with any (non Shift Immune) piece.";
+            case SpecialType.MorphIntoTarget:
+                return "Move or Transform into the target piece.";
+            case SpecialType.SlipMove:
+                return "Move to a square adjacent to enemy pieces.";
+            case SpecialType.PlantMove:
+                return "(Ignores Obstacles) Move or Capture underground to a square adjacent to ally pieces.";
+            case SpecialType.GliderMove:
+                return "Move to a square not adjacent to enemy pieces.";
+            case SpecialType.CoastMove:
+                return "Move or Capture to a square on the 4 edges of the board.";
+            case SpecialType.ShadowMove:
+                return "Move or Capture to a square that has a piece on it on the mirrored square";
+            case SpecialType.AllyAbility:
+                return "An ability that affects allies";
+            case SpecialType.ImbueModifier:
+                switch (pte.type)
+                {
+                    case PieceType.HornSpirit:
+                        return "Imbue the target with Vengeful. (Vengeful: When captured, the capturer is destroyed if it is not a King.)";
+                    case PieceType.TorchSpirit:
+                        return "Imbue the target with Phoenix. (Phoenix: When destroyed, respawn as far back as possible and lose this Modifier.)";
+                    case PieceType.RingSpirit:
+                        return "Imbue the target with Radiant. (Radiant: When this piece captures, spawn a Pawn as far back as possible.)";
+                    case PieceType.FeatherSpirit:
+                        return "Imbue the target with Winged. (Winged: Ignore the first obstacle but can't capture after leaping over the obstacle.)";
+                    case PieceType.GlassSpirit:
+                        return "Imbue the target with Spectral. (Spectral: Ally pieces are not blocked by this piece.)";
+                    case PieceType.BottleSpirit:
+                        return "Imbue the target with Immune. (Immune: Unaffected by status effects and enchantments. Enemy pieces that are orthogonally adjacent can't capture.)";
+                    case PieceType.CapSpirit:
+                        return "Imbue the target with Warped. (Warped: Ally pieces can swap places with this piece if they can move onto it.)";
+                    case PieceType.ShieldSpirit:
+                        return "Imbue the target with Shielded. (Shielded: Invincible, but degrades to Half Shielded if an enemy piece threatens it at the start of their turn. Half Shielded degrades to nothing after 1 turn.)";
+                }
+                //todo: this also needs piece specifics
+                return "Imbue a modifier, destroying this piece";
+            case SpecialType.ImbuePromote:
+                return "Promote a promotable piece, destroying this piece";
+            case SpecialType.ChargeApplyModifier:
+                switch (pte.type)
+                {
+                    case PieceType.DivineArtisan:
+                    case PieceType.DivineApprentice:
+                        return "Use one charge to apply Shielded to the target piece. (Shielded: Invincible, but degrades to Half Shielded if an enemy piece threatens it at the start of their turn. Half Shielded degrades to nothing after 1 turn.)";
+                }
+                //todo: this also needs piece specifics
+                return "Use one charge to apply a modifier to the target piece.";
+            case SpecialType.RangedPullAllyOnly:
+                switch (pte.type)
+                {
+                    case PieceType.ArcanaPriestess:
+                        return "Pull an ally piece as far as possible.";
+                }
+                //priestess needs a special description
+                return "Pull an ally piece one square.";
+            case SpecialType.RangedPushAllyOnly:
+                switch (pte.type)
+                {
+                    case PieceType.ArcanaPriestess:
+                        return "Push an ally piece as far as possible.";
+                }
+                //priestess needs a special description
+                return "Push an ally piece one square.";
+            case SpecialType.InflictFreeze:
+                return "Move or Inflict Freeze for 3 turns on enemy pieces. (Freeze: Piece can't move.)";
+            case SpecialType.InflictFreezeCaptureOnly:
+                return "Inflict Freeze for 3 turns on enemy pieces. (Freeze: Piece can't move.)";
+            case SpecialType.Inflict:
+                switch (pte.type)
+                {
+                    case PieceType.Phantom:
+                        return "Move or Inflict Ghostly for 3 turns on enemy pieces. (Ghostly: Enemy pieces are not blocked by this piece.)";
+                    case PieceType.SparkMage:
+                        return "Move or Inflict Sparked for 2 turns on enemy pieces. (Sparked: Piece will be destroyed if they do not move before the effect expires.)";
+                    case PieceType.SplashMage:
+                        return "Move or Inflict Soaked for 3 turns on enemy pieces. (Soaked: Piece can't capture.)";
+                    default:
+                        return "Move or Inflict Poisoned for 3 turns on enemy pieces. (Poisoned: Piece will be destroyed when the effect expires.)";
+                }
+            case SpecialType.InflictCaptureOnly:
+                switch (pte.type)
+                {
+                    case PieceType.Phantom:
+                        return "Inflict Ghostly for 3 turns on enemy pieces. (Ghostly: Enemy pieces are not blocked by this piece.)";
+                    case PieceType.SparkMage:
+                        return "Inflict Sparked for 2 turns on enemy pieces. (Sparked: Piece will be destroyed if they do not move before the effect expires.)";
+                    case PieceType.SplashMage:
+                        return "Inflict Soaked for 3 turns on enemy pieces. (Soaked: Piece can't capture.)";
+                    default:
+                        return "Inflict Poisoned for 3 turns on enemy pieces. (Poisoned: Piece will be destroyed when the effect expires.)";
+                }
+            case SpecialType.InflictShift:
+                switch (pte.type)
+                {
+                    case PieceType.FloatMage:
+                        return "Move or Inflict Light on an enemy for 3 turns. (Light: Piece automatically moves forward every turn.)";
+                    case PieceType.GravityMage:
+                        return "Move or Inflict Heavy on an enemy for 3 turns. (Heavy: Piece automatically moves backwards every turn.)";
+                }
+                return "Move or Inflict a status effect for 3 turns on enemy pieces.";
+            case SpecialType.InflictShiftCaptureOnly:
+                switch (pte.type)
+                {
+                    case PieceType.FloatMage:
+                        return "Inflict Light on an enemy for 3 turns. (Light: Piece automatically moves forward every turn)";
+                    case PieceType.GravityMage:
+                        return "Inflict Heavy on an enemy for 3 turns. (Heavy: Piece automatically moves backwards every turn)";
+                }
+                return "Inflict a status effect for 3 turns on enemy pieces.";
+            case SpecialType.TeleportOpposite:
+                return "Teleport the target to the opposite side of yourself.";
+            case SpecialType.TeleportRecall:
+                return "Teleport the target back behind yourself if that square is empty.";
+            case SpecialType.TeleportMirror:
+                return "Teleport the target to its mirrored square.";
+            case SpecialType.CarryAlly:
+                return "Move an ally inside of yourself.";
+            case SpecialType.DepositAlly:
+                return "Deposit an ally inside of yourself to outside.";
+            case SpecialType.DepositAllyPlantMove:
+                return "(Ignores Obstacles) Deposit an ally inside of yourself to outside.";
+            case SpecialType.EnemyAbility:
+                return "An ability that affects enemy pieces.";
+            case SpecialType.RangedPull:
+                return "(Ignores Obstacles) Pull a piece one square.";
+            case SpecialType.RangedPush:
+                return "(Ignores Obstacles) Push a piece one square.";
+            case SpecialType.EmptyAbility:
+                return "An ability that affects empty squares.";
+            case SpecialType.PassiveAbility:
+                switch (pte.type)
+                {
+                    case PieceType.Hypnotist:
+                        return "Move enemy pieces in this area.";
+                    case PieceType.Envy:
+                        return "Copy non special enemy movement in this area.";
+                }
+                return "A passive ability.";
+            case SpecialType.AimEnemy:
+                return "Aim yourself at an enemy piece.";
+            case SpecialType.AimAny:
+                return "Aim yourself at a square.";
+            case SpecialType.AimOccupied:
+                return "Aim yourself at an occupied square.";
+            case SpecialType.AmoebaCombine:
+                return "Combine with other Amoebas to fuse into a stronger piece.";
+            case SpecialType.MorphRabbit:
+                return "Turn a piece into a Rabbit. (Rabbits can transform back on their first or last row)";
+            case SpecialType.ConvertRabbit:
+                return "Convert a Rabbit to your side.";
+            case SpecialType.KingAttack:
+                return "Capture enemy Kings. (i.e. gives Check on these squares)";
+        }
+        return "";
     }
 
     public static bool IsModifierCompatible(PieceModifier pm, PieceTableEntry pte)
