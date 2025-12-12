@@ -947,26 +947,30 @@ public static class Piece
     public enum Aura
     {
         None = 0,
-        Virgo = 1,
-        Banshee = 1 << 1,
-        Immobilizer = 1 << 2,
-        Attractor = 1 << 3,
-        Repulser = 1 << 4,
-        Harpy = 1 << 5,
-        Hag = 1 << 6,
-        Sloth = 1 << 7,
-        Watchtower = 1 << 8,
-        Fan = 1 << 9,
-        Hanged = 1 << 10,
-        Rough = 1 << 11,
-        Water = 1 << 12
+        Nullify = 1,            //empty set symbol
+        Banshee = 1 << 1,       //x symbol
+        Immobilizer = 1 << 2,   //hollow square symbol
+        Attractor = 1 << 3,     //-><- symbol
+        Repulser = 1 << 4,      //<-> symbol
+        Harpy = 1 << 5,         //spear ^ symbols
+        Hag = 1 << 6,           //circle dots
+        Sloth = 1 << 7,         //spiral symbols
+        Watchtower = 1 << 8,    //eyes
+        Fan = 1 << 9,           //pinwheels
+        Hanged = 1 << 10,       //spin arrows
+        Rough = 1 << 11,        //square dots
+        Water = 1 << 12         //water waves (same symbol for water tiles?)
     }
 
+    public static string GetAuraName(Aura aura)
+    {
+        return aura.ToString();
+    }
     public static string GetAuraDescription(Aura aura)
     {
         switch (aura)
         {
-            case Aura.Virgo:
+            case Aura.Nullify:
                 return "Nullifies the effects of enemy Auras.";
             case Aura.Banshee:
                 return "Enemies can't move here unless they are capturing.";
@@ -999,7 +1003,7 @@ public static class Piece
     {
         switch (aura)
         {
-            case Aura.Virgo:
+            case Aura.Nullify:
                 return new Color(0, 1, 1, 1);
             case Aura.Banshee:
                 return new Color(1f, 0.25f, 0, 1f);
@@ -1028,7 +1032,115 @@ public static class Piece
         }
         return new Color(0,0,0,0);
     }
-
+    public static string GetPropertyName(PieceProperty pp)
+    {
+        switch (pp)
+        {
+            case PieceProperty.Push:
+            case PieceProperty.Pull:
+            case PieceProperty.Splitter:
+            case PieceProperty.ConsumeAllies:
+            case PieceProperty.ConvertCapture:
+            case PieceProperty.WeakConvertCapture:
+            case PieceProperty.SwapCapture:
+            case PieceProperty.WrathCapture:
+            case PieceProperty.FlankingCapture:
+            case PieceProperty.FireCapture:
+            case PieceProperty.SlipMover:
+            case PieceProperty.PlantMover:
+            case PieceProperty.ClockworkSwapper:
+                break;
+            case PieceProperty.BonusMove:
+                return "Bonus Move";
+            case PieceProperty.SlowMove:
+                return "Slow";
+            case PieceProperty.ChargeEnhance:
+                return "Charge Enhance";
+            case PieceProperty.ExplodeCaptureX:
+                return "Explode X";
+            case PieceProperty.RangeIncrease_MissingPieces:
+                return "Range Boost - Pieces";
+            case PieceProperty.RangeIncrease_FurtherRows:
+                return "Range Boost - Far";
+            case PieceProperty.RangeIncrease_NearRows:
+                return "Range Boost - Close";
+            case PieceProperty.RangeDecrease_FurtherRows:
+                return "Range Reduction - Far";
+            case PieceProperty.PromoteCapture:
+                return "Promote Capture";
+            case PieceProperty.PromoteCaptureNonPawn:
+                return "Promote Capture";
+            case PieceProperty.EnchantImmune:
+                return "Enchant Immune";
+            case PieceProperty.Deadly:
+                return "Deadly";
+            case PieceProperty.FireImmune:
+                return "Fire Immune";
+            case PieceProperty.WaterImmune:
+                return "Water Immune";
+            case PieceProperty.Cylindrical:
+                return "Cylindrical";
+            case PieceProperty.Sneaky:
+                return "Sneaky";
+            case PieceProperty.Reflecter:
+                return "Reflecter";
+            case PieceProperty.Unique:
+                return "Unique";
+            case PieceProperty.Invincible:
+                return "Invincible";
+            case PieceProperty.InvincibleWrongColor:
+                return "Invincible - Wrong Color";
+            case PieceProperty.InvincibleFront:
+                return "Invincible - Front";
+            case PieceProperty.InvinciblePawns:
+                return "Invincible - Pawns";
+            case PieceProperty.InvincibleNonPawns:
+                return "Invincible - Non Pawns";
+            case PieceProperty.InvincibleClose:
+                return "Invincible - Close";
+            case PieceProperty.InvincibleClose2:
+                return "Invincible - Close 2";
+            case PieceProperty.InvinciblePride:
+                return "Invincible - Pride";
+            case PieceProperty.InvincibleJustice:
+                return "Invincible - Justice";
+            case PieceProperty.Relay:
+                return "Relay";
+            case PieceProperty.RelayBishop:
+                return "Relay Bishop";
+            case PieceProperty.RelayImmune:
+                return "Shared Immunity";
+            case PieceProperty.OnlyCapturePawns:
+                return "Only Capture Pawns";
+            case PieceProperty.DestroyCapturer:
+                return "Destroy Capturer";
+            case PieceProperty.DestroyOnCapture:
+                return "Destroy On Capture";
+            case PieceProperty.ExplodeCapture:
+                return "Explode";
+            case PieceProperty.NoTerrain:
+                return "Terrain Immune";
+            case PieceProperty.MorphCapturer:
+                return "Morph Capturer";
+            case PieceProperty.MorphCapturerPawn:
+                return "Morph Capturer Pawn";
+            case PieceProperty.MorphCapturerNonPawn:
+                return "Morph Capturer Non Pawn";
+            case PieceProperty.PassivePull:
+                return "Passive Pull";
+            case PieceProperty.PassivePushDiag:
+                return "Passive Pull Diagonal";
+            case PieceProperty.PassivePullStrong:
+                return "Passive Pull Strong";
+            case PieceProperty.PassivePushStrongDiag:
+                return "Passive Push Strong Diagonal";
+            case PieceProperty.PassivePush:
+                return "Passive Push";
+            case PieceProperty.PassivePushStrong:
+                return "Passive Push Strong";
+        }
+        return "";
+    }
     public static string GetPropertyDescription(PieceProperty pp, PieceType pt)
     {
         switch (pp)
@@ -1048,99 +1160,175 @@ public static class Piece
             case PieceProperty.ClockworkSwapper:
                 break;
             case PieceProperty.BonusMove:
-                return "Bonus Move: Moving this piece gives you a bonus move (Limit of 1 bonus move per turn.).";
+                return "Moving this piece gives you a bonus move (Limit of 1 bonus move per turn.).";
             case PieceProperty.SlowMove:
-                return "Slow: Can't move a Slow piece if you moved a Slow piece last turn.";
+                return "Can't move a Slow piece if you moved a Slow piece last turn.";
             case PieceProperty.ChargeEnhance:
                 switch (pt) {
                     case PieceType.ChargeWarper:
-                        return "Charge Enhance: Certain moves are only possible when charged (Teleport Opposite).";
+                        return "Certain moves are only possible when charged (Teleport Opposite).";
                     case PieceType.SoulCannon:
-                        return "Charge Enhance: Certain moves are only possible when charged (Fire Capture).";
+                        return "Certain moves are only possible when charged (Fire Capture).";
                 }
-                return "Charge Enhance: Certain moves are only possible when charged.";
+                return "Certain moves are only possible when charged.";
             case PieceProperty.ExplodeCaptureX:
-                return "Explode X: On capture, explodes, destroying pieces in an X shape.";
+                return "On capture, explodes, destroying pieces in an X shape.";
             case PieceProperty.RangeIncrease_MissingPieces:
-                return "Range Boost - Pieces: Gain range for each piece lost.";
+                return "Gain range for each piece lost.";
             case PieceProperty.RangeIncrease_FurtherRows:
-                return "Range Boost - Far: Gain range the further ahead you are.";
+                return " Gain range the further ahead you are.";
             case PieceProperty.RangeIncrease_NearRows:
-                return "Range Boost - Close: Gain range the further back you are.";
+                return "Gain range the further back you are.";
             case PieceProperty.RangeDecrease_FurtherRows:
-                return "Range Reduction - Far: Lose range the further forward you are. (2 squares per square ahead)";
+                return "Lose range the further forward you are. (2 squares per square ahead)";
             case PieceProperty.PromoteCapture:
-                return "Promote Capture: Promotes when capturing a piece.";
+                return "Promotes when capturing a piece.";
             case PieceProperty.PromoteCaptureNonPawn:
-                return "Promote Capture: Promotes when capturing a non pawn piece.";
+                return "Promotes when capturing a non pawn piece.";
             case PieceProperty.EnchantImmune:
-                return "Enchant Immune: Immune to enchantment effects.";
+                return "Immune to enchantment effects.";
             case PieceProperty.Deadly:
-                return "Deadly: Ignores all forms of Invincibility.";
+                return "Ignores all forms of Invincibility.";
             case PieceProperty.FireImmune:
-                return "Fire Immune: Can't be Burned.";
+                return "Can't be Burned.";
             case PieceProperty.WaterImmune:
-                return "Water Immune: Ignores water effects.";
+                return "Ignores water effects.";
             case PieceProperty.Cylindrical:
-                return "Cylindrical: Moves can wrap around the sides of the board.";
+                return "Moves can wrap around the sides of the board.";
             case PieceProperty.Sneaky:
-                return "Sneaky: Moves can wrap around the top and bottom edges of the board. Can't capture when crossing over.";
+                return "Moves can wrap around the top and bottom edges of the board. Can't capture when crossing over.";
             case PieceProperty.Reflecter:
-                return "Reflecter: Moves reflect off the sides of the board.";
+                return "Moves reflect off the sides of the board.";
             case PieceProperty.Unique:
-                return "Unique: Normally impossible to obtain multiple copies of this piece.";
+                return "Normally impossible to obtain multiple copies of this piece.";
             case PieceProperty.Invincible:
-                return "Invincible: Can't be destroyed.";
+                return "Can't be destroyed.";
             case PieceProperty.InvincibleWrongColor:
-                return "Invincible - Wrong Color: Can't be destroyed by attackers on the opposite color squares.";
+                return "Wrong Color: Can't be destroyed by attackers on the opposite color squares.";
             case PieceProperty.InvincibleFront:
-                return "Invincible - Front: Can't be destroyed by attackers ahead of it.";
+                return "Can't be destroyed by attackers ahead of it.";
             case PieceProperty.InvinciblePawns:
-                return "Invincible - Pawns: Can't be destroyed by pawns.";
+                return "Can't be destroyed by pawns.";
             case PieceProperty.InvincibleNonPawns:
-                return "Invincible - Non Pawns: Can't be destroyed by non pawns.";
+                return "Can't be destroyed by non pawns.";
             case PieceProperty.InvincibleClose:
-                return "Invincible - Close: Can't be destroyed by adjacent attackers.";
+                return "Can't be destroyed by adjacent attackers.";
             case PieceProperty.InvincibleClose2:
-                return "Invincible - Close 2: Can't be destroyed by attackers in range 2.";
+                return "Can't be destroyed by attackers in range 2.";
             case PieceProperty.InvinciblePride:
-                return "Invincible - Pride: Can't attack or be attacked by pieces of lesser value except for the piece the enemy last moved.";
+                return "Can't attack or be attacked by pieces of lesser value except for the piece the enemy last moved.";
             case PieceProperty.InvincibleJustice:
-                return "Invincible - Justice: Can't be attacked if the enemy captured last turn.";
+                return "Can't be attacked if the enemy captured last turn.";
             case PieceProperty.Relay:
-                return "Relay: Allies defended by this piece gain its movement power.";
+                return "Allies defended by this piece gain its movement power.";
             case PieceProperty.RelayBishop:
-                return "Relay Bishop: Allies in Bishop range gain Bishop movement.";
+                return "Allies in Bishop range gain Bishop movement.";
             case PieceProperty.RelayImmune:
-                return "Shared Immunity: Allies adjacent to this piece are immune to negative effects.";
+                return "Allies adjacent to this piece are immune to negative effects.";
             case PieceProperty.OnlyCapturePawns:
-                return "Only Capture Pawns: Can only capture pawns.";
+                return "Can only capture pawns.";
             case PieceProperty.DestroyCapturer:
-                return "Destroy Capturer: When captured, the capturer is destroyed. (Kings are immune.)";
+                return "When captured, the capturer is destroyed. (Kings are immune.)";
             case PieceProperty.DestroyOnCapture:
-                return "Destroy On Capture: When capturing, this piece is destroyed.";
+                return "When capturing, this piece is destroyed.";
             case PieceProperty.ExplodeCapture:
-                return "Explode: When capturing, explode to destroy non fire immune pieces adjacent to where it captured.";
+                return "When capturing, explode to destroy non fire immune pieces adjacent to where it captured.";
             case PieceProperty.NoTerrain:
-                return "Terrain Immune: Immune to square effects and terrain auras (Rough aura and Water aura.)";
+                return "Immune to square effects and terrain auras (Rough aura and Water aura.)";
             case PieceProperty.MorphCapturer:
-                return "Morph Capturer: The piece that captures this one changes type to this piece.";
+                return "The piece that captures this one changes type to this piece.";
             case PieceProperty.MorphCapturerPawn:
-                return "Morph Capturer Pawn: The pawn that captures this one changes type to this piece.";
+                return "The pawn that captures this one changes type to this piece.";
             case PieceProperty.MorphCapturerNonPawn:
-                return "Morph Capturer Non Pawn: The non pawn piece that captures this one changes type to this piece.";
+                return "The non pawn piece that captures this one changes type to this piece.";
             case PieceProperty.PassivePull:
-                return "Passive Pull: Pull enemies from range 2 to be range 1.";
+                return "Pull enemies from range 2 to be range 1.";
             case PieceProperty.PassivePushDiag:
-                return "Passive Pull Diagonal: Pull enemies diagonally away from range 2 to be range 1.";
+                return "Pull enemies diagonally away from range 2 to be range 1.";
             case PieceProperty.PassivePullStrong:
-                return "Passive Pull Strong: Pull enemies from any distance 1 square towards this one.";
+                return "Pull enemies from any distance 1 square towards this one.";
             case PieceProperty.PassivePushStrongDiag:
-                return "Passive Push Strong Diagonal: Push enemies diagonally adjacent to the target square as far as possible.";
+                return "Push enemies diagonally adjacent to the target square as far as possible.";
             case PieceProperty.PassivePush:
-                return "Passive Push: Push enemies adjacent to the target square away 1 square.";
+                return "Push enemies adjacent to the target square away 1 square.";
             case PieceProperty.PassivePushStrong:
-                return "Passive Push Strong: Push enemies adjacent to the target square away as far as possible.";
+                return "Push enemies adjacent to the target square away as far as possible.";
+        }
+        return "";
+    }
+    public static string GetPropertyName(PiecePropertyB pp)
+    {
+        switch (pp)
+        {
+            case PiecePropertyB.GliderMover:
+            case PiecePropertyB.CoastMover:
+            case PiecePropertyB.ShadowMover:
+            case PiecePropertyB.PieceCarry:
+            case PiecePropertyB.InflictFreeze:
+            case PiecePropertyB.Inflict:
+                break;
+            case PiecePropertyB.ChargeEnhanceStack:
+                return "Charge Enhance Stack";
+            case PiecePropertyB.ChargeEnhanceStackReset:
+                return "Charge Enhance Stack Reset:";
+            case PiecePropertyB.NonBlockingAlly:
+                return "Non Blocking Ally";
+            case PiecePropertyB.NonBlockingEnemy:
+                return "Non Blocking Enemy";
+            case PiecePropertyB.ChargeByMoving:
+                return "Charge By Moving";
+            case PiecePropertyB.EnemyOnCapture:
+                return "Enemy On Capture";
+            case PiecePropertyB.NeutralOnCapture:
+                return "Neutral On Capture";
+            case PiecePropertyB.FreezeCapturer:
+                return "Freeze Capturer";
+            case PiecePropertyB.PoisonCapturer:
+                return "Poison Capturer";
+            case PiecePropertyB.StatusImmune:
+                return "Status Immune";
+            case PiecePropertyB.SpreadCure:
+                return "Spread Cure";
+            case PiecePropertyB.PoisonExplode:
+                return "Poison Explode";
+            case PiecePropertyB.IceExplode:
+                return "Ice Explode";
+            case PiecePropertyB.NotCarriable:
+                return "Not Carriable";
+            case PiecePropertyB.InvincibleNoEnemyAdjacent:
+                return "Invincible - No Enemy Adjacent";
+            case PiecePropertyB.ShiftImmune:
+                return "Shift Immune";
+            case PiecePropertyB.Giant:
+                return "Giant";
+            case PiecePropertyB.InvincibleFar:
+                return "Invincible - Far";
+            case PiecePropertyB.InvincibleFar2:
+                return "Invincible - Far 2";
+            case PiecePropertyB.Momentum:
+                return "Momentum";
+            case PiecePropertyB.ReverseMomentum:
+                return "Reverse Momentum";
+            case PiecePropertyB.BounceMomentum:
+                return "Bounce Momentum";
+            case PiecePropertyB.TandemMover:
+                return "Tandem Mover";
+            case PiecePropertyB.TandemMoverDiag:
+                return "Tandem Mover Diagonal";
+            case PiecePropertyB.TandemMoverOrtho:
+                return "Tandem Mover Orthogonal";
+            case PiecePropertyB.EnemyTandemMover:
+                return "Enemy Tandem Mover";
+            case PiecePropertyB.EnemyTandemMoverOrtho:
+                return "Enemy Tandem Mover Orthogonal";
+            case PiecePropertyB.AnyTandemMover:
+                return "Any Tandem Mover";
+            case PiecePropertyB.HoneyExplode:
+                return "Honey Explode";
+            case PiecePropertyB.NaturalWinged:
+                return "Natural Winged";
+            case PiecePropertyB.MorphImmune:
+                return "Morph Immune";
         }
         return "";
     }
@@ -1159,78 +1347,78 @@ public static class Piece
                 switch (pt)
                 {
                     case PieceType.ChargeWarper:
-                        return "Charge Enhance Stack: Certain moves are only possible when charged (Teleport Opposite). Range increases with charges.";
+                        return "Certain moves are only possible when charged (Teleport Opposite). Range increases with charges.";
                     case PieceType.SoulCannon:
-                        return "Charge Enhance Stack: Certain moves are only possible when charged (Fire Capture). Range increases with charges.";
+                        return "Certain moves are only possible when charged (Fire Capture). Range increases with charges.";
                 }
-                return "Charge Enhance Stack: Certain moves are only possible when charged. Range increases with charges.";
+                return "Certain moves are only possible when charged. Range increases with charges.";
             case PiecePropertyB.ChargeEnhanceStackReset:
                 switch (pt)
                 {
                     case PieceType.ChargeWarper:
-                        return "Charge Enhance Stack: Certain moves are only possible when charged (Teleport Opposite). Range increases with charges. Resets on move.";
+                        return "Certain moves are only possible when charged (Teleport Opposite). Range increases with charges. Resets on move.";
                     case PieceType.SoulCannon:
-                        return "Charge Enhance Stack: Certain moves are only possible when charged (Fire Capture). Range increases with charges. Resets on move.";
+                        return "Certain moves are only possible when charged (Fire Capture). Range increases with charges. Resets on move.";
                 }
-                return "Charge Enhance Stack: Certain moves are only possible when charged. Range increases with charges. Resets on move.";
+                return "Certain moves are only possible when charged. Range increases with charges. Resets on move.";
             case PiecePropertyB.NonBlockingAlly:
-                return "Non Blocking Ally: Ally pieces are not blocked by this piece.";
+                return "Ally pieces are not blocked by this piece.";
             case PiecePropertyB.NonBlockingEnemy: 
-                return "Non Blocking Enemy: Enemy pieces are not blocked by this piece.";
+                return "Enemy pieces are not blocked by this piece.";
             case PiecePropertyB.ChargeByMoving:
-                return "Charge By Moving: Gain charges whenever using a non charge move.";
+                return "Gain charges whenever using a non charge move.";
             case PiecePropertyB.EnemyOnCapture:
-                return "Enemy On Capture: After attacking, this piece switches alignment.";
+                return "After attacking, this piece switches alignment.";
             case PiecePropertyB.NeutralOnCapture:
-                return "Neutral On Capture: After attacking, this piece becomes Neutral if it isn't already.";
+                return "After attacking, this piece becomes Neutral if it isn't already.";
             case PiecePropertyB.FreezeCapturer:
-                return "Poison Capturer: When captured, the capturer is Frozen for 3 turns.";
+                return "When captured, the capturer is Frozen for 3 turns.";
             case PiecePropertyB.PoisonCapturer:
-                return "Poison Capturer: When captured, the capturer is Poisoned for 3 turns.";
+                return "When captured, the capturer is Poisoned for 3 turns.";
             case PiecePropertyB.StatusImmune:
-                return "Status Immune: Immune to status effects.";
+                return "Immune to status effects.";
             case PiecePropertyB.SpreadCure:
-                return "Spread Cure: After Move: Cure all adjacent allies of status effects.";
+                return "After Move: Cure all adjacent allies of status effects.";
             case PiecePropertyB.PoisonExplode:
-                return "Poison Explode: Explode to Poison adjacent enemy pieces for 3 turns.";
+                return "Explode to Poison adjacent enemy pieces for 3 turns.";
             case PiecePropertyB.IceExplode:
-                return "Ice Explode: Explode to Freeze adjacent enemy pieces for 3 turns.";
+                return "Explode to Freeze adjacent enemy pieces for 3 turns.";
             case PiecePropertyB.NotCarriable:
-                return "Not Carriable: Can't be carried by other pieces.";
+                return "Can't be carried by other pieces.";
             case PiecePropertyB.InvincibleNoEnemyAdjacent:
-                return "Invincible - No Enemy Adjacent: Invincible if no enemy is adjacent (not including the attacker).";
+                return "Invincible if no enemy is adjacent (not including the attacker).";
             case PiecePropertyB.ShiftImmune:
-                return "Shift Immune: Can't be displaced by any effects.";
+                return "Can't be displaced by any effects.";
             case PiecePropertyB.Giant:
-                return "Giant: Takes up 4 squares. Can capture up to 4 enemies at once but can be captured on any of its 4 squares.";
+                return "Takes up 4 squares. Can capture up to 4 enemies at once but can be captured on any of its 4 squares.";
             case PiecePropertyB.InvincibleFar:
-                return "Invincible - Far: Can only be destroyed by adjacent attackers.";
+                return "Can only be destroyed by adjacent attackers.";
             case PiecePropertyB.InvincibleFar2:
-                return "Invincible - Far 2: Can only be destroyed by attackers in range 2.";
+                return "Can only be destroyed by attackers in range 2.";
             case PiecePropertyB.Momentum:
-                return "Momentum: After Enemy Move: Move 1 square along after it moves. (Momentum is preserved until it hits an obstacle.).";
+                return "Move 1 square along after it moves. (Momentum is preserved until it hits an obstacle.).";
             case PiecePropertyB.ReverseMomentum:
-                return "Reverse Momentum: After Enemy Move: Move 1 square backwards after it moves. (Momentum is preserved until it hits an obstacle.).";
+                return "Move 1 square backwards after it moves. (Momentum is preserved until it hits an obstacle.).";
             case PiecePropertyB.BounceMomentum:
-                return "Bounce Momentum: After Enemy Move: Move 1 square along after it moves. (Momentum is inverted when it hits an obstacle.).";
+                return "Move 1 square along after it moves. (Momentum is inverted when it hits an obstacle.).";
             case PiecePropertyB.TandemMover:
-                return "Tandem Mover: Move adjacent allies along itself.";
+                return "Move adjacent allies along itself.";
             case PiecePropertyB.TandemMoverDiag:
-                return "Tandem Mover Diagonal: Move diagonally adjacent allies along itself.";
+                return "Move diagonally adjacent allies along itself.";
             case PiecePropertyB.TandemMoverOrtho:
-                return "Tandem Mover Orthogonal: Move orthogonally adjacent allies along itself.";
+                return "Move orthogonally adjacent allies along itself.";
             case PiecePropertyB.EnemyTandemMover:
-                return "Enemy Tandem Mover: Move adjacent enemies along itself.";
+                return "Move adjacent enemies along itself.";
             case PiecePropertyB.EnemyTandemMoverOrtho:
-                return "Enemy Tandem Mover Orthogonal: Move orthogonally adjacent enemies along itself.";
+                return "Move orthogonally adjacent enemies along itself.";
             case PiecePropertyB.AnyTandemMover:
-                return "Any Tandem Mover: Move adjacent pieces along itself.";
+                return "Move adjacent pieces along itself.";
             case PiecePropertyB.HoneyExplode:
-                return "Honey Explode: Explode to fill all adjacent squares with Honey Puddles.";
+                return "Explode to fill all adjacent squares with Honey Puddles.";
             case PiecePropertyB.NaturalWinged:
-                return "Natural Winged: Ignores the first obstacle it meets but can't capture past that obstacle.";
+                return "Ignores the first obstacle it meets but can't capture past that obstacle.";
             case PiecePropertyB.MorphImmune:
-                return "Morph Immune: Can't change type.";
+                return "Can't change type.";
         }
         return "";
     }

@@ -1591,7 +1591,7 @@ public class Board
             {
                 if ((bitIndex & globalData.bitboard_virgoAuraBlack) != 0)
                 {
-                    output[i] |= Aura.Virgo;
+                    output[i] |= Aura.Nullify;
                 }
                 if ((bitIndex & globalData.bitboard_bansheeBlack) != 0)
                 {
@@ -1642,7 +1642,7 @@ public class Board
             {
                 if ((bitIndex & globalData.bitboard_virgoAuraWhite) != 0)
                 {
-                    output[i] |= Aura.Virgo;
+                    output[i] |= Aura.Nullify;
                 }
                 if ((bitIndex & globalData.bitboard_bansheeWhite) != 0)
                 {
@@ -11282,27 +11282,27 @@ public struct Square
 {
     public enum SquareType : byte
     {
-        Hole = 255,
-        Normal = 0,
-        Fire,           //If on them: piece is deleted unless it is the piece last moved
-        Water,          //If on them: piece can't capture
-        Rough,          //Stops ray movers
-        WindUp,
-        WindDown,
-        WindLeft,
-        WindRight,
-        Slippery,       //If you move onto it: get Pushed 1 square in Dir
-        Bouncy,         //Opposite of Ice: pulls you back 1 when you move on them
-        Bright,         //Immune
-        Promotion,      //Promote early
-        Cursed,         //If not adjacent to allies: get destroyed
-        CaptureOnly,    //If on them: piece can only leave by capturing
+        Hole = 255,     //(missing)
+        Normal = 0,     //
+        Fire,           //(fire symbol) If on them: piece is deleted unless it is the piece last moved
+        Water,          //(wave symbol) If on them: piece can't capture
+        Rough,          //(square symbol) Stops ray movers
+        WindUp,         //squiggly wave
+        WindDown,       //squiggly wave
+        WindLeft,       //squiggly wave
+        WindRight,      //squiggly wave
+        Slippery,       //(asterisk crystal symbol) If you move onto it: get Pushed 1 square in Dir
+        Bouncy,         //(circle symbol) Opposite of Ice: pulls you back 1 when you move on them
+        Bright,         //(hexagon symbol) Immune
+        Promotion,      //(3 point crown symbol) Promote early
+        Cursed,         //(hollow circle) If not adjacent to allies: get destroyed
+        CaptureOnly,    //(^ symbol) If on them: piece can only leave by capturing
         Frost,    //Whatever moves onto them gets applied stun for 1 turn
 
         //Special objectives
-        BronzeTreasure, //Spawns on rank 6
-        SilverTreasure, //Spawns on back rank
-        GoldTreasure,   //Spawns in multiples (rank 6, 7, 8?), must occupy all to get treasure
+        BronzeTreasure, //($ symbol) Spawns on rank 6
+        SilverTreasure, //($$ symbol) Spawns on back rank
+        GoldTreasure,   //($$$ symbol) Spawns in multiples (rank 6, 7, 8?), must occupy all to get treasure
     }
 
     public SquareType type;
