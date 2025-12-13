@@ -657,12 +657,20 @@ MonoBehaviour:
   y: 0
   piece: 0
   isSelected: 0
+  isHover: 0
+  lastIsHover: 0
   isGiant: 0
   bc: {fileID: 6342896625213762319}
   trashCan: {fileID: 0}
   canDelete: 0
   specialText: {fileID: 724773517529419481}
   statusText: {fileID: 3461887250432290903}
+  squareBelow: {fileID: 0}
+  relayDefenders: 0
+  relayAttacked: 0
+  relayTrailTemplate: {fileID: 307889686730510020, guid: 8c0f715623c275342807b65572cac46c, type: 3}
+  relayDefendersList: []
+  relayAttackedList: []
 --- !u!65 &6342896625213762319
 BoxCollider:
   m_ObjectHideFlags: 0

@@ -959,7 +959,8 @@ public static class Piece
         Fan = 1 << 9,           //pinwheels
         Hanged = 1 << 10,       //spin arrows
         Rough = 1 << 11,        //square dots
-        Water = 1 << 12         //water waves (same symbol for water tiles?)
+        Water = 1 << 12,         //water waves (same symbol for water tiles?)
+        Immune = 1 << 13        //shared immunity
     }
 
     public static string GetAuraName(Aura aura)
@@ -971,23 +972,23 @@ public static class Piece
         switch (aura)
         {
             case Aura.Nullify:
-                return "Nullifies the effects of enemy Auras.";
+                return "Nullifies the effects of enemy offensive Auras.";
             case Aura.Banshee:
-                return "Enemies can't move here unless they are capturing.";
+                return "(Enchant) Enemies can't move here unless they are capturing.";
             case Aura.Immobilizer:
-                return "Enemies in range can't move.";
+                return "(Enchant) Enemies in range can't move.";
             case Aura.Attractor:
-                return "Enemies in range can only move forwards.";
+                return "(Enchant) Enemies in range can only move forwards.";
             case Aura.Repulser:
-                return "Enemies in range can only move backwards.";
+                return "(Enchant) Enemies in range can only move backwards.";
             case Aura.Harpy:
-                return "Enemies in range can only capture.";
+                return "(Enchant) Enemies in range can only capture.";
             case Aura.Hag:
                 return "Enemies in range that capture here are Destroyed.";
             case Aura.Sloth:
-                return "Enemies in range can only move 1 space at a time.";
+                return "(Enchant) Enemies in range can only move 1 space at a time.";
             case Aura.Watchtower:
-                return "Enemies can't move onto these squares unless they are moving 1 square at a time.";
+                return "(Enchant) Enemies can't move onto these squares unless they are moving 1 square at a time.";
             case Aura.Fan:
                 return "Enemies in range are pushed forwards.";
             case Aura.Hanged:
@@ -996,6 +997,8 @@ public static class Piece
                 return "Enemies must stop on rough squares.";
             case Aura.Water:
                 return "Enemies in range can't capture.";
+            case Aura.Immune:
+                return "Allies in range are immune to enchantments.";
         }
         return null;
     }
@@ -1029,6 +1032,8 @@ public static class Piece
                 return new Color(1, 0.9f, 0, 0);
             case Aura.Water:
                 return new Color(0, 0, 1, 1);
+            case Aura.Immune:
+                return new Color(1, 1, 1, 1);
         }
         return new Color(0,0,0,0);
     }
@@ -1160,7 +1165,7 @@ public static class Piece
             case PieceProperty.ClockworkSwapper:
                 break;
             case PieceProperty.BonusMove:
-                return "Moving this piece gives you a bonus move (Limit of 1 bonus move per turn.).";
+                return "Moving this piece gives you a bonus move (Limit of 1 bonus move per turn. Can only give check on your last move.).";
             case PieceProperty.SlowMove:
                 return "Can't move a Slow piece if you moved a Slow piece last turn.";
             case PieceProperty.ChargeEnhance:
@@ -1436,7 +1441,7 @@ public static class Piece
             case PieceType.ArcanaFool:
                 return "Copies the non special moves of the last ally piece moved (Can't copy Arcana Fool.).";
             case PieceType.ArcanaEmpress:
-                return "Ally pieces in range 2 can move diagonally 1 square.";
+                return "Ally pieces in range 2 can move diagonally 1 square. This Relay works on any piece except Kings.";
             case PieceType.ArcanaMoon:
                 return "After Move: Spawn a Moon Illusion.\nMoon Illusions can be moved like Arcana Moon. When an ally Arcana Moon or an ally Moon Illusion is destroyed, all of them are destroyed.";
             case PieceType.MoonIllusion:

@@ -145,6 +145,8 @@ public struct BoardGlobalData
     public ulong bitboard_immuneRelayerWhite;
     public ulong bitboard_immuneRelayerBlack;
     //public ulong bitboard_immune;
+    public ulong bitboard_immuneNaturalWhite;
+    public ulong bitboard_immuneNaturalBlack;
     public ulong bitboard_immuneWhite;
     public ulong bitboard_immuneBlack;
 
@@ -1637,6 +1639,10 @@ public class Board
                 {
                     output[i] |= Aura.Water;
                 }
+                if ((bitIndex & MainManager.SmearBitboard(globalData.bitboard_immuneRelayerBlack)) != 0)
+                {
+                    output[i] |= Aura.Immune;
+                }
             }
             else
             {
@@ -1687,6 +1693,10 @@ public class Board
                 if ((bitIndex & globalData.bitboard_waterWhite) != 0)
                 {
                     output[i] |= Aura.Water;
+                }
+                if ((bitIndex & MainManager.SmearBitboard(globalData.bitboard_immuneRelayerWhite)) != 0)
+                {
+                    output[i] |= Aura.Immune;
                 }
             }
         }
@@ -12496,9 +12506,9 @@ public static class Move
             case SpecialType.Castling:
                 return "Move towards an ally non-pawn piece beyond the square moved to, moving that ally behind you. Only usable once per battle.";
             case SpecialType.Convert:
-                return "Move or Convert an enemy piece to your side.";
+                return "(Enchant) Move or Convert an enemy piece to your side.";
             case SpecialType.ConvertCaptureOnly:
-                return "Convert an enemy piece to your side.";
+                return "(Enchant) Convert an enemy piece to your side.";
             case SpecialType.ConvertPawn:
                 return "Move or Convert an enemy pawn to your side. Against non pawns, this is a capture.";
             case SpecialType.Spawn:
@@ -12682,18 +12692,18 @@ public static class Move
             case SpecialType.DepositAllyPlantMove:
                 return "(Ignores Obstacles) Deposit an ally inside of yourself to outside.";
             case SpecialType.EnemyAbility:
-                return "An ability that affects enemy pieces.";
+                return "(Enchant) An ability that affects enemy pieces.";
             case SpecialType.RangedPull:
-                return "(Ignores Obstacles) Pull a piece one square.";
+                return "(Enchant) (Ignores Obstacles) Pull a piece one square.";
             case SpecialType.RangedPush:
-                return "(Ignores Obstacles) Push a piece one square.";
+                return "(Enchant) (Ignores Obstacles) Push a piece one square.";
             case SpecialType.EmptyAbility:
                 return "An ability that affects empty squares.";
             case SpecialType.PassiveAbility:
                 switch (pte.type)
                 {
                     case PieceType.Hypnotist:
-                        return "Move enemy pieces in this area.";
+                        return "(Enchant) Move enemy pieces in this area.";
                     case PieceType.Envy:
                         return "Copy non special enemy movement in this area.";
                 }
@@ -12843,6 +12853,16 @@ public class MoveBitTable
         tableElements = new ulong[64];
     }
 
+    public ulong Flatten()
+    {
+        ulong output = 0;
+        for (int i = 0; i < 64; i++)
+        {
+            output |= tableElements[i];
+        }
+        return output;
+    }
+
     public void Reset()
     {
         if (tableElements == null)
@@ -12873,6 +12893,13 @@ public class MoveBitTable
         }
     }
 
+    public void Copy(MoveBitTable mbt)
+    {
+        for (int i = 0; i < 64; i++)
+        {
+            tableElements[i] = mbt.tableElements[i];
+        }
+    }
     public MoveBitTable CopyInverse()
     {
         MoveBitTable newTable = new MoveBitTable();

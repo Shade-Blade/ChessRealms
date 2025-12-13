@@ -136,11 +136,22 @@ public class PieceMovePanelSquareScript : MonoBehaviour
             switch (types.Count)
             {
                 case 1:
-                    imageA.color = defaultColor;
-                    imageB.color = PieceMovePanelScript.GetColorFromSpecialType(types[0]);
-                    imageB.rectTransform.localScale = Vector3.one * 0.5f;
-                    imageB.fillAmount = 1;
-                    imageC.color = new Color(0, 0, 0, 0);
+                    if (hybrid)
+                    {
+                        imageA.color = defaultColor;
+                        imageB.color = PieceMovePanelScript.GetColorFromSpecialType(types[0]);
+                        imageB.fillAmount = 0.5f;
+                        imageC.color = PieceMovePanelScript.GetColorFromSpecialType(types[0]);
+                        imageC.rectTransform.localScale = Vector3.one * 0.5f;
+                        imageC.fillAmount = 1f;
+                    } else
+                    {
+                        imageA.color = defaultColor;
+                        imageB.color = PieceMovePanelScript.GetColorFromSpecialType(types[0]);
+                        imageB.rectTransform.localScale = Vector3.one * 0.5f;
+                        imageB.fillAmount = 1;
+                        imageC.color = new Color(0, 0, 0, 0);
+                    }
                     break;
                 case 2:
                     imageA.color = new Color(0, 0, 0, 0);

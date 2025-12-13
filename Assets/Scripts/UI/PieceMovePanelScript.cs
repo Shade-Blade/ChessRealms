@@ -272,7 +272,7 @@ public class PieceMovePanelScript : MonoBehaviour
         Piece.PieceModifier pm = Piece.GetPieceModifier(piece);
 
         ResetGridColor();
-        pieceNameText.text = pte.type + "";
+        pieceNameText.text = Piece.GetPieceName(pte.type) + "";
         specialTypes = new HashSet<SpecialType>();
         specialIndications = 0;
         string moveText = "";
@@ -426,7 +426,7 @@ public class PieceMovePanelScript : MonoBehaviour
 
         if (pte.promotionType != 0)
         {
-            pieceInfoText.text += "Promotes to " + pte.promotionType + "\n\n";
+            pieceInfoText.text += "Promotes to " + Piece.GetPieceName(pte.promotionType) + "\n\n";
         }
 
         //string propertyText = "";

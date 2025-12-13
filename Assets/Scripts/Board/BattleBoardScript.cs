@@ -21,6 +21,11 @@ public class BattleBoardScript : BoardScript
     public Dictionary<uint, MoveMetadata> enemyMoveMetadata;
     public MoveTrailScript illegalMoveTrail;
 
+    MoveBitTable mbtWhite;
+    MoveBitTable mbtWhiteInverse;
+    MoveBitTable mbtBlack;
+    MoveBitTable mbtBlackInverse;
+
     //
     public MoveTrailScript checkMoveTrail;
 
@@ -81,6 +86,11 @@ public class BattleBoardScript : BoardScript
         setupMoves = false;
         MakeBoard();
         InitializeAI();
+
+        mbtWhite = new MoveBitTable();
+        mbtWhiteInverse = new MoveBitTable();
+        mbtBlack = new MoveBitTable();
+        mbtBlackInverse = new MoveBitTable();
     }
 
     public void ResetBoard(Board.BoardPreset bp)
@@ -229,6 +239,11 @@ public class BattleBoardScript : BoardScript
 
     public override void MakeBoard()
     {
+        mbtWhite = new MoveBitTable();
+        mbtWhiteInverse = new MoveBitTable();
+        mbtBlack = new MoveBitTable();
+        mbtBlackInverse = new MoveBitTable();
+
         squares = new List<SquareScript>();
         historyList = new List<Board>();
         historyIndex = -1;
@@ -1583,6 +1598,29 @@ public class BattleBoardScript : BoardScript
         Piece.Aura[] wAura = board.GetAuraBitboards(false);
         Piece.Aura[] bAura = board.GetAuraBitboards(true);
 
+        mbtWhiteInverse.MakeInverse(mbtWhite);
+        mbtBlackInverse.MakeInverse(mbtBlack);
+
+        ulong test = mbtWhite.Flatten();
+
+        ulong whiteBitboard = board.globalData.bitboard_piecesWhite;
+        ulong blackBitboard = board.globalData.bitboard_piecesBlack;
+        ulong allBitboard = board.globalData.bitboard_pieces;
+        ulong relayableBitboard = board.globalData.bitboard_pieces & ~board.globalData.bitboard_king & ~board.globalData.bitboard_pawns;
+
+        for (int i = 0; i < 64; i++)
+        {
+            if (board.pieces[i] == 0)
+            {
+                continue;
+            }
+
+            if ((GlobalPieceManager.GetPieceTableEntry(board.pieces[i]).piecePropertyB & PiecePropertyB.TrueShiftImmune) != 0)
+            {
+                relayableBitboard &= ~(1uL << i);
+            }
+        }
+
         //fix the pieces to match the board state
         for (int i = 0; i < pieces.Count; i++)
         {
@@ -1640,6 +1678,162 @@ public class BattleBoardScript : BoardScript
                 pieces[i] = ps;
                 ps.Setup(board.pieces[i], checkX, checkY);
                 ps.squareBelow = squares[i];
+
+                ulong relayTest = 0;
+
+                if ((GlobalPieceManager.GetPieceTableEntry(board.pieces[i]).pieceProperty & PieceProperty.Relay) != 0)
+                {
+                    switch (Piece.GetPieceAlignment(ps.piece))
+                    {
+                        case PieceAlignment.White:
+                            ps.relayAttacked |= mbtWhite.Get(i) & whiteBitboard & relayableBitboard;
+                            break;
+                        case PieceAlignment.Black:
+                            ps.relayAttacked |= mbtBlack.Get(i) & blackBitboard & relayableBitboard;
+                            break;
+                        case PieceAlignment.Neutral:
+                        case PieceAlignment.Crystal:
+                            break;
+                    }
+                }
+                if ((GlobalPieceManager.GetPieceTableEntry(board.pieces[i]).pieceProperty & PieceProperty.RelayBishop) != 0)
+                {
+                    int x = i & 7;
+                    int y = i >> 3;
+                    ulong relayBishopBitboard = 0;
+                    relayBishopBitboard |= (MoveGenerator.BITBOARD_PATTERN_DIAGONAL << (i)) & MainManager.GetWraparoundCutoff(x);
+                    relayBishopBitboard |= (MoveGenerator.BITBOARD_PATTERN_DIAGONAL >> (63 - i)) & MainManager.GetWraparoundCutoff(x - 7);
+                    if (i <= 56)
+                    {
+                        relayBishopBitboard |= (MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL >> (56 - i)) & MainManager.GetWraparoundCutoff(x);
+                    }
+                    else
+                    {
+                        relayBishopBitboard |= (MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL << (i - 56)) & MainManager.GetWraparoundCutoff(x);
+                    }
+                    if (i <= 7)
+                    {
+                        relayBishopBitboard |= (MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL >> (7 - i)) & MainManager.GetWraparoundCutoff(x - 7);
+                    }
+                    else
+                    {
+                        relayBishopBitboard |= (MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL << (i - 7)) & MainManager.GetWraparoundCutoff(x - 7);
+                    }
+
+                    switch (Piece.GetPieceAlignment(ps.piece))
+                    {
+                        case PieceAlignment.White:
+                            ps.relayAttacked |= mbtWhite.Get(i) & whiteBitboard & relayBishopBitboard & relayableBitboard;
+                            break;
+                        case PieceAlignment.Black:
+                            ps.relayAttacked |= mbtBlack.Get(i) & blackBitboard & relayBishopBitboard & relayableBitboard;
+                            break;
+                        case PieceAlignment.Neutral:
+                        case PieceAlignment.Crystal:
+                            break;
+                    }
+                }
+
+                switch (Piece.GetPieceAlignment(ps.piece))
+                {
+                    case PieceAlignment.White:
+                        relayTest = mbtWhiteInverse.Get(i) & whiteBitboard;
+                        break;
+                    case PieceAlignment.Black:
+                        relayTest = mbtBlackInverse.Get(i) & blackBitboard;
+                        break;
+                    case PieceAlignment.Neutral:
+                    case PieceAlignment.Crystal:
+                        break;
+                }
+
+                if (Piece.GetPieceType(board.pieces[i]) == PieceType.Envy)
+                {
+                    //enemy pieces
+                    switch (Piece.GetPieceAlignment(ps.piece))
+                    {
+                        case PieceAlignment.White:
+                            ps.relayDefenders |= mbtWhite.Get(i) & allBitboard & ~whiteBitboard;
+                            break;
+                        case PieceAlignment.Black:
+                            ps.relayDefenders |= mbtBlack.Get(i) & allBitboard & ~blackBitboard;
+                            break;
+                        case PieceAlignment.Neutral:
+                        case PieceAlignment.Crystal:
+                            break;
+                    }
+                }
+
+                if (Piece.GetPieceType(board.pieces[i]) == PieceType.ArcanaEmpress)
+                {
+                    //empress stuff
+                    ulong squareBitboard = MainManager.ShiftBitboardPattern(MoveGenerator.BITBOARD_PATTERN_RANGE2, i, -2, -2);
+                    switch (Piece.GetPieceAlignment(ps.piece))
+                    {
+                        case PieceAlignment.White:
+                            squareBitboard &= whiteBitboard & ~(1uL << i);
+                            break;
+                        case PieceAlignment.Black:
+                            squareBitboard &= blackBitboard & ~(1uL << i);
+                            break;
+                        case PieceAlignment.Neutral:
+                        case PieceAlignment.Crystal:
+                            break;
+                    }
+                    ps.relayAttacked = squareBitboard & ~board.globalData.bitboard_king;
+
+                    //do the reverse too
+                    ulong empressReverse = squareBitboard;
+                    while (empressReverse != 0)
+                    {
+                        int er = MainManager.PopBitboardLSB1(empressReverse, out empressReverse);
+
+                        if (pieces[er] == null)
+                        {
+                            continue;
+                        }
+
+                        if (Piece.GetPieceType(pieces[er].piece) == PieceType.King)
+                        {
+                            continue;
+                        }
+
+                        pieces[er].relayDefenders |= (1uL << er);
+                    }
+                } 
+
+                if (((1uL << i) & relayableBitboard) != 0)
+                {
+                    bool kindness = Piece.GetPieceType(board.pieces[i]) == PieceType.Kindness;
+
+                    //relays are highlighted
+                    while (relayTest != 0)
+                    {
+                        int ai = MainManager.PopBitboardLSB1(relayTest, out relayTest);
+                        ulong bitIndex = 1uL << ai;
+
+                        if (kindness || (GlobalPieceManager.GetPieceTableEntry(board.pieces[ai]).pieceProperty & PieceProperty.Relay) != 0)
+                        {
+                            ps.relayDefenders |= bitIndex;
+                        }
+
+                        if ((GlobalPieceManager.GetPieceTableEntry(board.pieces[ai]).pieceProperty & PieceProperty.RelayBishop) != 0)
+                        {
+                            //bishop lines only
+                            int aix = ai & 7;
+                            int aiy = ai >> 3;
+                            int x = i & 7;
+                            int y = i >> 3;
+                            if ((aix - x) != (aiy - y) && (aix - x) != -(aiy - y))
+                            {
+                                continue;
+                            }
+                            ps.relayDefenders |= bitIndex;
+                        }
+                    }
+                }
+
+                ps.UpdateRelay();
             }
 
             //reset color anyway
@@ -2240,6 +2434,14 @@ public class BattleBoardScript : BoardScript
         MoveGenerator.GenerateMovesForPlayer(moveList, ref board, board.blackToMove ? PieceAlignment.Black : PieceAlignment.White, moveMetadata);
         //MoveGeneratorInfoEntry.GenerateMovesForPlayer(moveList, ref board, PieceAlignment.White);
 
+        if (board.blackToMove)
+        {
+            mbtBlack.Copy(board.globalData.mbtactive);
+        } else
+        {
+            mbtWhite.Copy(board.globalData.mbtactive);
+        }
+
         board.globalData.mbtactiveInverse.MakeInverse(board.globalData.mbtactive);
         for (int i = 0; i < squares.Count; i++)
         {
@@ -2267,6 +2469,15 @@ public class BattleBoardScript : BoardScript
         copy.ApplyNullMove(false);
         MoveGenerator.GenerateMovesForPlayer(enemyMoveList, ref copy, copy.blackToMove ? PieceAlignment.Black : PieceAlignment.White, enemyMoveMetadata);
         //MoveGeneratorInfoEntry.GenerateMovesForPlayer(enemyMoveList, ref board, PieceAlignment.Black);
+
+        if (copy.blackToMove)
+        {
+            mbtBlack.Copy(copy.globalData.mbtactive);
+        }
+        else
+        {
+            mbtWhite.Copy(copy.globalData.mbtactive);
+        }
 
         copy.globalData.mbtactiveInverse.MakeInverse(copy.globalData.mbtactive);
         for (int i = 0; i < squares.Count; i++)

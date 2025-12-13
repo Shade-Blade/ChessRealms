@@ -35,6 +35,13 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
     public SquareScript squareBelow;
 
+    public ulong relayDefenders;
+    public ulong relayAttacked;
+
+    public GameObject relayTrailTemplate;
+    public List<LineRenderer> relayDefendersList;   //Light part is the end point
+    public List<LineRenderer> relayAttackedList;    //Light part is the start point
+
     public virtual void Start()
     {
         trashCan = FindObjectOfType<TrashCanScript>();
@@ -80,6 +87,53 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         {
             Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(piece);
             hoverText += "\n" + "<outlinecolor," + MainManager.ColorToString(Piece.GetStatusEffectColor(pse)) + ">" + Piece.GetStatusEffectName(pse) + "</color></font>: " + Piece.GetStatusEffectDescription(pse);
+        }
+
+        //Relay attackers
+        if (relayAttacked != 0)
+        {
+            hoverText += "\n<outlinecolor,#ffff00>Relay</color></font> to: ";
+            int relay = 0;
+            ulong ra = relayAttacked;
+            while (ra != 0)
+            {
+                int i = MainManager.PopBitboardLSB1(ra, out ra);
+
+                if (relay != 0)
+                {
+                    hoverText += ", ";
+                }
+
+                if (bs.board.pieces[i] != 0)
+                {
+                    hoverText += Piece.GetPieceName(Piece.GetPieceType(bs.board.pieces[i]));
+                }
+
+                relay++;
+            }
+        }
+        //Relay defenders
+        if (relayDefenders != 0)
+        {
+            hoverText += "\n<outlinecolor,#ffff00>Relay</color></font> from: ";
+            int relay = 0;
+            ulong rd = relayDefenders;
+            while (rd != 0)
+            {
+                int i = MainManager.PopBitboardLSB1(rd, out rd);
+
+                if (relay != 0)
+                {
+                    hoverText += ", ";
+                }
+
+                if (bs.board.pieces[i] != 0)
+                {
+                    hoverText += Piece.GetPieceName(Piece.GetPieceType(bs.board.pieces[i]));
+                }
+
+                relay++;
+            }
         }
 
         if (squareBelow != null)
@@ -175,6 +229,38 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
             switch (pt)
             {
+                case PieceType.ArcanaFool:
+                    Piece.PieceType last = PieceType.Null;
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            last = b.whitePerPlayerInfo.lastPieceMovedType;
+                            break;
+                        case PieceAlignment.Black:
+                            last = b.blackPerPlayerInfo.lastPieceMovedType;
+                            break;
+                    }
+                    if (last != PieceType.ArcanaFool && last != PieceType.Null)
+                    {
+                        specialText.text = Piece.GetPieceName(last);
+                    }
+                    break;
+                case PieceType.Imitator:
+                    Piece.PieceType elast = PieceType.Null;
+                    switch (pa)
+                    {
+                        case PieceAlignment.White:
+                            elast = b.blackPerPlayerInfo.lastPieceMovedType;
+                            break;
+                        case PieceAlignment.Black:
+                            elast = b.whitePerPlayerInfo.lastPieceMovedType;
+                            break;
+                    }
+                    if (elast != PieceType.Imitator && elast != PieceType.ArcanaFool && elast != PieceType.Null)
+                    {
+                        specialText.text = Piece.GetPieceName(elast);
+                    }
+                    break;
                 case Piece.PieceType.Revenant:
                     if (specialData != 0)
                     {
@@ -310,6 +396,63 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         transform.position = BoardScript.GetSpritePositionFromCoordinates(x, y, -0.5f);
     }
 
+    public void ResetRelay()
+    {
+        for (int i = 0; i < relayAttackedList.Count; i++)
+        {
+            Destroy(relayAttackedList[i].gameObject);
+        }
+        relayAttackedList = new List<LineRenderer>();
+        for (int i = 0; i < relayDefendersList.Count; i++)
+        {
+            Destroy(relayDefendersList[i].gameObject);
+        }
+        relayDefendersList = new List<LineRenderer>();
+    }
+    public void UpdateRelay()
+    {
+        ResetRelay();
+        ulong test = relayDefenders;
+        while (test != 0)
+        {
+            int i = MainManager.PopBitboardLSB1(test, out test);
+
+            GameObject relayTrail = Instantiate(relayTrailTemplate, transform);
+            LineRenderer relayTrailLine = relayTrail.GetComponent<LineRenderer>();
+
+            Vector3 posA = BoardScript.GetSpritePositionFromCoordinates(x, y, -0.8f);
+            Vector3 posB = BoardScript.GetSpritePositionFromCoordinates(i & 7, i >> 3, -0.8f);
+            List<Vector3> pointList = new List<Vector3>();
+            pointList.Add(posA);
+            MoveTrailScript.AddLeaperSegment(pointList, posA, posB);
+            pointList.Add(posB);
+
+            relayTrailLine.positionCount = pointList.Count;
+            relayTrailLine.SetPositions(pointList.ToArray());
+            relayDefendersList.Add(relayTrailLine);
+        }
+        test = relayAttacked;
+        while (test != 0)
+        {
+            int i = MainManager.PopBitboardLSB1(test, out test);
+
+            GameObject relayTrail = Instantiate(relayTrailTemplate, transform);
+            LineRenderer relayTrailLine = relayTrail.GetComponent<LineRenderer>();
+
+            //reversed
+            Vector3 posA = BoardScript.GetSpritePositionFromCoordinates(i & 7, i >> 3, -0.8f);
+            Vector3 posB = BoardScript.GetSpritePositionFromCoordinates(x, y, -0.8f);
+            List<Vector3> pointList = new List<Vector3>();
+            pointList.Add(posA);
+            MoveTrailScript.AddLeaperSegment(pointList, posA, posB);
+            pointList.Add(posB);
+
+            relayTrailLine.positionCount = pointList.Count;
+            relayTrailLine.SetPositions(pointList.ToArray());
+            relayAttackedList.Add(relayTrailLine);
+        }
+    }
+
     public virtual void Update()
     {
         dob.canDrag = bs.CanSelectPieces();
@@ -379,6 +522,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
     public void OnDragStart()
     {
+        //ResetRelay();
     }
     public virtual void OnDragStay()
     {

@@ -174,6 +174,12 @@ public class SquareScript : MonoBehaviour
     }
     public void SetAura(Piece.Aura wAura, Piece.Aura bAura) 
     {
+        //no change
+        if (this.wAura == wAura && this.bAura == bAura)
+        {
+            return;
+        }
+
         this.wAura = wAura;
         this.bAura = bAura;
         ResetAura();
@@ -270,6 +276,8 @@ public class SquareScript : MonoBehaviour
                 return effectSprites[15];
             case Piece.Aura.Water:
                 return effectSprites[22];
+            case Piece.Aura.Immune:
+                return effectSprites[25];
         }
         return null;
     }
@@ -280,7 +288,7 @@ public class SquareScript : MonoBehaviour
 
     public void ResetSquareColor()
     {
-        ResetAura();
+        //ResetAura();
 
         squareEffect.sprite = GetSquareSprite(sq.type);
         squareEffect.color = new Color(0, 0, 0, 0);

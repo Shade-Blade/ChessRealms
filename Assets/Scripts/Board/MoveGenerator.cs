@@ -114,8 +114,8 @@ internal static class MoveGenerator
         b.globalData.bitboard_waterBlack = 0;
 
         //Immune relayer
-        b.globalData.bitboard_immuneWhite |= MainManager.SmearBitboard(b.globalData.bitboard_immuneRelayerWhite);
-        b.globalData.bitboard_immuneBlack |= MainManager.SmearBitboard(b.globalData.bitboard_immuneRelayerBlack);
+        b.globalData.bitboard_immuneWhite = b.globalData.bitboard_immuneNaturalWhite | MainManager.SmearBitboard(b.globalData.bitboard_immuneRelayerWhite);
+        b.globalData.bitboard_immuneBlack = b.globalData.bitboard_immuneNaturalBlack | MainManager.SmearBitboard(b.globalData.bitboard_immuneRelayerBlack);
 
         //MainManager.PrintBitboard(b.globalData.bitboard_immuneWhite);
 
@@ -503,8 +503,8 @@ internal static class MoveGenerator
         b.globalData.bitboard_bansheeWhite &= ~b.globalData.bitboard_virgoAuraBlack;
         b.globalData.bitboard_attractorWhite &= ~b.globalData.bitboard_virgoAuraBlack;
         b.globalData.bitboard_repulserWhite &= ~b.globalData.bitboard_virgoAuraBlack;
-        b.globalData.bitboard_immobilizerWhite &= ~b.globalData.bitboard_virgoAuraBlack;
-        b.globalData.bitboard_harpyWhite &= ~b.globalData.bitboard_virgoAuraBlack;
+        b.globalData.bitboard_immobilizerWhite &= ~b.globalData.bitboard_virgoAuraBlack & ~b.globalData.bitboard_immuneBlack;
+        b.globalData.bitboard_harpyWhite &= ~b.globalData.bitboard_virgoAuraBlack & ~b.globalData.bitboard_immuneBlack;
         b.globalData.bitboard_hagWhite &= ~b.globalData.bitboard_virgoAuraBlack;
         b.globalData.bitboard_slothWhite &= ~b.globalData.bitboard_virgoAuraBlack;
         b.globalData.bitboard_watchTowerWhite &= ~b.globalData.bitboard_virgoAuraBlack;
@@ -522,8 +522,8 @@ internal static class MoveGenerator
         b.globalData.bitboard_bansheeBlack &= ~b.globalData.bitboard_virgoAuraWhite;
         b.globalData.bitboard_attractorBlack &= ~b.globalData.bitboard_virgoAuraWhite;
         b.globalData.bitboard_repulserBlack &= ~b.globalData.bitboard_virgoAuraWhite;
-        b.globalData.bitboard_immobilizerBlack &= ~b.globalData.bitboard_virgoAuraWhite;
-        b.globalData.bitboard_harpyBlack &= ~b.globalData.bitboard_virgoAuraWhite;
+        b.globalData.bitboard_immobilizerBlack &= ~b.globalData.bitboard_virgoAuraWhite & ~b.globalData.bitboard_immuneWhite;
+        b.globalData.bitboard_harpyBlack &= ~b.globalData.bitboard_virgoAuraWhite & ~b.globalData.bitboard_immuneWhite;
         b.globalData.bitboard_hagBlack &= ~b.globalData.bitboard_virgoAuraWhite;
         b.globalData.bitboard_slothBlack &= ~b.globalData.bitboard_virgoAuraWhite;
         b.globalData.bitboard_watchTowerBlack &= ~b.globalData.bitboard_virgoAuraWhite;
@@ -1240,6 +1240,8 @@ internal static class MoveGenerator
 
         b.globalData.bitboard_immuneWhite = 0;
         b.globalData.bitboard_immuneBlack = 0;
+        b.globalData.bitboard_immuneNaturalWhite = 0;
+        b.globalData.bitboard_immuneNaturalBlack = 0;
         b.globalData.bitboard_immuneRelayerWhite = 0;
         b.globalData.bitboard_immuneRelayerBlack = 0;
 
@@ -1346,10 +1348,10 @@ internal static class MoveGenerator
                     switch (ppaB)
                     {
                         case 0:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                         case 0x40000000:
-                            b.globalData.bitboard_immuneBlack |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalBlack |= bitIndex;
                             break;
                     }
                     break;
@@ -1359,10 +1361,10 @@ internal static class MoveGenerator
                     switch (ppaB)
                     {
                         case 0:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                         case 0x40000000:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                     }
                     break;
@@ -1371,10 +1373,10 @@ internal static class MoveGenerator
                     switch (ppaB)
                     {
                         case 0:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                         case 0x40000000:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                     }
                     break;
@@ -1384,12 +1386,12 @@ internal static class MoveGenerator
                     {
                         case 0:
                             b.globalData.bitboard_virgoWhite |= bitIndex;
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             b.globalData.bitboard_immuneRelayerWhite |= bitIndex;
                             break;
                         case 0x40000000:
                             b.globalData.bitboard_virgoBlack |= bitIndex;
-                            b.globalData.bitboard_immuneBlack |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalBlack |= bitIndex;
                             b.globalData.bitboard_immuneRelayerBlack |= bitIndex;
                             break;
                     }
@@ -1451,10 +1453,10 @@ internal static class MoveGenerator
                     switch (ppaB)
                     {
                         case 0:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                         case 0x40000000:
-                            b.globalData.bitboard_immuneBlack |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalBlack |= bitIndex;
                             break;
                     }
                     b.globalData.bitboard_egg |= bitIndex;
@@ -1535,11 +1537,11 @@ internal static class MoveGenerator
                 {
                     case 0:
                         b.globalData.bitboard_immuneRelayerWhite |= bitIndex;
-                        b.globalData.bitboard_immuneWhite |= bitIndex;
+                        b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                         break;
                     case 0x40000000:
                         b.globalData.bitboard_immuneRelayerBlack |= bitIndex;
-                        b.globalData.bitboard_immuneBlack |= bitIndex;
+                        b.globalData.bitboard_immuneNaturalBlack |= bitIndex;
                         break;
                 }
             }
@@ -1548,10 +1550,10 @@ internal static class MoveGenerator
                 switch (ppaB)
                 {
                     case 0:
-                        b.globalData.bitboard_immuneWhite |= bitIndex;
+                        b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                         break;
                     case 0x40000000:
-                        b.globalData.bitboard_immuneBlack |= bitIndex;
+                        b.globalData.bitboard_immuneNaturalBlack |= bitIndex;
                         break;
                 }
             }
@@ -1646,51 +1648,6 @@ internal static class MoveGenerator
 
         b.globalData.bitboard_EOTPieces = b.globalData.bitboard_daySwapper | b.globalData.bitboard_seasonSwapper | b.globalData.bitboard_egg | (b.globalData.bitboard_rabbit & MoveGenerator.BITBOARD_PATTERN_RANK18);
 
-
-        //X -> X white and X black
-        //slower actually???
-        //???
-        /*
-        b.globalData.bitboard_pawnsWhite = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_pawnsBlack = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesBlack;
-        b.globalData.bitboard_kingWhite = b.globalData.bitboard_king & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_kingBlack = b.globalData.bitboard_king & b.globalData.bitboard_piecesBlack;
-
-        //doing it for the others is slow?
-        b.globalData.bitboard_pawnsWhite = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_pawnsBlack = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesBlack;
-        b.globalData.bitboard_kingWhite = b.globalData.bitboard_king & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_kingBlack = b.globalData.bitboard_king & b.globalData.bitboard_piecesBlack;
-
-        b.globalData.bitboard_immuneWhite = b.globalData.bitboard_immune & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_immuneBlack = b.globalData.bitboard_immune & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_immuneRelayerWhite = b.globalData.bitboard_immuneRelayer & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_immuneRelayerBlack = b.globalData.bitboard_immuneRelayer & b.globalData.bitboard_piecesWhite;
-
-        b.globalData.bitboard_abominationWhite = b.globalData.bitboard_abomination & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_abominationBlack = b.globalData.bitboard_abomination & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_zombieWhite = b.globalData.bitboard_zombie & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_zombieBlack = b.globalData.bitboard_zombie & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_clockworksnapperWhite = b.globalData.bitboard_clockworksnapper & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_clockworksnapperBlack = b.globalData.bitboard_clockworksnapper & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_bladebeastWhite = b.globalData.bitboard_bladebeast & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_bladebeastBlack = b.globalData.bitboard_bladebeast & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_tarotMoonWhite = b.globalData.bitboard_tarotMoon & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_tarotMoonBlack = b.globalData.bitboard_tarotMoon & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_tarotMoonIllusionWhite = b.globalData.bitboard_tarotMoonIllusion & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_tarotMoonIllusionBlack = b.globalData.bitboard_tarotMoonIllusion & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_virgoWhite = b.globalData.bitboard_virgo & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_virgoBlack = b.globalData.bitboard_virgo & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_warpWeaverWhite = b.globalData.bitboard_warpWeaver & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_warpWeaverBlack = b.globalData.bitboard_warpWeaver & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_metalFoxWhite = b.globalData.bitboard_metalFox & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_metalFoxBlack = b.globalData.bitboard_metalFox & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_megacannonWhite = b.globalData.bitboard_megacannon & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_megacannonBlack = b.globalData.bitboard_megacannon & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_momentumWhite = b.globalData.bitboard_momentum & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_momentumBlack = b.globalData.bitboard_momentum & b.globalData.bitboard_piecesWhite;
-        */
-
         b.globalData.bitboard_piecesWhiteAdjacent = MainManager.SmearBitboard(b.globalData.bitboard_piecesWhite);
         b.globalData.bitboard_piecesBlackAdjacent = MainManager.SmearBitboard(b.globalData.bitboard_piecesBlack);
 
@@ -1723,6 +1680,8 @@ internal static class MoveGenerator
 
         b.globalData.bitboard_immuneWhite &= antiUpdate;
         b.globalData.bitboard_immuneBlack &= antiUpdate;
+        b.globalData.bitboard_immuneNaturalWhite &= antiUpdate;
+        b.globalData.bitboard_immuneNaturalBlack &= antiUpdate;
         b.globalData.bitboard_immuneRelayerWhite &= antiUpdate;
         b.globalData.bitboard_immuneRelayerBlack &= antiUpdate;
 
@@ -1833,10 +1792,10 @@ internal static class MoveGenerator
                     switch (ppaB)
                     {
                         case 0:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                         case 0x40000000:
-                            b.globalData.bitboard_immuneBlack |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalBlack |= bitIndex;
                             break;
                     }
                     break;
@@ -1846,10 +1805,10 @@ internal static class MoveGenerator
                     switch (ppaB)
                     {
                         case 0:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                         case 0x40000000:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                     }
                     break;
@@ -1858,10 +1817,10 @@ internal static class MoveGenerator
                     switch (ppaB)
                     {
                         case 0:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                         case 0x40000000:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                     }
                     break;
@@ -1871,12 +1830,12 @@ internal static class MoveGenerator
                     {
                         case 0:
                             b.globalData.bitboard_virgoWhite |= bitIndex;
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             b.globalData.bitboard_immuneRelayerWhite |= bitIndex;
                             break;
                         case 0x40000000:
                             b.globalData.bitboard_virgoBlack |= bitIndex;
-                            b.globalData.bitboard_immuneBlack |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalBlack |= bitIndex;
                             b.globalData.bitboard_immuneRelayerBlack |= bitIndex;
                             break;
                     }
@@ -1938,10 +1897,10 @@ internal static class MoveGenerator
                     switch (ppaB)
                     {
                         case 0:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                         case 0x40000000:
-                            b.globalData.bitboard_immuneBlack |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalBlack |= bitIndex;
                             break;
                     }
                     b.globalData.bitboard_egg |= bitIndex;
@@ -2023,11 +1982,11 @@ internal static class MoveGenerator
                 {
                     case 0:
                         b.globalData.bitboard_immuneRelayerWhite |= bitIndex;
-                        b.globalData.bitboard_immuneWhite |= bitIndex;
+                        b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                         break;
                     case 0x40000000:
                         b.globalData.bitboard_immuneRelayerBlack |= bitIndex;
-                        b.globalData.bitboard_immuneBlack |= bitIndex;
+                        b.globalData.bitboard_immuneNaturalBlack |= bitIndex;
                         break;
                 }
             }
@@ -2036,10 +1995,10 @@ internal static class MoveGenerator
                 switch (ppaB)
                 {
                     case 0:
-                        b.globalData.bitboard_immuneWhite |= bitIndex;
+                        b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                         break;
                     case 0x40000000:
-                        b.globalData.bitboard_immuneBlack |= bitIndex;
+                        b.globalData.bitboard_immuneNaturalBlack |= bitIndex;
                         break;
                 }
             }
@@ -2134,51 +2093,6 @@ internal static class MoveGenerator
 
         b.globalData.bitboard_EOTPieces = b.globalData.bitboard_daySwapper | b.globalData.bitboard_seasonSwapper | b.globalData.bitboard_egg | (b.globalData.bitboard_rabbit & MoveGenerator.BITBOARD_PATTERN_RANK18);
 
-
-        //X -> X white and X black
-        //slower actually???
-        //???
-        /*
-        b.globalData.bitboard_pawnsWhite = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_pawnsBlack = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesBlack;
-        b.globalData.bitboard_kingWhite = b.globalData.bitboard_king & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_kingBlack = b.globalData.bitboard_king & b.globalData.bitboard_piecesBlack;
-
-        //doing it for the others is slow?
-        b.globalData.bitboard_pawnsWhite = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_pawnsBlack = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesBlack;
-        b.globalData.bitboard_kingWhite = b.globalData.bitboard_king & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_kingBlack = b.globalData.bitboard_king & b.globalData.bitboard_piecesBlack;
-
-        b.globalData.bitboard_immuneWhite = b.globalData.bitboard_immune & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_immuneBlack = b.globalData.bitboard_immune & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_immuneRelayerWhite = b.globalData.bitboard_immuneRelayer & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_immuneRelayerBlack = b.globalData.bitboard_immuneRelayer & b.globalData.bitboard_piecesWhite;
-
-        b.globalData.bitboard_abominationWhite = b.globalData.bitboard_abomination & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_abominationBlack = b.globalData.bitboard_abomination & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_zombieWhite = b.globalData.bitboard_zombie & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_zombieBlack = b.globalData.bitboard_zombie & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_clockworksnapperWhite = b.globalData.bitboard_clockworksnapper & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_clockworksnapperBlack = b.globalData.bitboard_clockworksnapper & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_bladebeastWhite = b.globalData.bitboard_bladebeast & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_bladebeastBlack = b.globalData.bitboard_bladebeast & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_tarotMoonWhite = b.globalData.bitboard_tarotMoon & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_tarotMoonBlack = b.globalData.bitboard_tarotMoon & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_tarotMoonIllusionWhite = b.globalData.bitboard_tarotMoonIllusion & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_tarotMoonIllusionBlack = b.globalData.bitboard_tarotMoonIllusion & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_virgoWhite = b.globalData.bitboard_virgo & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_virgoBlack = b.globalData.bitboard_virgo & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_warpWeaverWhite = b.globalData.bitboard_warpWeaver & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_warpWeaverBlack = b.globalData.bitboard_warpWeaver & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_metalFoxWhite = b.globalData.bitboard_metalFox & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_metalFoxBlack = b.globalData.bitboard_metalFox & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_megacannonWhite = b.globalData.bitboard_megacannon & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_megacannonBlack = b.globalData.bitboard_megacannon & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_momentumWhite = b.globalData.bitboard_momentum & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_momentumBlack = b.globalData.bitboard_momentum & b.globalData.bitboard_piecesWhite;
-        */
-
         b.globalData.bitboard_piecesWhiteAdjacent = MainManager.SmearBitboard(b.globalData.bitboard_piecesWhite);
         b.globalData.bitboard_piecesBlackAdjacent = MainManager.SmearBitboard(b.globalData.bitboard_piecesBlack);
 
@@ -2211,6 +2125,8 @@ internal static class MoveGenerator
 
         b.globalData.bitboard_immuneWhite &= antiUpdate;
         b.globalData.bitboard_immuneBlack &= antiUpdate;
+        b.globalData.bitboard_immuneNaturalWhite &= antiUpdate;
+        b.globalData.bitboard_immuneNaturalBlack &= antiUpdate;
         b.globalData.bitboard_immuneRelayerWhite &= antiUpdate;
         b.globalData.bitboard_immuneRelayerBlack &= antiUpdate;
 
@@ -2323,10 +2239,10 @@ internal static class MoveGenerator
                     switch (ppaB)
                     {
                         case 0:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                         case 0x40000000:
-                            b.globalData.bitboard_immuneBlack |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalBlack |= bitIndex;
                             break;
                     }
                     break;
@@ -2336,10 +2252,10 @@ internal static class MoveGenerator
                     switch (ppaB)
                     {
                         case 0:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                         case 0x40000000:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                     }
                     break;
@@ -2348,10 +2264,10 @@ internal static class MoveGenerator
                     switch (ppaB)
                     {
                         case 0:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                         case 0x40000000:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                     }
                     break;
@@ -2361,12 +2277,12 @@ internal static class MoveGenerator
                     {
                         case 0:
                             b.globalData.bitboard_virgoWhite |= bitIndex;
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             b.globalData.bitboard_immuneRelayerWhite |= bitIndex;
                             break;
                         case 0x40000000:
                             b.globalData.bitboard_virgoBlack |= bitIndex;
-                            b.globalData.bitboard_immuneBlack |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalBlack |= bitIndex;
                             b.globalData.bitboard_immuneRelayerBlack |= bitIndex;
                             break;
                     }
@@ -2428,10 +2344,10 @@ internal static class MoveGenerator
                     switch (ppaB)
                     {
                         case 0:
-                            b.globalData.bitboard_immuneWhite |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalWhite |= bitIndex;
                             break;
                         case 0x40000000:
-                            b.globalData.bitboard_immuneBlack |= bitIndex;
+                            b.globalData.bitboard_immuneNaturalBlack |= bitIndex;
                             break;
                     }
                     b.globalData.bitboard_egg |= bitIndex;
@@ -2605,51 +2521,6 @@ internal static class MoveGenerator
         b.globalData.bitboard_rabbitAdjacent = MainManager.SmearBitboard(b.globalData.bitboard_rabbit);
 
         b.globalData.bitboard_EOTPieces = b.globalData.bitboard_daySwapper | b.globalData.bitboard_seasonSwapper | b.globalData.bitboard_egg | (b.globalData.bitboard_rabbit & MoveGenerator.BITBOARD_PATTERN_RANK18);
-
-
-        //X -> X white and X black
-        //slower actually???
-        //???
-        /*
-        b.globalData.bitboard_pawnsWhite = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_pawnsBlack = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesBlack;
-        b.globalData.bitboard_kingWhite = b.globalData.bitboard_king & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_kingBlack = b.globalData.bitboard_king & b.globalData.bitboard_piecesBlack;
-
-        //doing it for the others is slow?
-        b.globalData.bitboard_pawnsWhite = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_pawnsBlack = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesBlack;
-        b.globalData.bitboard_kingWhite = b.globalData.bitboard_king & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_kingBlack = b.globalData.bitboard_king & b.globalData.bitboard_piecesBlack;
-
-        b.globalData.bitboard_immuneWhite = b.globalData.bitboard_immune & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_immuneBlack = b.globalData.bitboard_immune & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_immuneRelayerWhite = b.globalData.bitboard_immuneRelayer & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_immuneRelayerBlack = b.globalData.bitboard_immuneRelayer & b.globalData.bitboard_piecesWhite;
-
-        b.globalData.bitboard_abominationWhite = b.globalData.bitboard_abomination & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_abominationBlack = b.globalData.bitboard_abomination & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_zombieWhite = b.globalData.bitboard_zombie & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_zombieBlack = b.globalData.bitboard_zombie & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_clockworksnapperWhite = b.globalData.bitboard_clockworksnapper & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_clockworksnapperBlack = b.globalData.bitboard_clockworksnapper & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_bladebeastWhite = b.globalData.bitboard_bladebeast & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_bladebeastBlack = b.globalData.bitboard_bladebeast & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_tarotMoonWhite = b.globalData.bitboard_tarotMoon & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_tarotMoonBlack = b.globalData.bitboard_tarotMoon & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_tarotMoonIllusionWhite = b.globalData.bitboard_tarotMoonIllusion & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_tarotMoonIllusionBlack = b.globalData.bitboard_tarotMoonIllusion & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_virgoWhite = b.globalData.bitboard_virgo & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_virgoBlack = b.globalData.bitboard_virgo & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_warpWeaverWhite = b.globalData.bitboard_warpWeaver & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_warpWeaverBlack = b.globalData.bitboard_warpWeaver & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_metalFoxWhite = b.globalData.bitboard_metalFox & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_metalFoxBlack = b.globalData.bitboard_metalFox & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_megacannonWhite = b.globalData.bitboard_megacannon & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_megacannonBlack = b.globalData.bitboard_megacannon & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_momentumWhite = b.globalData.bitboard_momentum & b.globalData.bitboard_piecesWhite;
-        b.globalData.bitboard_momentumBlack = b.globalData.bitboard_momentum & b.globalData.bitboard_piecesWhite;
-        */
 
         //b.globalData.bitboard_piecesWhiteAdjacent = MainManager.SmearBitboard(b.globalData.bitboard_piecesWhite);
         //b.globalData.bitboard_piecesBlackAdjacent = MainManager.SmearBitboard(b.globalData.bitboard_piecesBlack);
@@ -10258,7 +10129,7 @@ internal static class MoveGenerator
 
                 immuneBitboard = b.globalData.bitboard_immuneWhite;
 
-                bansheeBitboard = b.globalData.bitboard_bansheeBlack & ~immuneBitboard;
+                bansheeBitboard = b.globalData.bitboard_bansheeBlack;// & ~immuneBitboard;
                 attractorBitboard = b.globalData.bitboard_attractorBlack & ~immuneBitboard;
                 repulserBitboard = b.globalData.bitboard_repulserBlack & ~immuneBitboard;
                 slothBitboard = b.globalData.bitboard_slothBlack & ~immuneBitboard;
@@ -10294,7 +10165,7 @@ internal static class MoveGenerator
 
                 immuneBitboard = b.globalData.bitboard_immuneBlack;
 
-                bansheeBitboard = b.globalData.bitboard_bansheeWhite & ~immuneBitboard;
+                bansheeBitboard = b.globalData.bitboard_bansheeWhite;// & ~immuneBitboard;
                 attractorBitboard = b.globalData.bitboard_attractorWhite & ~immuneBitboard;
                 repulserBitboard = b.globalData.bitboard_repulserWhite & ~immuneBitboard;
                 slothBitboard = b.globalData.bitboard_slothWhite & ~immuneBitboard;
@@ -10304,7 +10175,7 @@ internal static class MoveGenerator
 
         ulong bitindex = 1uL << x + (y << 3);
 
-        if ((pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0 && pm != PieceModifier.Immune)
+        if ((pte.pieceProperty & Piece.PieceProperty.EnchantImmune) == 0 && pm != PieceModifier.Immune && ((bitindex & immuneBitboard) == 0))
         {
             bitboard &= (~bansheeBitboard | enemyBitboard);
 
