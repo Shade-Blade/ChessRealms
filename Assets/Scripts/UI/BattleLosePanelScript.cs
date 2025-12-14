@@ -8,9 +8,17 @@ public class BattleLosePanelScript : MonoBehaviour
     public Image loseButton;
     public Image loseButtonBorder;
     public TMPro.TMP_Text loseButtonText;
-    public TMPro.TMP_Text runStats;
+    public TextDisplayer runStats;
 
     public float lifetime;
+    Board.VictoryType vt;
+
+    public void Setup(Board.VictoryType vt)
+    {
+        this.vt = vt;
+    }
+
+
     public void Start()
     {
         transform.localPosition = Vector3.up * 500;
@@ -22,7 +30,7 @@ public class BattleLosePanelScript : MonoBehaviour
             loseButtonBorder.color = new Color(0.75f, 0.75f, 0.75f);
         }
 
-        runStats.text = "Made it to Realm " + MainManager.Instance.playerData.realmsComplete + " Battle " + MainManager.Instance.playerData.realmBattlesComplete;
+        runStats.SetText("Lost by " + vt.ToString() + " Victory.\nMade it to Realm " + (MainManager.Instance.playerData.realmsComplete + 1) + ", Battle " + (MainManager.Instance.playerData.realmBattlesComplete + 1), true, true);
     }
 
     public void Update()

@@ -483,6 +483,16 @@ public class Board
         SecondaryModifiers = Defensive | KingMoveModifiers
     }
 
+    public enum VictoryType
+    {
+        None,
+        KingCapture,
+        Checkmate,
+        Stalemate,
+        Overtaken,
+        Domination,
+    }
+
     public void Init()
     {
         blackToMove = false;
@@ -2246,6 +2256,86 @@ public class Board
 
 
         return output;
+    }
+
+    public VictoryType GetVictoryType()
+    {
+        bool whiteKing = false;
+        bool blackKing = false;
+        if ((globalData.playerModifier & PlayerModifier.NoKing) != 0)
+        {
+            whiteKing = true;
+        }
+        if ((globalData.enemyModifier & EnemyModifier.Hidden) != 0)
+        {
+            blackKing = true;
+        }
+
+        //Piece value check
+        if (whitePerPlayerInfo.pieceValueSumX2 >= GlobalPieceManager.KING_VALUE_BONUS)
+        {
+            whiteKing = true;
+        }
+        if (blackPerPlayerInfo.pieceValueSumX2 >= GlobalPieceManager.KING_VALUE_BONUS)
+        {
+            blackKing = true;
+        }
+
+        if (!whiteKing || !blackKing)
+        {
+            return VictoryType.KingCapture;
+        }
+
+        if (whitePerPlayerInfo.pieceCount == 1)
+        {
+            return VictoryType.Domination;
+        }
+        if (blackPerPlayerInfo.pieceCount == 1)
+        {
+            return VictoryType.Domination;
+        }
+
+        //Overtaken victory
+        int ylevel = 7;
+        if ((globalData.enemyModifier & EnemyModifier.Zenith) == 0)
+        {
+            //Not possible with Zenith active (would be dumb if you could cheese the final boss early)
+            for (int i = 0; i < 8; i++)
+            {
+                uint target = pieces[i + (ylevel << 3)];
+                if (Piece.GetPieceType(target) == PieceType.King && Piece.GetPieceAlignment(target) == PieceAlignment.White)
+                {
+                    return VictoryType.Overtaken;
+                }
+            }
+        }
+        ylevel = 0;
+        for (int i = 0; i < 8; i++)
+        {
+            uint target = pieces[i + (ylevel << 3)];
+            if (Piece.GetPieceType(target) == PieceType.King && Piece.GetPieceAlignment(target) == PieceAlignment.Black)
+            {
+                return VictoryType.Overtaken;
+            }
+        }
+
+        //check side to move for possible moves
+        Board boardCopy = new Board(this);
+        bool check = Board.PositionIsCheck(ref boardCopy);
+        bool stalemate = Board.PositionIsStalemate(ref boardCopy);
+
+        if (stalemate)
+        {
+            if (check)
+            {
+                return VictoryType.Checkmate;
+            } else
+            {
+                return VictoryType.Stalemate;
+            }
+        }
+
+        return VictoryType.None;
     }
 
     public Piece.PieceAlignment GetVictoryCondition()

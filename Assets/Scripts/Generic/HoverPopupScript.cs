@@ -25,7 +25,7 @@ public class HoverPopupScript : TextDisplayer
     {
         PositionUpdate();
     }
-    public void PositionUpdate()
+    public virtual void PositionUpdate()
     {
         rectTransform.anchoredPosition = MainManager.Instance.RealMousePos() + (baseBox.rectTransform.sizeDelta.x * Vector2.right * 0.5f) + (baseBox.rectTransform.sizeDelta.y * Vector2.down * 0.5f) + new Vector2(5,-10);
 
@@ -73,7 +73,7 @@ public class HoverPopupScript : TextDisplayer
         base.SetText(text, complete, forceOpaque, -2);
     }
 
-    public void RecalculateBoxSize()
+    public virtual void RecalculateBoxSize()
     {
         float width = Mathf.Min(textMesh.GetRenderedValues()[0] + 3, 290);
 

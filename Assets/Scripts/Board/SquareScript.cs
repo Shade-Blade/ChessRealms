@@ -54,6 +54,8 @@ public class SquareScript : MonoBehaviour
     public List<Sprite> effectSprites;
     public List<Material> effectMaterials;
 
+    public List<ArrowScript> arrows;
+
     public void Setup(int x, int y, Square sq)
     {
         isBlack = (x + y) % 2 == 0;

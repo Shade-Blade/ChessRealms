@@ -3702,7 +3702,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: -29.999954}
-  m_SizeDelta: {x: 350, y: 50}
+  m_SizeDelta: {x: 400, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &719647006
 MonoBehaviour:
@@ -3727,7 +3727,7 @@ MonoBehaviour:
   m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6f10f5d5c961b364a87876ce9d8c6076, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: 0eabe1fb7af7ffe4a8c2bb223750e2bc, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 163e2635b68b32d4baa147bd2b10d75c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3758,7 +3758,7 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
+  m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
@@ -9616,7 +9616,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1756460785}
   m_HandleRect: {fileID: 1756460784}
   m_Direction: 1
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -9976,6 +9976,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hoverPopupPrototype: {fileID: 5966837659103197295, guid: 2e5d941dbb6309d4cb5d90899f717fd2, type: 3}
+  hoverPopupArmyPrototype: {fileID: 2334241258490449269, guid: 5e0c2c62148262b43abb8b7131b590e2, type: 3}
   hoverPopup: {fileID: 0}
   hoverText: 
   pastHoverText: 

@@ -12,6 +12,7 @@ public class BattleBoardScript : BoardScript
     public GameObject moveParticleTemplate;
     public GameObject battleWinPanelTemplate;
     public GameObject battleLosePanelTemplate;
+    public GameObject arrowTemplate;
 
     public List<uint> moveList;
     public Dictionary<uint, MoveMetadata> moveMetadata;
@@ -28,6 +29,7 @@ public class BattleBoardScript : BoardScript
 
     //
     public MoveTrailScript checkMoveTrail;
+    public bool onlyConsumableMoves;
 
     public List<MoveTrailScript> extraMoveTrails;
 
@@ -62,6 +64,9 @@ public class BattleBoardScript : BoardScript
 
     public bool awaitingMove = false;
     public bool errorMove = false;
+
+    public bool rightClick;
+    public ArrowScript arrow;
 
     public static BattleBoardScript CreateBoard(Piece.PieceType[] army, Board.PlayerModifier pm, Board.EnemyModifier em)
     {
@@ -298,6 +303,30 @@ public class BattleBoardScript : BoardScript
         chessAI.InitAI(difficulty);
     }
 
+    public bool ConsumableMovePossible()
+    {
+        for (int i = 0; i < MainManager.Instance.playerData.consumables.Length; i++)
+        {
+            if (MainManager.Instance.playerData.consumables[i] == Move.ConsumableMoveType.None)
+            {
+                continue;
+            }
+
+            for (int x = 0; x < 8; x++)
+            {
+                for (int y = 0; y < 8; y++)
+                {
+                    if (Board.IsConsumableMoveValid(ref board, Move.EncodeConsumableMove(MainManager.Instance.playerData.consumables[i], i & 7, i >> 3)))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     public override void SelectConsumable(ConsumableScript cs)
     {
         ResetSelected(false);
@@ -527,6 +556,7 @@ public class BattleBoardScript : BoardScript
             Destroy(lastMoveTrail.gameObject);
         }
 
+        onlyConsumableMoves = false;
         if (checkMoveTrail != null)
         {
             Destroy(checkMoveTrail.gameObject);
@@ -679,6 +709,7 @@ public class BattleBoardScript : BoardScript
             {
                 Destroy(illegalMoveTrail.gameObject);
             }
+            onlyConsumableMoves = false;
             if (checkMoveTrail != null)
             {
                 Destroy(checkMoveTrail.gameObject);
@@ -896,6 +927,7 @@ public class BattleBoardScript : BoardScript
             {
                 Destroy(illegalMoveTrail.gameObject);
             }
+            onlyConsumableMoves = false;
             if (checkMoveTrail != null)
             {
                 Destroy(checkMoveTrail.gameObject);
@@ -1084,6 +1116,7 @@ public class BattleBoardScript : BoardScript
             {
                 Destroy(illegalMoveTrail.gameObject);
             }
+            onlyConsumableMoves = false;
             if (checkMoveTrail != null)
             {
                 Destroy(checkMoveTrail.gameObject);
@@ -1368,6 +1401,7 @@ public class BattleBoardScript : BoardScript
         {
             Destroy(illegalMoveTrail.gameObject);
         }
+        onlyConsumableMoves = false;
         if (checkMoveTrail != null)
         {
             Destroy(checkMoveTrail.gameObject);
@@ -1467,20 +1501,32 @@ public class BattleBoardScript : BoardScript
             }
         }
 
-        if (check && stalemate)
+        if (stalemate)
         {
-            winnerPA = PieceAlignment.Black;
-            Debug.Log("Black win");
-            gameOver = true;
-            LoseBattle();
-        }
-        else if (stalemate)
-        {
-            //stalemate is loss
-            winnerPA = PieceAlignment.Black;
-            Debug.Log("White stalemated");
-            gameOver = true;
-            LoseBattle();
+            bool consumableLegal = ConsumableMovePossible();
+
+            if (consumableLegal)
+            {
+                onlyConsumableMoves = true;
+                thinkingText.text = "<color,#800000>Only legal moves are consumable moves.</color>";
+            } else
+            {
+                if (check && stalemate)
+                {
+                    winnerPA = PieceAlignment.Black;
+                    Debug.Log("Black win");
+                    gameOver = true;
+                    LoseBattle();
+                }
+                else if (stalemate)
+                {
+                    //stalemate is loss
+                    winnerPA = PieceAlignment.Black;
+                    Debug.Log("White stalemated");
+                    gameOver = true;
+                    LoseBattle();
+                }
+            }
         }
     }
 
@@ -1865,12 +1911,16 @@ public class BattleBoardScript : BoardScript
 
     public void WinBattle()
     {
+        Board.VictoryType vt = board.GetVictoryType();
         GameObject go = Instantiate(battleWinPanelTemplate, MainManager.Instance.canvas.transform);
         go.GetComponent<BattleWinPanelScript>().bs = this;
+        go.GetComponent<BattleWinPanelScript>().Setup(vt);
     }
     public void LoseBattle()
     {
-        Instantiate(battleLosePanelTemplate, MainManager.Instance.canvas.transform);
+        Board.VictoryType vt = board.GetVictoryType();
+        GameObject go = Instantiate(battleLosePanelTemplate, MainManager.Instance.canvas.transform);
+        go.GetComponent<BattleLosePanelScript>().Setup(vt);
     }
 
     public IEnumerator AnimatePieceSpawn(uint piece, int ofx, int ofy, int otx, int oty)
@@ -2523,10 +2573,86 @@ public class BattleBoardScript : BoardScript
 
     public override void Update()
     {
+        (hoverX, hoverY) = GetCoordinatesFromPosition(MainManager.XYProjectPreserve(Camera.main.ScreenToWorldPoint(Input.mousePosition)));
         backgroundA.color = backgroundColorWhite;
         backgroundB.color = backgroundColorBlack;
 
         chessAI.searchDuration = moveThinkTime;
+
+        if (CanSelectPieces())
+        {
+            if (Input.GetMouseButtonDown(1))
+            {
+                //click the thing
+                if (hoverX <= 7 && hoverX >= 0 && hoverY <= 7 && hoverY >= 0)
+                {
+                    //legal square, make an arrow
+                    GameObject arrowObject = Instantiate(arrowTemplate, transform);
+                    arrow = arrowObject.GetComponent<ArrowScript>();
+                    arrow.Set(hoverX, hoverY, hoverX, hoverY);
+                    squares[(hoverX + (hoverY << 3))].arrows.Add(arrow);
+                }
+            }
+            rightClick = Input.GetMouseButton(1);
+        } else
+        {
+            rightClick = false;
+        }
+
+        if (arrow != null)
+        {
+            if (rightClick)
+            {
+                int tx = hoverX;
+                int ty = hoverY;
+                if (tx < 0)
+                {
+                    tx = 0;
+                }
+                if (tx > 7)
+                {
+                    tx = 7;
+                }
+                if (ty < 0)
+                {
+                    ty = 0;
+                }
+                if (ty > 7)
+                {
+                    ty = 7;
+                }
+                arrow.Set(tx, ty);
+            } else
+            {
+                //set up the arrow
+                //destroy if there is already arrows with that coordinates
+                List<ArrowScript> arrowList = squares[(arrow.fx + (arrow.fy << 3))].arrows;
+                bool remove = false;
+                for (int i = 0; i < arrowList.Count - 1; i++)
+                {
+                    if (arrowList[i].fx == arrow.fx && arrowList[i].fy == arrow.fy && arrowList[i].tx == arrow.tx && arrowList[i].ty == arrow.ty)
+                    {
+                        remove = true;
+                        break;
+                    }
+                }
+
+                if (remove)
+                {
+                    for (int i = 0; i < arrowList.Count; i++)
+                    {
+                        if (arrowList[i].fx == arrow.fx && arrowList[i].fy == arrow.fy && arrowList[i].tx == arrow.tx && arrowList[i].ty == arrow.ty)
+                        {
+                            Destroy(arrowList[i].gameObject);
+                            arrowList.RemoveAt(i);
+                            i--;
+                            continue;
+                        }
+                    }
+                }
+                arrow = null;
+            }
+        }
 
         if (awaitingMove)
         {
@@ -2534,13 +2660,20 @@ public class BattleBoardScript : BoardScript
         }
         else
         {
-            if (board.globalData.enemyModifier == 0)
+            if (onlyConsumableMoves)
             {
-                thinkingText.text = "";
+                thinkingText.text = "<size=200%><color=#800000>Only consumable moves are possible.</color></size>";
             }
             else
             {
-                thinkingText.text = board.globalData.enemyModifier.ToString();
+                if (board.globalData.enemyModifier == 0)
+                {
+                    thinkingText.text = "";
+                }
+                else
+                {
+                    thinkingText.text = "<size=200%>" + board.globalData.enemyModifier.ToString() + "</size>";
+                }
             }
         }
 
@@ -2711,6 +2844,6 @@ public class BattleBoardScript : BoardScript
 
     public override bool CanSelectPieces()
     {
-        return !animating;
+        return !animating && !gameOver;
     }
 }

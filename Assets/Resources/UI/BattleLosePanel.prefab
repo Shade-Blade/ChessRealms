@@ -400,7 +400,7 @@ MonoBehaviour:
   loseButton: {fileID: 750855249248358781}
   loseButtonBorder: {fileID: 4303889364335407784}
   loseButtonText: {fileID: 7903682504507451143}
-  runStats: {fileID: 7779663010761076923}
+  runStats: {fileID: 8167231860101979705}
   lifetime: 0
 --- !u!1 &4467453059395687619
 GameObject:
@@ -756,6 +756,7 @@ GameObject:
   - component: {fileID: 2517328316935032329}
   - component: {fileID: 9186672375390256534}
   - component: {fileID: 7779663010761076923}
+  - component: {fileID: 8167231860101979705}
   m_Layer: 0
   m_Name: RunStats
   m_TagString: Untagged
@@ -879,6 +880,27 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8167231860101979705
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6376757968355973418}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9bb94cb65c7e0e842a3400b4e2e7c765, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  textMesh: {fileID: 7779663010761076923}
+  inputString: 
+  cleanString: 
+  charsVisible: 0
+  scrollDone: 0
+  lockButtons: 0
+  aPressTime: 0
+  bPress: 0
+  hasTextChanged: 0
 --- !u!1 &7578367976962397604
 GameObject:
   m_ObjectHideFlags: 0

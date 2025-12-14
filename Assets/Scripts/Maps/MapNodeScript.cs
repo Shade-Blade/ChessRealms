@@ -41,6 +41,8 @@ public class MapNodeScript : MonoBehaviour
 
     public int nodeSeed;
 
+    public bool isHover;
+
     public void Start()
     {
         if (parents == null)
@@ -79,6 +81,7 @@ public class MapNodeScript : MonoBehaviour
                 break;
             case MapNodeType.Shop:
                 text.text = "Shop";
+                //Make the army contain the shop pieces?
                 break;
             case MapNodeType.WorldNode:
                 text.text = GlobalPieceManager.GetPieceClassEntry(pieceClass).name + "\nRealm\n" + truePieceValueTotal;
@@ -243,9 +246,33 @@ public class MapNodeScript : MonoBehaviour
             os.EnterNode(this);
         }
     }
+    public void OnMouseOver()
+    {
+        isHover = true;
+    }
 
     public void Update()
     {
+        if (isHover)
+        {
+            switch (nodeType) {
+                case MapNodeType.Battle:
+                    HoverTextMasterScript.Instance.MakeHoverPopup(army, "Army Value: " + pieceValueTotal);
+                    break;
+                case MapNodeType.BossBattle:
+                case MapNodeType.FinalBossBattle:
+                    HoverTextMasterScript.Instance.MakeHoverPopup(army, "Army Value: " + pieceValueTotal + ", Boss: " + em.ToString());
+                    break;
+                case MapNodeType.WorldNode:
+                    HoverTextMasterScript.Instance.SetHoverText(GlobalPieceManager.GetPieceClassEntry(pieceClass).name + " Realm, Base Power: " + truePieceValueTotal);
+                    break;
+                default:
+                    HoverTextMasterScript.Instance.SetHoverText(nodeType.ToString());
+                    break;
+            }
+        }
+        isHover = false;
+
         if (debugRegenerate)
         {
             debugRegenerate = false;

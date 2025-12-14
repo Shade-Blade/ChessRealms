@@ -6,8 +6,14 @@ using UnityEngine;
 public class BattleWinPanelScript : MonoBehaviour
 {
     public BoardScript bs;
-    public TMPro.TMP_Text text;
+    public TextDisplayer text;
     public float lifetime;
+    Board.VictoryType vt;
+
+    public void Setup(Board.VictoryType vt)
+    {
+        this.vt = vt;
+    }
 
     public void Update()
     {
@@ -22,14 +28,16 @@ public class BattleWinPanelScript : MonoBehaviour
     public void Start()
     {
         transform.localPosition = Vector3.up * 500;
+        int value = Mathf.Max(6, Mathf.CeilToInt((bs.board.globalData.blackPerPlayerInfo.startPieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) / 5f));
         if (bs.board.globalData.enemyModifier != 0)
         {
-            text.text = "You won $" + Mathf.Max(6, Mathf.CeilToInt((bs.board.globalData.blackPerPlayerInfo.startPieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) / 5f));
+            value = Mathf.Max(6, Mathf.CeilToInt((bs.board.globalData.blackPerPlayerInfo.startPieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) / 5f));
         }
         else
         {
-            text.text = "You won $" + Mathf.Max(4, Mathf.CeilToInt((bs.board.globalData.blackPerPlayerInfo.startPieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) / 8f));
+            value = Mathf.Max(4, Mathf.CeilToInt((bs.board.globalData.blackPerPlayerInfo.startPieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) / 8f));
         }
+        text.SetText("Won by " + vt.ToString() + " Victory.\nYou won <outlinecolor,#ffff00>$" + value + "</color>", true, true);
     }
 
     public void ContinueButton()

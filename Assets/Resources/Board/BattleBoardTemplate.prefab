@@ -182,6 +182,8 @@ MonoBehaviour:
       bitboard_waterBlack: 0
       bitboard_immuneRelayerWhite: 0
       bitboard_immuneRelayerBlack: 0
+      bitboard_immuneNaturalWhite: 0
+      bitboard_immuneNaturalBlack: 0
       bitboard_immuneWhite: 0
       bitboard_immuneBlack: 0
       bitboard_bansheeWhite: 0
@@ -272,6 +274,7 @@ MonoBehaviour:
   moveParticleTemplate: {fileID: 2675936083115365684, guid: 865cf15c53a7695428b135c52ba71f8f, type: 3}
   battleWinPanelTemplate: {fileID: 4522741887018891003, guid: 301c0b2e9a10c8c4e881d71018e51140, type: 3}
   battleLosePanelTemplate: {fileID: 4230754855850751269, guid: 57f0fb5836dceab4099ab46abfc82251, type: 3}
+  arrowTemplate: {fileID: 1922048658244027206, guid: 4bed9e0f16af5d742a526a63d6b0c4d5, type: 3}
   moveList: 
   lastMoveTrail: {fileID: 0}
   enemyMoveList: 
@@ -297,6 +300,7 @@ MonoBehaviour:
   difficulty: 2
   awaitingMove: 0
   errorMove: 0
+  rightClick: 0
 --- !u!1 &2255433947139563736
 GameObject:
   m_ObjectHideFlags: 0
