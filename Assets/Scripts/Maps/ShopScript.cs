@@ -71,6 +71,9 @@ public class ShopScript : MonoBehaviour, IEvent
         }
         List<Piece.PieceType> pieces = new List<Piece.PieceType>(GlobalPieceManager.GetPieceClassEntry(pieceClass).normalPieces);
 
+        pieces.Sort((a, b) => (GlobalPieceManager.GetPieceTableEntry(a).pieceValueX2 - GlobalPieceManager.GetPieceTableEntry(b).pieceValueX2));
+        Piece.PieceType firstPiece = pieces[0];
+
         if (pieceClass == Piece.PieceClass.None)
         {
             for (int i = 0; i < GlobalPieceManager.pieceTable.Length; i++)
@@ -127,6 +130,9 @@ public class ShopScript : MonoBehaviour, IEvent
         }
 
         pieces.Sort((a, b) => (GlobalPieceManager.GetPieceTableEntry(a).pieceValueX2 - GlobalPieceManager.GetPieceTableEntry(b).pieceValueX2));
+
+        //give you more pawns and such so you can get a full army quicker
+        pieces.Insert(0, firstPiece);
 
         for (int i = 0; i < pieces.Count; i++)
         {

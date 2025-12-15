@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static Piece;
 
 public class SetupPieceScript : PieceScript, IShopItem
 {
@@ -127,6 +128,8 @@ public class SetupPieceScript : PieceScript, IShopItem
             backSprite.transform.localPosition = offset;
             text.transform.localScale = Vector3.one * 2;
             backSprite.transform.localScale = Vector3.one * 2f;
+            selectObject.transform.localPosition = offset + Vector3.forward * 0.2f;
+            selectObject.transform.localScale = Vector3.one * 2f;
             bc.center = offset;
             bc.size = new Vector3(2, 2, 0.1f);
         }
@@ -136,6 +139,8 @@ public class SetupPieceScript : PieceScript, IShopItem
             backSprite.transform.localPosition = Vector3.zero;
             text.transform.localScale = Vector3.one;
             backSprite.transform.localScale = Vector3.one;
+            selectObject.transform.localPosition = Vector3.forward * 0.2f;
+            selectObject.transform.localScale = Vector3.one;
             bc.center = Vector3.zero;
             bc.size = new Vector3(1, 1, 0.1f);
         }
@@ -177,6 +182,11 @@ public class SetupPieceScript : PieceScript, IShopItem
 
         backSprite.color = color;
         text.color = color;
+
+        if (pa == PieceAlignment.Black)
+        {
+            text.color = Color.black;
+        }
     }
 
     public override void OnDragStop()

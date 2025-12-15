@@ -409,8 +409,10 @@ public static class ArmyGenerator
         int pushIndex = 0;
         int rowPieces = 0;
         bool retry = false;
-        while (subArmy.Count > 0)
+        int attempts = 0;
+        while (subArmy.Count > 0 && attempts < 10000)
         {
+            attempts++;
             //plop stuff down on y level
             if (pushIndex > 7)
             {
@@ -483,6 +485,11 @@ public static class ArmyGenerator
             }
             else
             {
+                if (yLevel * 8 + pushOrder[pushIndex] > 32)
+                {
+                    pushIndex++;
+                    continue;
+                }
                 if (army[yLevel * 8 + pushOrder[pushIndex]] != PieceType.Null)
                 {
                     pushIndex++;
@@ -531,6 +538,21 @@ public static class ArmyGenerator
 
         RandomTable<PieceTableEntry> fusedTable = new RandomTable<PieceTableEntry>(normalTable, extraTable);
         return fusedTable;
+    }
+    public static List<PieceTableEntry> GetFullPieceTableForClass(Piece.PieceClass pc)
+    {
+        List<PieceTableEntry> piecePool = new List<PieceTableEntry>();
+
+        foreach (Piece.PieceType pt in GlobalPieceManager.GetPieceClassEntry(pc).normalPieces)
+        {
+            piecePool.Add(GlobalPieceManager.GetPieceTableEntry(pt));
+        }
+        foreach (Piece.PieceType pt in GlobalPieceManager.GetPieceClassEntry(pc).extraPieces)
+        {
+            piecePool.Add(GlobalPieceManager.GetPieceTableEntry(pt));
+        }
+
+        return piecePool;
     }
     public static RandomTable<PieceTableEntry> GetPieceTableForClass(Piece.PieceClass pc, int types, float targetTotal, float lowPieceBias, float lowComplexityBias)
     {

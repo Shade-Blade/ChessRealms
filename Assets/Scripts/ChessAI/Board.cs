@@ -680,6 +680,204 @@ public class Board
 
         PostSetupInit();
     }
+    public void Setup(Piece.PieceType[] warmy, Piece.PieceType[] barmy, PlayerModifier pm, EnemyModifier em, Piece.PieceClass pieceClass)
+    {
+        Init();
+
+        Piece.PieceType[] ptList = warmy;
+
+        for (int i = 0; i < pieces.Length; i++)
+        {
+            int indexToRead = i;
+            if (indexToRead > 31)
+            {
+                ptList = barmy;
+                indexToRead = 63 - indexToRead;
+                indexToRead = indexToRead - (indexToRead % 8) + (7 - (indexToRead % 8));
+            }
+
+            if (indexToRead >= ptList.Length)
+            {
+                continue;
+            }
+
+            Piece.PieceType pt = ptList[indexToRead];
+
+            if (pt == PieceType.Null)
+            {
+                continue;
+            }
+
+            if (GlobalPieceManager.GetPieceTableEntry(pt) == null)
+            {
+                Debug.Log(pt);
+            }
+
+            pieces[i] = Piece.PackPieceData(pt, i < 32 ? PieceAlignment.White : PieceAlignment.Black);
+
+            if ((GlobalPieceManager.GetPieceTableEntry(pt).piecePropertyB & PiecePropertyB.Giant) != 0)
+            {
+                //Based on how the giants are oriented to get the giants to appear the same way on both sides the bottom right corner becomes the top right
+                //So on the black side the bottom corner is down 1
+                if (i > 32)
+                {
+                    PlaceGiant(pieces[i], i & 7, (i >> 3) - 1);
+                }
+                else
+                {
+                    PlaceGiant(pieces[i], i & 7, i >> 3);
+                }
+            }
+        }
+
+        globalData.enemyModifier = em;
+
+        globalData.playerModifier = pm;
+
+        //add extra stuff
+        PieceClassEntry pce = GlobalPieceManager.GetPieceClassEntry(pieceClass);
+
+        void TryPlaceSquare(Square.SquareType st)
+        {            
+            int totalCount = UnityEngine.Random.Range(-2, 5);
+            //negative to make some chance of getting no special squares
+            if (totalCount <= 0)
+            {
+                return;
+            }
+
+            int attempts = 0;
+            int squaresAdded = 0;
+            while (attempts < 1000)
+            {
+                int randPosition = UnityEngine.Random.Range(16, 32);
+
+                if (globalData.squares[randPosition].type == Square.SquareType.Normal && globalData.squares[63 - randPosition].type == Square.SquareType.Normal)
+                {
+                    globalData.squares[randPosition].type = st;
+                    globalData.squares[63 - randPosition].type = st;
+                    squaresAdded += 2;
+                    if (squaresAdded >= totalCount)
+                    {
+                        break;
+                    }
+                }
+                attempts++;
+            }
+        }
+
+        for (int i = 0; i < pce.terrainTypes.Length; i++)
+        {
+            //random stuff
+            TryPlaceSquare(pce.terrainTypes[i]);            
+        }
+
+        //rocks, neutrals and crystals
+        int spieces = UnityEngine.Random.Range(0, 6 * pce.rockCount);
+        int attempts = 0;
+        if (pce.rockCount > 0 && spieces < pce.rockCount)
+        {
+            while (attempts < 1000)
+            {
+                int randPosition = UnityEngine.Random.Range(16, 32);
+
+                if (pieces[randPosition] == 0 && pieces[63 - randPosition] == 0)
+                {
+                    pieces[randPosition] = Piece.SetPieceAlignment(PieceAlignment.Neutral, Piece.SetPieceType(PieceType.Rock, 0));
+                    pieces[63 - randPosition] = Piece.SetPieceAlignment(PieceAlignment.Neutral, Piece.SetPieceType(PieceType.Rock, 0));
+                    spieces += 2;
+                    if (spieces >= pce.rockCount * 4)
+                    {
+                        break;
+                    }
+                }
+                attempts++;
+            }
+        }
+        spieces = UnityEngine.Random.Range(0, 6 * pce.neutralCount);
+        attempts = 0;
+        if (pce.neutralCount > 0 && spieces < pce.neutralCount)
+        {
+            //attempt to find something to spawn in
+            List<PieceTableEntry> list = ArmyGenerator.GetFullPieceTableForClass(pieceClass);
+            list = list.FindAll((e) => (!e.neutralIncompatible));
+            if (list.FindAll((e) => (e.promotionType == PieceType.Null)).Count > 0)
+            {
+                list = list.FindAll((e) => (e.promotionType == PieceType.Null));
+            }
+            list.Sort((a, b) => (a.pieceValueX2 - b.pieceValueX2));
+            while (list.Count > 2)
+            {
+                list.RemoveAt(2);
+            }
+            list = MainManager.ShuffleList(list);
+
+            if (list.Count > 0)
+            {
+                while (attempts < 1000 && list.Count > 0)
+                {
+                    int randPosition = UnityEngine.Random.Range(16, 32);
+
+                    if (pieces[randPosition] == 0 && pieces[63 - randPosition] == 0)
+                    {
+                        Piece.PieceType pt = (RandomTable<PieceTableEntry>.ChooseRandom(list)).type;
+
+                        pieces[randPosition] = Piece.SetPieceAlignment(PieceAlignment.Neutral, Piece.SetPieceType(pt, 0));
+                        pieces[63 - randPosition] = Piece.SetPieceAlignment(PieceAlignment.Neutral, Piece.SetPieceType(pt, 0));
+                        spieces += 2;
+                        if (spieces >= pce.neutralCount * 4)
+                        {
+                            break;
+                        }
+                    }
+                    attempts++;
+                }
+            }
+        }
+        spieces = UnityEngine.Random.Range(0, 6 * pce.crystalCount);
+        attempts = 0;
+        if (pce.crystalCount > 0 && spieces < pce.crystalCount)
+        {
+            //attempt to find something to spawn in
+            List<PieceTableEntry> list = ArmyGenerator.GetFullPieceTableForClass(pieceClass);
+            list = list.FindAll((e) => (!e.neutralIncompatible));
+            if (list.FindAll((e) => (e.promotionType == PieceType.Null)).Count > 0)
+            {
+                list = list.FindAll((e) => (e.promotionType == PieceType.Null));
+            }
+            list.Sort((a, b) => (a.pieceValueX2 - b.pieceValueX2));
+            while (list.Count > 2)
+            {
+                list.RemoveAt(2);
+            }
+            list = MainManager.ShuffleList(list);
+
+            if (list.Count > 0)
+            {
+                while (attempts < 1000 && list.Count > 0)
+                {
+                    int randPosition = UnityEngine.Random.Range(16, 32);
+
+                    if (pieces[randPosition] == 0 && pieces[63 - randPosition] == 0)
+                    {
+                        Piece.PieceType pt = (RandomTable<PieceTableEntry>.ChooseRandom(list)).type;
+
+                        pieces[randPosition] = Piece.SetPieceAlignment(PieceAlignment.Crystal, Piece.SetPieceType(pt, 0));
+                        pieces[63 - randPosition] = Piece.SetPieceAlignment(PieceAlignment.Crystal, Piece.SetPieceType(pt, 0));
+                        spieces += 2;
+                        if (spieces >= pce.crystalCount * 4)
+                        {
+                            break;
+                        }
+                    }
+                    attempts++;
+                }
+            }
+        }
+
+        PostSetupInit();
+    }
+
 
     public void SetupNormal()
     {
@@ -1595,6 +1793,20 @@ public class Board
     public Piece.Aura[] GetAuraBitboards(bool black)
     {
         Piece.Aura[] output = new Aura[64];
+        ulong bansheeBlack = globalData.bitboard_bansheeBlack;
+
+        if (black)
+        {
+            if ((globalData.enemyModifier & Board.EnemyModifier.Slothful) != 0)
+            {
+
+            }
+            if ((globalData.enemyModifier & Board.EnemyModifier.Terror) != 0)
+            {
+                bansheeBlack |= MainManager.SmearBitboard(MainManager.SmearBitboard(globalData.bitboard_king & globalData.bitboard_piecesBlack));
+            }
+        }
+
         for (int i = 0; i < 64; i++)
         {
             ulong bitIndex = 1uL << i;
@@ -1605,7 +1817,7 @@ public class Board
                 {
                     output[i] |= Aura.Nullify;
                 }
-                if ((bitIndex & globalData.bitboard_bansheeBlack) != 0)
+                if ((bitIndex & bansheeBlack) != 0)
                 {
                     output[i] |= Aura.Banshee;
                 }
@@ -1648,6 +1860,10 @@ public class Board
                 if ((bitIndex & globalData.bitboard_waterBlack) != 0)
                 {
                     output[i] |= Aura.Water;
+                }
+                if ((bitIndex & globalData.bitboard_immobilizerBlack) != 0)
+                {
+                    output[i] |= Aura.Immobilizer;
                 }
                 if ((bitIndex & MainManager.SmearBitboard(globalData.bitboard_immuneRelayerBlack)) != 0)
                 {
@@ -1703,6 +1919,10 @@ public class Board
                 if ((bitIndex & globalData.bitboard_waterWhite) != 0)
                 {
                     output[i] |= Aura.Water;
+                }
+                if ((bitIndex & globalData.bitboard_immobilizerWhite) != 0)
+                {
+                    output[i] |= Aura.Immobilizer;
                 }
                 if ((bitIndex & MainManager.SmearBitboard(globalData.bitboard_immuneRelayerWhite)) != 0)
                 {
@@ -11239,7 +11459,7 @@ public class Board
             case EnemyModifier.Jester:
                 return "Jester: Spawn 3 Jesters.";
             case EnemyModifier.Knave:
-                return "Knave: Enemy pieces can move between the top and bottom of the board (wwithout capturing).";
+                return "Knave: Enemy pieces can move between the top and bottom of the board (without capturing).";
             case EnemyModifier.Lustful:
                 return "Lustful: Pieces on the same rank, file or diagonals as the enemy King can be moved by the enemy";
             case EnemyModifier.Mesmerizing:

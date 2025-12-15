@@ -100,7 +100,7 @@ public class OverworldScript : MonoBehaviour
                 case MapNodeScript.MapNodeType.BossBattle:
                 case MapNodeScript.MapNodeType.FinalBossBattle:
                     setupBoard.gameObject.SetActive(false);
-                    mapNodeSubobject = BattleBoardScript.CreateBoard(ms.army, MainManager.Instance.playerData.GetPlayerModifier(), ms.em).gameObject;
+                    mapNodeSubobject = BattleBoardScript.CreateBoard(ms.army, MainManager.Instance.playerData.GetPlayerModifier(), ms.em, ms.pieceClass).gameObject;
                     mapNodeSubobject.GetComponent<BattleBoardScript>().SetTheme(realmMap.pieceClass);
                     break;
                 case MapNodeScript.MapNodeType.Shop:
@@ -223,6 +223,10 @@ public class OverworldScript : MonoBehaviour
 
         while (time < animationDuration)
         {
+            if (realmMap == null)
+            {
+                yield break;
+            }
             realmMap.transform.localPosition = UnityEngine.Vector3.up * 10 * (1 - (MainManager.EasingQuadratic(time / animationDuration, 1)));
             yield return null;
 
@@ -249,6 +253,10 @@ public class OverworldScript : MonoBehaviour
 
         while (time < animationDuration)
         {
+            if (realmMap == null)
+            {
+                yield break;
+            }
             realmMap.transform.localPosition = UnityEngine.Vector3.up * 10 * (MainManager.EasingQuadratic(time / animationDuration, 1));
             yield return null;
 
@@ -275,6 +283,10 @@ public class OverworldScript : MonoBehaviour
 
         while (time < animationDuration)
         {
+            if (worldMap == null)
+            {
+                yield break;
+            }
             worldMap.transform.localPosition = UnityEngine.Vector3.up * 10 * (1 - (MainManager.EasingQuadratic(time / animationDuration, 1)));
             yield return null;
 
@@ -301,6 +313,10 @@ public class OverworldScript : MonoBehaviour
 
         while (time < animationDuration)
         {
+            if (worldMap == null)
+            {
+                yield break;
+            }
             worldMap.transform.localPosition = UnityEngine.Vector3.up * 10 * (MainManager.EasingQuadratic(time / animationDuration, 1));
             yield return null;
 

@@ -55,7 +55,7 @@ Tardigrade,2.5,mfFcfWmifB2=,,InvincibleNonPawns|OnlyCapturePawns|ShiftImmune,FAL
 BigBomb,9.5,R2B2,,ExplodeCapture|ShiftImmune,FALSE,,Explosive,2
 Bomb,5,WF,,ExplodeCapture|ShiftImmune,FALSE,,Explosive,2
 XBomb,4,B2,,ExplodeCaptureX,FALSE,,Explosive,2
-PiercingCharge,2.5,R2,,WrathCapture|DestroyOnCapture,FALSE,,Explosive,2
+PiercingCharge,2.5,R2,,WrathCapturer|DestroyOnCapture,FALSE,,Explosive,2
 MiniBomb,2,fWihW,,DestroyCapturer|DestroyOnCapture,FALSE,BigBomb,Explosive,2
 RelayKnight,4.5,"(1,2)",,Relay,FALSE,,Relay,1
 RelayBishop,4.5,B,,Relay,FALSE,,Relay,1
@@ -94,7 +94,7 @@ Repulser,6,"Ff(0,2)",,,FALSE,,Enchanter,3
 Immobilizer,7,mWmF,,EnchantImmune|Unique,FALSE,,Enchanter,3
 Entrancer,4,B2,,,TRUE,,Enchanter,3
 Charmer,2,mfF,,,TRUE,,Enchanter,3
-Wrath,8,FR2,,WrathCapture,TRUE,,DeadlySins,3
+Wrath,8,FR2,,WrathCapturer,TRUE,,DeadlySins,3
 Greed,5.5,WB2,,WeakConvertCapture,FALSE,,DeadlySins,2
 Gluttony,4.5,WF,,,TRUE,,DeadlySins,2
 Sloth,4.5,mW,,ShiftImmune,TRUE,,DeadlySins,3
@@ -128,8 +128,8 @@ ArcanaTemperance,8,mB2rR2,,Cylindrical,FALSE,,TarotMajor,3
 ArcanaDevil,6,WF,,ConvertCapture,FALSE,,TarotMajor,3
 ArcanaTower,4,WffG,,RangeDecrease_FurtherRows,FALSE,,TarotMajor,3
 ArcanaStar,3.5,fhWbF,,RangeIncrease_FurtherRows,FALSE,,TarotMajor,3
-ArcanaMoon,10,"(1,2)bh(0,2)",,Unique|ShiftImmune|StatusImmune|NoTerrain|EnchantImmune|NotCarriable|MorphImmune,FALSE,,TarotMajor,5
-MoonIllusion,10,"(1,2)bh(0,2)",,NotCarriable|EnchantImmune|MorphImmune,FALSE,,TarotMajor,5
+ArcanaMoon,10,"(1,2)bh(0,2)",,Unique|ShiftImmune|StatusImmune|NoTerrain|EnchantImmune|NotCarriable|MorphImmune,TRUE,,TarotMajor,5
+MoonIllusion,10,"(1,2)bh(0,2)",,NotCarriable|EnchantImmune|MorphImmune,TRUE,,TarotMajor,5
 ArcanaSun,11,R2B2,,Relay,FALSE,,TarotMajor,2
 ArcanaJudgement,5.5,"W(2,2)",,RangeIncrease_MissingPieces,FALSE,,TarotMajor,2
 ArcanaWorld,11,"(1,2)(0,2)(2,2)",,Relay,FALSE,,TarotMajor,2
@@ -162,7 +162,7 @@ Ganymede,8.5,WP,,,TRUE,,Planets,4
 Callisto,8.5,WPoP,,PlantMove,FALSE,,Planets,4
 Aries,8,fhR2fB2bWbF,,Push,TRUE,,Zodiac,2
 Taurus,6.5,"(1,2)W",,,TRUE,,Zodiac,3
-Gemini,9,"vGhRnb(2,2)nbh(1,2)",,Splitter,TRUE,,Zodiac,2.5
+Gemini,9,"vGhRnb(2,2)nbh(1,2)",,Splitter,FALSE,,Zodiac,2.5
 GeminiTwin,4,hR2vG2,,,FALSE,,Zodiac,2.5
 Cancer,4.5,"vf(1,2)hb(1,2)",,Cylindrical|InvincibleClose|ShiftImmune,FALSE,,Zodiac,3
 Leo,9.5,"FvR3fB3b(1,2)cf(1,2)",,,FALSE,,Zodiac,1

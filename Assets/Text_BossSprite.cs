@@ -52,6 +52,11 @@ public class Text_BossSprite : Text_SpecialSprite
 
         Enum.TryParse(boss, true, out bossType);
 
+        if (MainManager.PopCount((ulong)bossType) > 1)
+        {
+            return null;
+        }
+
         //random failsafe thing I guess
         if ((int)bossType < 1)
         {

@@ -125,6 +125,12 @@ internal static class MoveGenerator
 
         //Generate the area bitboards for other piece types
         ulong pieceBitboard = (b.globalData.bitboard_piecesWhite | b.globalData.bitboard_piecesBlack) & b.globalData.bitboard_aura;
+
+        if (slothful)
+        {
+            pieceBitboard |= b.globalData.bitboard_king;
+        }
+
         while (pieceBitboard != 0)
         {
             int index = MainManager.PopBitboardLSB1(pieceBitboard, out pieceBitboard);

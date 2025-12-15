@@ -69,14 +69,14 @@ public class BattleBoardScript : BoardScript
     public bool rightClick;
     public ArrowScript arrow;
 
-    public static BattleBoardScript CreateBoard(Piece.PieceType[] army, Board.PlayerModifier pm, Board.EnemyModifier em)
+    public static BattleBoardScript CreateBoard(Piece.PieceType[] army, Board.PlayerModifier pm, Board.EnemyModifier em, Piece.PieceClass pieceClass)
     {
         GameObject go = Instantiate(Resources.Load<GameObject>("Board/BattleBoardTemplate"));
         BattleBoardScript bbs = go.GetComponent<BattleBoardScript>();
 
         bbs.MakeBoard();
         bbs.InitializeAI();
-        bbs.ResetBoard(MainManager.Instance.playerData.army, army, pm, em);
+        bbs.ResetBoard(MainManager.Instance.playerData.army, army, pm, em, pieceClass);
         bbs.StartAnimatingStartAnimation();
         bbs.animationSpeed = MainManager.Instance.playerData.animationSpeed;
         return bbs;
@@ -192,6 +192,49 @@ public class BattleBoardScript : BoardScript
         ResetSelected();
         board = new Board();
         board.Setup(warmy, barmy, pm, em);
+        for (int i = 0; i < squares.Count; i++)
+        {
+            squares[i].czhWhite = false;
+            squares[i].czhBlack = false;
+            squares[i].Setup(i & 7, i >> 3, board.GetSquareAtCoordinate(i & 7, i >> 3));
+        }
+        RegenerateMoveList();
+        FixBoardBasedOnPosition();
+        historyList = new List<Board>();
+        historyList.Add(new Board(board));
+        historyIndex = 0;
+        awaitingMove = false;
+        gameOver = false;
+        drawError = false;
+
+        switch (difficulty)
+        {
+            case -1:
+            case 0:
+            case 1:
+            case 2:
+                moveThinkTime = 4;
+                break;
+            case 3:
+                moveThinkTime = 8;
+                break;
+        }
+        chessAI.InitAI(difficulty);
+    }
+    public void ResetBoard(Piece.PieceType[] warmy, Piece.PieceType[] barmy, Board.PlayerModifier pm, Board.EnemyModifier em, Piece.PieceClass pieceClass)
+    {
+        if (pieceClass == PieceClass.None)
+        {
+            ResetBoard(warmy, barmy, pm, em);
+            return;
+        }
+
+        Debug.Log("Make board");
+        DestroyLastMovedTrail();
+        whiteIsAI = false;  //so you can make your own move
+        ResetSelected();
+        board = new Board();
+        board.Setup(warmy, barmy, pm, em, pieceClass);
         for (int i = 0; i < squares.Count; i++)
         {
             squares[i].czhWhite = false;
@@ -1795,6 +1838,25 @@ public class BattleBoardScript : BoardScript
                         break;
                 }
 
+                if (Piece.GetPieceType(board.pieces[i]) == PieceType.King && Piece.GetPieceAlignment(board.pieces[i]) == PieceAlignment.Black)
+                {
+                    if ((board.globalData.enemyModifier & Board.EnemyModifier.Fusion) != 0)
+                    {
+                        switch (Piece.GetPieceAlignment(ps.piece))
+                        {
+                            case PieceAlignment.White:
+                                ps.relayDefenders |= mbtWhite.Get(i) & whiteBitboard;
+                                break;
+                            case PieceAlignment.Black:
+                                ps.relayDefenders |= mbtBlack.Get(i) & blackBitboard;
+                                break;
+                            case PieceAlignment.Neutral:
+                            case PieceAlignment.Crystal:
+                                break;
+                        }
+                    }
+                }
+
                 if (Piece.GetPieceType(board.pieces[i]) == PieceType.Envy)
                 {
                     //enemy pieces
@@ -2370,6 +2432,14 @@ public class BattleBoardScript : BoardScript
 
     public void StartAnimtingEndAnimation()
     {
+        for (int i = 0; i < pieces.Count; i++)
+        {
+            if (pieces[i] != null)
+            {
+                pieces[i].ResetRelay();
+            }
+        }
+
         if (animationSpeed < 10000)
         {
             for (int i = 0; i < 48; i++)
@@ -2750,7 +2820,7 @@ public class BattleBoardScript : BoardScript
 
     public override void Update()
     {
-        (hoverX, hoverY) = GetCoordinatesFromPosition(MainManager.XYProjectPreserve(Camera.main.ScreenToWorldPoint(Input.mousePosition)));
+        (realHoverX, realHoverY) = GetCoordinatesFromPosition(MainManager.XYProjectPreserve(Camera.main.ScreenToWorldPoint(Input.mousePosition)));
         backgroundA.color = backgroundColorWhite;
         backgroundB.color = backgroundColorBlack;
 
@@ -2761,13 +2831,13 @@ public class BattleBoardScript : BoardScript
             if (Input.GetMouseButtonDown(1))
             {
                 //click the thing
-                if (hoverX <= 7 && hoverX >= 0 && hoverY <= 7 && hoverY >= 0)
+                if (realHoverX <= 7 && realHoverX >= 0 && realHoverY <= 7 && realHoverY >= 0)
                 {
                     //legal square, make an arrow
                     GameObject arrowObject = Instantiate(arrowTemplate, transform);
                     arrow = arrowObject.GetComponent<ArrowScript>();
-                    arrow.Set(hoverX, hoverY, hoverX, hoverY);
-                    squares[(hoverX + (hoverY << 3))].arrows.Add(arrow);
+                    arrow.Set(realHoverX, realHoverY, realHoverX, realHoverY);
+                    squares[(realHoverX + (realHoverY << 3))].arrows.Add(arrow);
                 }
             }
             rightClick = Input.GetMouseButton(1);
@@ -2780,8 +2850,8 @@ public class BattleBoardScript : BoardScript
         {
             if (rightClick)
             {
-                int tx = hoverX;
-                int ty = hoverY;
+                int tx = realHoverX;
+                int ty = realHoverY;
                 if (tx < 0)
                 {
                     tx = 0;
@@ -2833,13 +2903,13 @@ public class BattleBoardScript : BoardScript
 
         if (awaitingMove)
         {
-            thinkingText.SetText("Depth " + chessAI.currentDepth + ": (" + chessAI.TranslateEval(chessAI.bestEvaluation) + ") " + Piece.GetPieceType(board.pieces[Move.GetFromX(chessAI.bestMove) + (Move.GetFromY(chessAI.bestMove) << 3)]) + " " + Move.ConvertToStringMinimal(chessAI.bestMove), true, true);
+            thinkingText.SetText("<size,50%>Depth " + chessAI.currentDepth + ": (" + chessAI.TranslateEval(chessAI.bestEvaluation) + ") " + Piece.GetPieceType(board.pieces[Move.GetFromX(chessAI.bestMove) + (Move.GetFromY(chessAI.bestMove) << 3)]) + " " + Move.ConvertToStringMinimal(chessAI.bestMove) + "</size>", true, true);
         }
         else
         {
             if (onlyConsumableMoves)
             {
-                thinkingText.SetText("<size,200%><color,#c00000>Only consumable moves are possible.</color></size>", true, true);
+                thinkingText.SetText("<color,#c00000>Only consumable moves are possible.</color>", true, true);
             }
             else
             {
@@ -2849,7 +2919,7 @@ public class BattleBoardScript : BoardScript
                 }
                 else
                 {
-                    thinkingText.SetText("<size,200%><boss," + board.globalData.enemyModifier.ToString() + "> " + board.globalData.enemyModifier.ToString() + "</size>", true, true);
+                    thinkingText.SetText("<boss," + board.globalData.enemyModifier.ToString() + "> " + board.globalData.enemyModifier.ToString() + "<line><size,50%>" + Board.GetEnemyModifierDescription(board.globalData.enemyModifier) + "</size>", true, true);
                 }
             }
         }

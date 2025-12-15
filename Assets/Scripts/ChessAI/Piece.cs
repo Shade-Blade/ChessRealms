@@ -1737,25 +1737,25 @@ public static class Piece
         switch (pm)
         {
             case PieceModifier.Vengeful:
-                return new Color(1, 0, 0, 1);
+                return new Color(1, 0.5f, 0.5f, 1);
             case PieceModifier.Phoenix:
-                return new Color(1, 0.5f, 0, 1);
+                return new Color(1, 0.75f, 0.5f, 1);
             case PieceModifier.Radiant:
-                return new Color(1, 1, 0, 1);
+                return new Color(1, 1, 0.5f, 1);
             case PieceModifier.Winged:
-                return new Color(0, 1, 0, 1);
+                return new Color(0.5f, 1, 0.5f, 1);
             case PieceModifier.Spectral:
-                return new Color(0, 1, 1, 1);
+                return new Color(0.5f, 1, 1, 1);
             case PieceModifier.Immune:
-                return new Color(0, 0, 1, 1);
+                return new Color(0.5f, 0.5f, 1, 1);
             case PieceModifier.Warped:
-                return new Color(0.5f, 0, 1, 1);
+                return new Color(0.75f, 0.5f, 1, 1);
             case PieceModifier.Shielded:
                 return new Color(1, 1, 1, 1);
             case PieceModifier.HalfShielded:
-                return new Color(0.5f, 0.5f, 0.5f, 1);
+                return new Color(0.75f, 0.75f, 0.75f, 1);
             case PieceModifier.NoSpecial:
-                return new Color(0, 0, 0, 1);
+                return new Color(0.5f, 0.5f, 0.5f, 1);
         }
         return new Color(0, 0, 0, 1);
     }
@@ -1933,6 +1933,23 @@ public static class Piece
                 case Move.SpecialType.ConvertPawn:
                     return true;
             }
+        }
+
+        switch (pa)
+        {
+            case PieceAlignment.Neutral:
+            case PieceAlignment.Crystal:
+                switch (specialType)
+                {
+                    case Move.SpecialType.Inflict:
+                    case Move.SpecialType.InflictShift:
+                    case Move.SpecialType.InflictFreeze:
+                    case Move.SpecialType.InflictCaptureOnly:
+                    case Move.SpecialType.InflictFreezeCaptureOnly:
+                    case Move.SpecialType.InflictShiftCaptureOnly:
+                        return true;
+                }
+                break;
         }
 
         bool victimGiant = ((pteV.piecePropertyB & PiecePropertyB.Giant) != 0);

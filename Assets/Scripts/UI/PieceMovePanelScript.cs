@@ -273,6 +273,12 @@ public class PieceMovePanelScript : MonoBehaviour
                 SetAura(MoveGenerator.BITBOARD_PATTERN_ADJACENT, -1, -1);
                 return Aura.Fan;
         }
+
+        if ((pte.pieceProperty & PieceProperty.RelayImmune) != 0)
+        {
+            SetAura(MoveGenerator.BITBOARD_PATTERN_ADJACENT, -1, -1);
+            return Aura.Immune;
+        }
         return Aura.None;
     }
 

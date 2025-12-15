@@ -543,6 +543,8 @@ public sealed class PieceTableEntry
     public float complexityLevel;
     public bool canIndirectCapture; //Pieces with this marked as false can speed up Q search a lot
 
+    public bool neutralIncompatible;
+
     public static PieceTableEntry Parse(Piece.PieceType target, string[] tableRow)
     {
         //Debug.Log(target);
@@ -816,6 +818,85 @@ public sealed class PieceTableEntry
             case PieceType.Bolter:
             case PieceType.LightningElemental:
                 output.canIndirectCapture = true;
+                break;
+        }
+
+        //blanket ban?
+        output.neutralIncompatible |= output.hasAdvancedMagic;
+
+        if ((output.pieceProperty & PieceProperty.ConvertCapture) != 0)
+        {
+            output.neutralIncompatible = true;
+        }
+        if ((output.pieceProperty & PieceProperty.Relay) != 0)
+        {
+            output.neutralIncompatible = true;
+        }
+        if ((output.pieceProperty & PieceProperty.WeakConvertCapture) != 0)
+        {
+            output.neutralIncompatible = true;
+        }
+        if ((output.piecePropertyB & PiecePropertyB.EnemyOnCapture) != 0)
+        {
+            output.neutralIncompatible = true;
+        }
+        if ((output.piecePropertyB & PiecePropertyB.AnyMomentum) != 0)
+        {
+            output.neutralIncompatible = true;
+        }
+        if ((output.piecePropertyB & PiecePropertyB.Amoeba) != 0)
+        {
+            output.neutralIncompatible = true;
+        }
+        if ((output.piecePropertyB & PiecePropertyB.PieceCarry) != 0)
+        {
+            output.neutralIncompatible = true;
+        }
+        if ((output.piecePropertyB & PiecePropertyB.TrueShiftImmune) != 0)
+        {
+            output.neutralIncompatible = true;
+        }
+        switch (output.type)
+        {
+            case PieceType.RoyalDouble:
+            case PieceType.RoyalCastle:
+            case PieceType.RoyalGuard:
+            case PieceType.RoyalMaid:
+            case PieceType.RoyalRecruit:
+            case PieceType.Pride:
+            case PieceType.Patience:
+            case PieceType.ArcanaJustice:
+            case PieceType.ArcanaLovers:
+            case PieceType.ArcanaTower:
+            case PieceType.ArcanaStar:
+            case PieceType.ArcanaJudgement:
+            case PieceType.SummerPawn:
+            case PieceType.SummerQueen:
+            case PieceType.SummerRook:
+            case PieceType.WinterBishop:
+            case PieceType.WinterPawn:
+            case PieceType.WinterQueen:
+            case PieceType.SpringKnight:
+            case PieceType.SpringPawn:
+            case PieceType.FallPawn:
+            case PieceType.FallKnight:
+            case PieceType.DayBishop:
+            case PieceType.DayPawn:
+            case PieceType.DayQueen:
+            case PieceType.NightKnight:
+            case PieceType.NightPawn:
+            case PieceType.NightQueen:
+                output.neutralIncompatible = true;
+                break;
+        }
+        //whitelist a few things anyways
+        switch (output.type)
+        {
+            case PieceType.Mercenary:
+            case PieceType.EdgeRook:
+            case PieceType.CenterQueen:
+            case PieceType.CornerlessBishop:
+                output.neutralIncompatible = false;
                 break;
         }
 
@@ -1349,6 +1430,11 @@ public sealed class PieceClassEntry
     public Piece.PieceType[] normalPieces;
     public Piece.PieceType[] extraPieces;
 
+    public Square.SquareType[] terrainTypes;
+    public int rockCount;
+    public int neutralCount;
+    public int crystalCount;
+
     public enum Climate
     {
         Temperate,
@@ -1477,8 +1563,41 @@ public sealed class PieceClassEntry
 
         if (tableRow.Length > 11)
         {
+            string[] terrains = tableRow[11].Split("|");
+
+            List<Square.SquareType> terrainList = new List<Square.SquareType>();
+            for (int j = 0; j < terrains.Length; j++)
+            {
+                Square.SquareType st = Square.SquareType.Normal;
+                Enum.TryParse(terrains[j], out st);
+                if (st != Square.SquareType.Normal)
+                {
+                    terrainList.Add(st);
+                }
+                else if (terrains[j].Length > 0)
+                {
+                    if (terrains[j].Equals("Rock"))
+                    {
+                        output.rockCount++;
+                    } else if (terrains[j].Equals("Neutral"))
+                    {
+                        output.neutralCount++;
+                    } else if (terrains[j].Equals("Crystal"))
+                    {
+                        output.crystalCount++;
+                    }
+                    else {
+                        Debug.LogWarning("Could not parse " + terrains[j] + " in parsing " + i);
+                    }
+                }
+            }
+            output.terrainTypes = terrainList.ToArray();
+        }
+
+        if (tableRow.Length > 12)
+        {
             List<Piece.PieceType> extraPiecesList = new List<PieceType>();
-            string[] extraPieces = tableRow[11].Split("|");
+            string[] extraPieces = tableRow[12].Split("|");
             for (int j = 0; j < extraPieces.Length; j++)
             {
                 Piece.PieceType pt = PieceType.Null;

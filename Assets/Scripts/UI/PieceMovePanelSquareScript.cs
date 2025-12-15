@@ -107,6 +107,9 @@ public class PieceMovePanelSquareScript : MonoBehaviour
             }
         }
 
+        imageA.rectTransform.localScale = Vector3.one;
+        imageB.rectTransform.localScale = Vector3.one;
+        imageC.rectTransform.localScale = Vector3.one;
         if (spi == 0)
         {
             switch (types.Count)
@@ -166,6 +169,7 @@ public class PieceMovePanelSquareScript : MonoBehaviour
                     }
                     else
                     {
+                        imageA.color = defaultColor;
                         imageB.fillAmount = 1;
                         imageC.color = PieceMovePanelScript.GetColorFromSpecialType(types[1]);
                         imageC.rectTransform.localScale = Vector3.one * 0.5f;

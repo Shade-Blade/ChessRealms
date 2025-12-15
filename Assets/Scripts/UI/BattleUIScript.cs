@@ -163,7 +163,7 @@ public class BattleUIScript : MonoBehaviour
             Piece.PieceType[] army = ArmyGenerator.GenerateArmy(tryValue, typeValue, 0.5f, 0.5f, classValue, em);
 
             MainManager.Instance.playerData.GenerateSeed();
-            bbs.ResetBoard(MainManager.Instance.playerData.army, army, pm, em);
+            bbs.ResetBoard(MainManager.Instance.playerData.army, army, pm, em, classValue);
         }
     }
 

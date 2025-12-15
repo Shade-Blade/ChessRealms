@@ -18,6 +18,8 @@ public class BoardScript : MonoBehaviour
     public List<SquareScript> squares;
     public List<PieceScript> pieces;
 
+    public int realHoverX;
+    public int realHoverY;
     public int hoverX;
     public int hoverY;
 
