@@ -1,4 +1,4 @@
-Shader "Custom/SquareEffectShader" {
+Shader "Custom/SquareEffect" {
 	Properties{
 		[PerRendererData]_MainTex("Sprite Texture", 2D) = "white" {}
 		_Cutoff("Shadow alpha cutoff", Range(0,1)) = 0.5
@@ -11,7 +11,7 @@ Shader "Custom/SquareEffectShader" {
 	SubShader {
 		Tags
 		{
-			"Queue" = "Transparent-100"
+			"Queue" = "Transparent"
 			"RenderType" = "TransparentCutout"
 		}
 		LOD 200

@@ -7,6 +7,7 @@ public class ShopItemScript : MonoBehaviour
     public int cost;
     public IShopItem shopItem;
     public TMPro.TMP_Text text;
+    public bool canInteract;
 
     public void Start()
     {
@@ -14,6 +15,7 @@ public class ShopItemScript : MonoBehaviour
         {
             shopItem = GetComponentInChildren<IShopItem>();
             shopItem.SetShopItemScript(this);
+            ResetHomePosition();
         }
 
         if (shopItem == null)
@@ -30,10 +32,18 @@ public class ShopItemScript : MonoBehaviour
     {
         cost = shopItem.GetCost();
         text.text = "$" + cost;
-        if (MainManager.Instance.playerData.coins >= cost)
+        if (canInteract)
         {
-            shopItem.EnableInteraction();
-        } else
+            if (MainManager.Instance.playerData.coins >= cost)
+            {
+                shopItem.EnableInteraction();
+            }
+            else
+            {
+                shopItem.DisableInteraction();
+            }
+        }
+        else
         {
             shopItem.DisableInteraction();
         }
@@ -43,6 +53,11 @@ public class ShopItemScript : MonoBehaviour
     {
         MainManager.Instance.playerData.coins -= cost;
         Destroy(gameObject);
+    }
+
+    public void ResetHomePosition()
+    {
+        shopItem.ResetHomePosition(transform.position);
     }
 }
 
@@ -54,4 +69,6 @@ public interface IShopItem
     public int GetCost();
 
     public void SetShopItemScript(ShopItemScript sis);
+
+    public void ResetHomePosition(Vector3 homePosition);
 }

@@ -20,6 +20,7 @@ public class MapNodeScript : MonoBehaviour
     public MapNodeType nodeType;
 
     public SpriteRenderer backSprite;
+    public SpriteRenderer borderSprite;
     public float truePieceValueTotal;
     public float pieceValueTotal;
     public int pieceTypes;
@@ -144,6 +145,7 @@ public class MapNodeScript : MonoBehaviour
         if (done)
         {
             backSprite.color = Color.cyan;
+            borderSprite.color = new Color(1,1,1, 1);
 
             for (int i = 0; i < parentLines.Count; i++)
             {
@@ -178,6 +180,7 @@ public class MapNodeScript : MonoBehaviour
         } else if (active)
         {
             backSprite.color = Color.green;
+            borderSprite.color = Color.white;
             if (nodeType == MapNodeType.WorldNode)
             {
                 backSprite.color = GlobalPieceManager.GetPieceClassEntry(pieceClass).backgroundColorLight;
@@ -192,6 +195,7 @@ public class MapNodeScript : MonoBehaviour
         else
         {
             backSprite.color = new Color(0, 0.5f, 0, 1f);
+            borderSprite.color = new Color(0.5f, 0.5f, 0.5f, 1);
             if (nodeType == MapNodeType.WorldNode)
             {
                 backSprite.color = GlobalPieceManager.GetPieceClassEntry(pieceClass).squareColorDark;
@@ -253,6 +257,12 @@ public class MapNodeScript : MonoBehaviour
 
     public void Update()
     {
+        //make the fade in work properly :P
+        for (int i = 0; i < childrenLines.Count; i++)
+        {
+            childrenLines[i].SetPositions(new Vector3[] { transform.position + Vector3.forward * 0.2f, children[i].transform.position + Vector3.forward * 0.2f });
+        }
+
         if (isHover)
         {
             switch (nodeType) {
@@ -261,10 +271,10 @@ public class MapNodeScript : MonoBehaviour
                     break;
                 case MapNodeType.BossBattle:
                 case MapNodeType.FinalBossBattle:
-                    HoverTextMasterScript.Instance.MakeHoverPopup(army, "Army Value: " + pieceValueTotal + ", Boss: " + em.ToString());
+                    HoverTextMasterScript.Instance.MakeHoverPopup(army, "Army Value: " + pieceValueTotal + "\n<boss," + em.ToString() + "> Boss: " + em.ToString() + "\n" + Board.GetEnemyModifierDescription(em));
                     break;
                 case MapNodeType.WorldNode:
-                    HoverTextMasterScript.Instance.SetHoverText(GlobalPieceManager.GetPieceClassEntry(pieceClass).name + " Realm, Base Power: " + truePieceValueTotal);
+                    HoverTextMasterScript.Instance.SetHoverText(GlobalPieceManager.GetPieceClassEntry(pieceClass).name + " Realm\nBase Power: " + truePieceValueTotal);
                     break;
                 default:
                     HoverTextMasterScript.Instance.SetHoverText(nodeType.ToString());

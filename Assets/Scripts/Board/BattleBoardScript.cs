@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
+using Unity.VisualScripting.Antlr3.Runtime.Collections;
 using UnityEngine;
 using UnityEngine.UIElements;
 using static Piece;
@@ -48,7 +49,7 @@ public class BattleBoardScript : BoardScript
     public bool drawError;
     public Piece.PieceAlignment winnerPA;
 
-    public TMPro.TMP_Text thinkingText;
+    public TextDisplayer thinkingText;
     public TMPro.TMP_Text turnText;
     //public TMPro.TMP_Text scoreText;
     //public TMPro.TMP_Text pieceInfoText;
@@ -76,6 +77,8 @@ public class BattleBoardScript : BoardScript
         bbs.MakeBoard();
         bbs.InitializeAI();
         bbs.ResetBoard(MainManager.Instance.playerData.army, army, pm, em);
+        bbs.StartAnimatingStartAnimation();
+        bbs.animationSpeed = MainManager.Instance.playerData.animationSpeed;
         return bbs;
     }
 
@@ -1508,7 +1511,6 @@ public class BattleBoardScript : BoardScript
             if (consumableLegal)
             {
                 onlyConsumableMoves = true;
-                thinkingText.text = "<color,#800000>Only legal moves are consumable moves.</color>";
             } else
             {
                 if (check && stalemate)
@@ -1920,6 +1922,7 @@ public class BattleBoardScript : BoardScript
     {
         Board.VictoryType vt = board.GetVictoryType();
         GameObject go = Instantiate(battleLosePanelTemplate, MainManager.Instance.canvas.transform);
+        go.GetComponent<BattleLosePanelScript>().bs = this;
         go.GetComponent<BattleLosePanelScript>().Setup(vt);
     }
 
@@ -2073,8 +2076,8 @@ public class BattleBoardScript : BoardScript
 
         while (time < animationDuration)
         {
-            time += Time.deltaTime;
             targetPiece.transform.position = Vector3.Lerp(startPos, targetPos, MainManager.EasingQuadratic(time / animationDuration, 1));
+            time += Time.deltaTime;
             yield return null;
         }
         targetPiece.transform.position = targetPos;
@@ -2111,8 +2114,8 @@ public class BattleBoardScript : BoardScript
 
         while (time < animationDuration)
         {
-            time += Time.deltaTime;
             mps.transform.position = Vector3.Lerp(startPos, targetPos, MainManager.EasingQuadratic(time / animationDuration, 1));
+            time += Time.deltaTime;
             yield return null;
         }
         mps.transform.position = targetPos;
@@ -2136,8 +2139,8 @@ public class BattleBoardScript : BoardScript
 
         while (time < animationDuration)
         {
-            time += Time.deltaTime;
             mps.transform.position = MoveTrailScript.LerpList(pathList, MainManager.EasingQuadratic(time / animationDuration, 1));
+            time += Time.deltaTime;
             yield return null;
         }
         mps.transform.position = pathList[pathList.Count - 1];
@@ -2234,8 +2237,8 @@ public class BattleBoardScript : BoardScript
 
         while (time < animationDuration)
         {
-            time += Time.deltaTime;
             targetPiece.transform.position = Vector3.Lerp(startPos, targetPos, MainManager.EasingQuadratic(time / animationDuration, 1));
+            time += Time.deltaTime;
             yield return null;
         }
         targetPiece.transform.position = targetPos;
@@ -2265,8 +2268,8 @@ public class BattleBoardScript : BoardScript
 
         while (time < animationDuration)
         {
-            time += Time.deltaTime;
             targetPiece.transform.position = MoveTrailScript.LerpList(pathList, MainManager.EasingQuadratic(time / animationDuration, 1));
+            time += Time.deltaTime;
             yield return null;
         }
         targetPiece.transform.position = pathList[pathList.Count - 1];
@@ -2276,6 +2279,180 @@ public class BattleBoardScript : BoardScript
         //I could remove the position reset (make a second Setup) but ehh
         targetPiece.x = moveTrail[moveTrail.Count - 1].x;
         targetPiece.y = moveTrail[moveTrail.Count - 1].y;
+    }
+
+    public void StartAnimatingStartAnimation()
+    {
+        if (animationSpeed < 10000)
+        {
+            for (int i = 0; i < 48; i++)
+            {
+                int xy = i + 16;
+                int x = xy & 7;
+                int y = xy >> 3;
+
+                if (squares[xy] != null)
+                {
+                    squares[xy].transform.position = GetSpritePositionFromCoordinates(x, y, 0) + Vector3.up * 10;
+                }
+
+                if (pieces[xy] != null)
+                {
+                    pieces[xy].transform.position = GetSpritePositionFromCoordinates(x, y, -0.5f) + Vector3.up * 10;
+                }
+            }
+
+            animating = true;
+            animCoroutine = StartCoroutine(StartAnimation());
+        }
+    }
+
+    //Move the top 6 rows downwards to animate stuff smoothly from the setup board to the battle board
+    public IEnumerator StartAnimation()
+    {
+        yield return new WaitForSeconds(0.2f);
+
+        DestroyLastMovedTrail();
+        float animationDuration = 9f / animationSpeed;
+        if (animationDuration > 1)
+        {
+            animationDuration = 1;
+        }
+        float time = 0;
+
+        while (time < animationDuration)
+        {
+            //piece position
+            //BoardScript.GetSpritePositionFromCoordinates(x, y, -0.5f)
+
+            //square position
+            //GetSpritePositionFromCoordinates(subX, subY, 0);
+
+            for (int i = 0; i < 48; i++)
+            {
+                int xy = i + 16;
+                int x = xy & 7;
+                int y = xy >> 3;
+
+                if (squares[xy] != null)
+                {
+                    squares[xy].transform.position = GetSpritePositionFromCoordinates(x, y, 0) + Vector3.up * 10 * (1 - MainManager.EasingQuadratic(time / animationDuration, 1));
+                }
+
+                if (pieces[xy] != null)
+                {
+                    pieces[xy].transform.position = GetSpritePositionFromCoordinates(x, y, -0.5f) + Vector3.up * 10 * (1 - MainManager.EasingQuadratic(time / animationDuration, 1));
+                }
+            }
+            time += Time.deltaTime;
+            yield return null;
+        }
+
+        for (int i = 0; i < 48; i++)
+        {
+            int xy = i + 16;
+            int x = xy & 7;
+            int y = xy >> 3;
+
+            if (squares[xy] != null)
+            {
+                squares[xy].transform.position = GetSpritePositionFromCoordinates(x, y, 0);
+            }
+
+            if (pieces[xy] != null)
+            {
+                pieces[xy].transform.position = GetSpritePositionFromCoordinates(x, y, -0.5f);
+            }
+        }
+
+        animating = false;
+    }
+
+    public void StartAnimtingEndAnimation()
+    {
+        if (animationSpeed < 10000)
+        {
+            for (int i = 0; i < 48; i++)
+            {
+                int xy = i + 16;
+                int x = xy & 7;
+                int y = xy >> 3;
+
+                if (squares[xy] != null)
+                {
+                    squares[xy].transform.position = GetSpritePositionFromCoordinates(x, y, 0);
+                }
+
+                if (pieces[xy] != null)
+                {
+                    pieces[xy].transform.position = GetSpritePositionFromCoordinates(x, y, -0.5f);
+                }
+            }
+
+            animating = true;
+            animCoroutine = StartCoroutine(EndAnimation());
+        }
+    }
+
+    public IEnumerator EndAnimation()
+    {
+        yield return new WaitForSeconds(0.2f);
+        DestroyLastMovedTrail();
+
+        float animationDuration = 9f / animationSpeed;
+        if (animationDuration > 1)
+        {
+            animationDuration = 1;
+        }
+        float time = 0;
+
+        while (time < animationDuration)
+        {
+            //piece position
+            //BoardScript.GetSpritePositionFromCoordinates(x, y, -0.5f)
+
+            //square position
+            //GetSpritePositionFromCoordinates(subX, subY, 0);
+
+            for (int i = 0; i < 48; i++)
+            {
+                int xy = i + 16;
+                int x = xy & 7;
+                int y = xy >> 3;
+
+                if (squares[xy] != null)
+                {
+                    squares[xy].transform.position = GetSpritePositionFromCoordinates(x, y, 0) + Vector3.up * 10 * (MainManager.EasingQuadratic(time / animationDuration, 1));
+                }
+
+                if (pieces[xy] != null)
+                {
+                    pieces[xy].transform.position = GetSpritePositionFromCoordinates(x, y, -0.5f) + Vector3.up * 10 * (MainManager.EasingQuadratic(time / animationDuration, 1));
+                }
+            }
+
+            time += Time.deltaTime;
+            yield return null;
+        }
+
+        for (int i = 0; i < 48; i++)
+        {
+            int xy = i + 16;
+            int x = xy & 7;
+            int y = xy >> 3;
+
+            if (squares[xy] != null)
+            {
+                squares[xy].transform.position = GetSpritePositionFromCoordinates(x, y, 0) + Vector3.up * 10;
+            }
+
+            if (pieces[xy] != null)
+            {
+                pieces[xy].transform.position = GetSpritePositionFromCoordinates(x, y, -0.5f) + Vector3.up * 10;
+            }
+        }
+
+        animating = false;
     }
 
     public void StartAnimatingBoardUpdate(uint move, bool lastMoveStationary, List<MoveMetadata> moveTrail, List<BoardUpdateMetadata> boardUpdateMetadata)
@@ -2656,23 +2833,23 @@ public class BattleBoardScript : BoardScript
 
         if (awaitingMove)
         {
-            thinkingText.text = "Depth " + chessAI.currentDepth + ": (" + chessAI.TranslateEval(chessAI.bestEvaluation) + ") " + Piece.GetPieceType(board.pieces[Move.GetFromX(chessAI.bestMove) + (Move.GetFromY(chessAI.bestMove) << 3)]) + " " + Move.ConvertToStringMinimal(chessAI.bestMove);
+            thinkingText.SetText("Depth " + chessAI.currentDepth + ": (" + chessAI.TranslateEval(chessAI.bestEvaluation) + ") " + Piece.GetPieceType(board.pieces[Move.GetFromX(chessAI.bestMove) + (Move.GetFromY(chessAI.bestMove) << 3)]) + " " + Move.ConvertToStringMinimal(chessAI.bestMove), true, true);
         }
         else
         {
             if (onlyConsumableMoves)
             {
-                thinkingText.text = "<size=200%><color=#800000>Only consumable moves are possible.</color></size>";
+                thinkingText.SetText("<size,200%><color,#c00000>Only consumable moves are possible.</color></size>", true, true);
             }
             else
             {
                 if (board.globalData.enemyModifier == 0)
                 {
-                    thinkingText.text = "";
+                    thinkingText.SetText("", true, true);
                 }
                 else
                 {
-                    thinkingText.text = "<size=200%>" + board.globalData.enemyModifier.ToString() + "</size>";
+                    thinkingText.SetText("<size,200%><boss," + board.globalData.enemyModifier.ToString() + "> " + board.globalData.enemyModifier.ToString() + "</size>", true, true);
                 }
             }
         }

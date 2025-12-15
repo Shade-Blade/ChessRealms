@@ -27,6 +27,7 @@ public class PlayerData
     public int nodesComplete;
     public List<int> realmRouteChoices;
     public ulong seed;
+    public float animationSpeed;
 
     public int undosLeft;
     public int retriesLeft;
@@ -49,6 +50,7 @@ public class PlayerData
         realmBattlesComplete = 0;
         battlesComplete = 0;
         nodesComplete = 0;
+        animationSpeed = 36;
         realmRouteChoices = new List<int>();
 
         undosLeft = 3;
@@ -129,6 +131,16 @@ public class MainManager : MonoBehaviour
     public SelectableObject currentSelected;
     public bool sameFrameSelected;
 
+    public GameObject text_PieceSprite;
+    public GameObject text_ConsumableSprite;
+    public GameObject text_BossSprite;
+    public GameObject text_BadgeSprite;
+
+    public Sprite[] pieceSprites;
+    public Sprite[] consumableSprites;
+    public Sprite[] bossSprites;
+    public Sprite[] badgeSprites;
+
     public const ulong NO_A_FILE = 0xfefefefefefefefe;
     public const ulong NO_AB_FILE = 0xfcfcfcfcfcfcfcfc;
     public const ulong NO_ABC_FILE = 0xf8f8f8f8f8f8f8f8;
@@ -148,6 +160,8 @@ public class MainManager : MonoBehaviour
 
     public string bitboardTest = "";
     public string lastTextboxMenuResult;
+
+    public bool pieceTextVisible = true;
 
     public enum GameConst
     {
@@ -173,6 +187,8 @@ public class MainManager : MonoBehaviour
     {
         intInstance = this;
         playerData.GenerateSeed();
+        DontDestroyOnLoad(gameObject);
+        LoadAssets();
     }
 
     // Start is called before the first frame update
@@ -252,6 +268,18 @@ public class MainManager : MonoBehaviour
         cai.moveFound = false;
         cai.AlphaBetaAI(null);
         */
+    }
+
+    void LoadAssets()
+    {
+        text_BadgeSprite = Resources.Load<GameObject>("Text/Text_BadgeSprite");
+        text_PieceSprite = Resources.Load<GameObject>("Text/Text_PieceSprite");
+        text_ConsumableSprite = Resources.Load<GameObject>("Text/Text_ConsumableSprite");
+        text_BossSprite = Resources.Load<GameObject>("Text/Text_BossSprite");
+        pieceSprites = Resources.LoadAll<Sprite>("Sprites/Spritesheets/PieceSprites");
+        bossSprites = Resources.LoadAll<Sprite>("Sprites/Spritesheets/BossSprites");
+        consumableSprites = Resources.LoadAll<Sprite>("Sprites/Spritesheets/ConsumableSprites");
+        badgeSprites = Resources.LoadAll<Sprite>("Sprites/Spritesheets/BadgeSprites");
     }
 
     // Update is called once per frame

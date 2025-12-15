@@ -182,6 +182,8 @@ MonoBehaviour:
       bitboard_waterBlack: 0
       bitboard_immuneRelayerWhite: 0
       bitboard_immuneRelayerBlack: 0
+      bitboard_immuneNaturalWhite: 0
+      bitboard_immuneNaturalBlack: 0
       bitboard_immuneWhite: 0
       bitboard_immuneBlack: 0
       bitboard_bansheeWhite: 0
@@ -294,7 +296,7 @@ Transform:
   m_GameObject: {fileID: 2746845620426744201}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -3, z: 0.5}
+  m_LocalPosition: {x: 0, y: -3, z: 1}
   m_LocalScale: {x: 8.5, y: 2.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -378,7 +380,7 @@ Transform:
   m_GameObject: {fileID: 3814071306129388870}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -3, z: 0.40000004}
+  m_LocalPosition: {x: 0, y: -3, z: 0.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

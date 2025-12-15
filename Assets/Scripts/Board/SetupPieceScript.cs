@@ -13,6 +13,11 @@ public class SetupPieceScript : PieceScript, IShopItem
     {
         this.sis = sis;
     }
+    public void ResetHomePosition(Vector3 homePos)
+    {
+        this.homePos = homePos;
+    }
+
 
     public override void Start()
     {
@@ -61,7 +66,8 @@ public class SetupPieceScript : PieceScript, IShopItem
         canDelete = false;
 
         backSprite.color = Piece.GetPieceColor(Piece.GetPieceAlignment(piece));
-        backSprite.color = new Color(1 - backSprite.color.r, backSprite.color.g, backSprite.color.b, 1);
+        //backSprite.color = new Color(1 - backSprite.color.r, backSprite.color.g, backSprite.color.b, 1);
+        selectObject.SetActive(true);
 
         bs.SelectPiece(this);
         isSelected = true;
@@ -117,26 +123,39 @@ public class SetupPieceScript : PieceScript, IShopItem
             //Different offset: The SetupPiece is centered on the x level it's placed on
             //Vector3 offset = (Vector3.up + Vector3.right) * 0.5f;
             Vector3 offset = (Vector3.up) * 0.5f;
-            text.transform.localPosition = offset;
+            text.transform.localPosition = offset + Vector3.back * 0.05f;
             backSprite.transform.localPosition = offset;
             text.transform.localScale = Vector3.one * 2;
-            backSprite.transform.localScale = Vector3.one * 1.6f;
+            backSprite.transform.localScale = Vector3.one * 2f;
             bc.center = offset;
             bc.size = new Vector3(2, 2, 0.1f);
         }
         else
         {
-            text.transform.localPosition = Vector3.zero;
+            text.transform.localPosition = Vector3.back * 0.05f;
             backSprite.transform.localPosition = Vector3.zero;
             text.transform.localScale = Vector3.one;
-            backSprite.transform.localScale = Vector3.one * 0.8f;
+            backSprite.transform.localScale = Vector3.one;
             bc.center = Vector3.zero;
             bc.size = new Vector3(1, 1, 0.1f);
         }
 
+        backSprite.sprite = Text_PieceSprite.GetPieceSprite(Piece.GetPieceType(piece));
+        backSprite.material = Text_PieceSprite.GetMaterial(Piece.GetPieceModifier(piece));
+        MaterialPropertyBlock mpb = Text_PieceSprite.SetupMaterialProperties(Piece.GetPieceStatusEffect(piece), null);
+        mpb.SetTexture("_MainTex", backSprite.sprite.texture);
+        backSprite.SetPropertyBlock(mpb);
 
-        text.text = Piece.GetPieceName(Piece.GetPieceType(piece)); //Piece.GetPieceType(piece).ToString();
+        if (MainManager.Instance.pieceTextVisible)
+        {
+            text.text = Piece.GetPieceName(Piece.GetPieceType(piece)); //Piece.GetPieceType(piece).ToString();
+        }
+        else
+        {
+            text.text = ""; //Piece.GetPieceType(piece).ToString();
+        }
 
+        /*
         if (Piece.GetPieceModifier(piece) != 0)
         {
             text.text = text.text + "\n" + Piece.GetPieceModifier(piece);
@@ -151,6 +170,7 @@ public class SetupPieceScript : PieceScript, IShopItem
         {
             text.text = text.text + "\n(" + Piece.GetPieceSpecialData(piece) + ")";
         }
+        */
 
         Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
         Color color = Piece.GetPieceColor(pa);

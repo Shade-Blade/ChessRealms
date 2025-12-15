@@ -534,230 +534,298 @@ public class TextDisplayer : MonoBehaviour
                     case TagEntry.TextTag.Sprite:
                         offset++;   //Sprites are not characters (so the offset is used to correct some indices)
                         break;
-                    /*
-                    case TagEntry.TextTag.Effect:
-                    case TagEntry.TextTag.EffectSprite:
-                        offset++;
-
-                        Vector3 Eposition;
-                        float Esize;
-                        (Esize, Eposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
-
-                        GameObject Es = Text_EffectSprite.Create(tags[i].args, j + offset, Esize);
-                        SpriteSetup(Es, Eposition, BuildTextEffectSet(j + offset));
-
-                        specialSprites.Add(Es);
-
-                        offset++;
-                        break;
-                    case TagEntry.TextTag.State:
-                    case TagEntry.TextTag.StateSprite:
-                        offset++;
-
-                        Vector3 Sposition;
-                        float Ssize;
-                        (Ssize, Sposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
-
-                        GameObject Ss = Text_StateSprite.Create(tags[i].args, j + offset, Ssize);
-                        SpriteSetup(Ss, Sposition, BuildTextEffectSet(j + offset));
-
-                        specialSprites.Add(Ss);
-
-                        offset++;
-                        break;
-                `   */
-                        //Now unnecessary as these tags should be destroyed by an earlier step
-                    /*
-                    case TagEntry.TextTag.ZeroSpace:    //all of these make a single character appear that isn't in the clean string (note: putting these characters in instead of using the tags won't cause problems)
-                    case TagEntry.TextTag.LArrow:
-                    case TagEntry.TextTag.RArrow:
-                    case TagEntry.TextTag.UArrow:
-                    case TagEntry.TextTag.DArrow:
-                    case TagEntry.TextTag.LRArrow:
-                    case TagEntry.TextTag.UDArrow:
-                    case TagEntry.TextTag.ULArrow:
-                    case TagEntry.TextTag.URArrow:
-                    case TagEntry.TextTag.DRArrow:
-                    case TagEntry.TextTag.DLArrow:
-                    case TagEntry.TextTag.Star:
-                    case TagEntry.TextTag.EmptyStar:
-                    case TagEntry.TextTag.Male:
-                    case TagEntry.TextTag.Female:
-                    case TagEntry.TextTag.Heart:
-                    case TagEntry.TextTag.EmptyHeart:
-                    case TagEntry.TextTag.QuarterNote:
-                    case TagEntry.TextTag.EighthNote:
-                    case TagEntry.TextTag.TwoEighthNotes:
-                    case TagEntry.TextTag.TwoSixteenthNotes:
-                    case TagEntry.TextTag.Flat:
-                    case TagEntry.TextTag.Natural:
-                    case TagEntry.TextTag.Sharp:
-                    case TagEntry.TextTag.Infinity:
-                        offset++;
-                        break;
-                    */
-                    /*
-                    case TagEntry.TextTag.Button:
-                    case TagEntry.TextTag.ButtonSprite:
-                        offset++;
-
-                        Vector3 Bposition;
-                        float Bsize;
-                        (Bsize, Bposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
-
-                        //hacky
-                        GameObject bbs;
-                        if (GetComponent<MeshRenderer>() != null)
+                    case TagEntry.TextTag.Piece:
+                    case TagEntry.TextTag.PieceSprite:
                         {
-                            bbs = Text_ButtonSprite.CreateWorld(tags[i].args, j + offset, Bsize);
-                        } else
-                        {
-                            bbs = Text_ButtonSprite.Create(tags[i].args, j + offset, Bsize);
+                            offset++;
+
+                            Vector3 position;
+                            float size;
+                            (size, position) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+
+                            GameObject s = Text_PieceSprite.Create(tags[i].args, j + offset, size);
+                            SpriteSetup(s, position, BuildTextEffectSet(j + offset));
+
+                            specialSprites.Add(s);
+
+                            offset++;
+                            break;
                         }
-                        SpriteSetup(bbs, Bposition, BuildTextEffectSet(j + offset));
+                    case TagEntry.TextTag.Consumable:
+                    case TagEntry.TextTag.ConsumableSprite:
+                        {
+                            offset++;
 
-                        specialSprites.Add(bbs);
+                            Vector3 position;
+                            float size;
+                            (size, position) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
 
-                        offset++;
-                        break;
-                    case TagEntry.TextTag.Item:
-                    case TagEntry.TextTag.ItemSprite:
-                        offset++;
+                            GameObject s = Text_ConsumableSprite.Create(tags[i].args, j + offset, size);
+                            SpriteSetup(s, position, BuildTextEffectSet(j + offset));
 
-                        Vector3 Iposition;
-                        float Isize;
-                        (Isize, Iposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+                            specialSprites.Add(s);
 
-                        GameObject its = Text_ItemSprite.Create(tags[i].args, j + offset, Isize);
-                        SpriteSetup(its, Iposition, BuildTextEffectSet(j + offset));
-
-                        specialSprites.Add(its);
-
-                        offset++;
-                        break;
-                    case TagEntry.TextTag.KeyItem:
-                    case TagEntry.TextTag.KeyItemSprite:
-                        offset++;
-
-                        Vector3 Kposition;
-                        float Ksize;
-                        (Ksize, Kposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
-
-                        GameObject kits = Text_KeyItemSprite.Create(tags[i].args, j + offset, Ksize);
-                        SpriteSetup(kits, Kposition, BuildTextEffectSet(j + offset));
-
-                        specialSprites.Add(kits);
-
-                        offset++;
-                        break;
+                            offset++;
+                            break;
+                        }
                     case TagEntry.TextTag.Badge:
                     case TagEntry.TextTag.BadgeSprite:
-                        offset++;
-
-                        Vector3 BAposition;
-                        float BAsize;
-                        (BAsize, BAposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
-
-                        GameObject bas = Text_BadgeSprite.Create(tags[i].args, j + offset, BAsize);
-                        SpriteSetup(bas, BAposition, BuildTextEffectSet(j + offset));
-
-                        specialSprites.Add(bas);
-
-                        offset++;
-                        break;
-                    case TagEntry.TextTag.Ribbon:
-                    case TagEntry.TextTag.RibbonSprite:
-                        offset++;
-
-                        Vector3 Rposition;
-                        float Rsize;
-                        (Rsize, Rposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
-
-                        GameObject ris = Text_RibbonSprite.Create(tags[i].args, j + offset, Rsize);
-                        SpriteSetup(ris, Rposition, BuildTextEffectSet(j + offset));
-
-                        specialSprites.Add(ris);
-
-                        offset++;
-                        break;
-                    case TagEntry.TextTag.HP:
-                    case TagEntry.TextTag.EP:
-                    case TagEntry.TextTag.SE:
-                    case TagEntry.TextTag.SP:
-                    case TagEntry.TextTag.Stamina:
-                    case TagEntry.TextTag.Carrot:
-                    case TagEntry.TextTag.Clock:
-                    case TagEntry.TextTag.Coin:
-                    case TagEntry.TextTag.SilverCoin:
-                    case TagEntry.TextTag.GoldCoin:
-                    case TagEntry.TextTag.Shard:
-                    case TagEntry.TextTag.XP:
-                    case TagEntry.TextTag.AstralToken:
-                    case TagEntry.TextTag.Common:
-                    case TagEntry.TextTag.CommonSprite:
-                        //Debug.Log(tags[i].tag + " " + cleanString);
-                        if (tags[i].tag != TagEntry.TextTag.Common && tags[i].tag != TagEntry.TextTag.CommonSprite)
                         {
-                            //construct a new args array
-                            string[] newargs = new string[1 + tags[i].args.Length];
-                            newargs[0] = tags[i].tag.ToString();
-                            for (int c = 0; c < tags[i].args.Length; c++)
+                            offset++;
+
+                            Vector3 position;
+                            float size;
+                            (size, position) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+
+                            GameObject s = Text_BadgeSprite.Create(tags[i].args, j + offset, size);
+                            SpriteSetup(s, position, BuildTextEffectSet(j + offset));
+
+                            specialSprites.Add(s);
+
+                            offset++;
+                            break;
+                        }
+                    case TagEntry.TextTag.Boss:
+                    case TagEntry.TextTag.BossSprite:
+                        {
+                            offset++;
+
+                            Vector3 position;
+                            float size;
+                            (size, position) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+
+                            GameObject s = Text_BossSprite.Create(tags[i].args, j + offset, size);
+                            SpriteSetup(s, position, BuildTextEffectSet(j + offset));
+
+                            specialSprites.Add(s);
+
+                            offset++;
+                            break;
+                        }
+                        /*
+                        case TagEntry.TextTag.Effect:
+                        case TagEntry.TextTag.EffectSprite:
+                            offset++;
+
+                            Vector3 Eposition;
+                            float Esize;
+                            (Esize, Eposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+
+                            GameObject Es = Text_EffectSprite.Create(tags[i].args, j + offset, Esize);
+                            SpriteSetup(Es, Eposition, BuildTextEffectSet(j + offset));
+
+                            specialSprites.Add(Es);
+
+                            offset++;
+                            break;
+                        case TagEntry.TextTag.State:
+                        case TagEntry.TextTag.StateSprite:
+                            offset++;
+
+                            Vector3 Sposition;
+                            float Ssize;
+                            (Ssize, Sposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+
+                            GameObject Ss = Text_StateSprite.Create(tags[i].args, j + offset, Ssize);
+                            SpriteSetup(Ss, Sposition, BuildTextEffectSet(j + offset));
+
+                            specialSprites.Add(Ss);
+
+                            offset++;
+                            break;
+                    `   */
+                        //Now unnecessary as these tags should be destroyed by an earlier step
+                        /*
+                        case TagEntry.TextTag.ZeroSpace:    //all of these make a single character appear that isn't in the clean string (note: putting these characters in instead of using the tags won't cause problems)
+                        case TagEntry.TextTag.LArrow:
+                        case TagEntry.TextTag.RArrow:
+                        case TagEntry.TextTag.UArrow:
+                        case TagEntry.TextTag.DArrow:
+                        case TagEntry.TextTag.LRArrow:
+                        case TagEntry.TextTag.UDArrow:
+                        case TagEntry.TextTag.ULArrow:
+                        case TagEntry.TextTag.URArrow:
+                        case TagEntry.TextTag.DRArrow:
+                        case TagEntry.TextTag.DLArrow:
+                        case TagEntry.TextTag.Star:
+                        case TagEntry.TextTag.EmptyStar:
+                        case TagEntry.TextTag.Male:
+                        case TagEntry.TextTag.Female:
+                        case TagEntry.TextTag.Heart:
+                        case TagEntry.TextTag.EmptyHeart:
+                        case TagEntry.TextTag.QuarterNote:
+                        case TagEntry.TextTag.EighthNote:
+                        case TagEntry.TextTag.TwoEighthNotes:
+                        case TagEntry.TextTag.TwoSixteenthNotes:
+                        case TagEntry.TextTag.Flat:
+                        case TagEntry.TextTag.Natural:
+                        case TagEntry.TextTag.Sharp:
+                        case TagEntry.TextTag.Infinity:
+                            offset++;
+                            break;
+                        */
+                        /*
+                        case TagEntry.TextTag.Button:
+                        case TagEntry.TextTag.ButtonSprite:
+                            offset++;
+
+                            Vector3 Bposition;
+                            float Bsize;
+                            (Bsize, Bposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+
+                            //hacky
+                            GameObject bbs;
+                            if (GetComponent<MeshRenderer>() != null)
                             {
-                                newargs[c + 1] = tags[i].args[c];
+                                bbs = Text_ButtonSprite.CreateWorld(tags[i].args, j + offset, Bsize);
+                            } else
+                            {
+                                bbs = Text_ButtonSprite.Create(tags[i].args, j + offset, Bsize);
                             }
-                            
-                            offset++;
+                            SpriteSetup(bbs, Bposition, BuildTextEffectSet(j + offset));
 
-                            //Debug.Log(tags[i].tag);
-
-                            Vector3 Cposition;
-                            float Csize;
-                            (Csize, Cposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
-
-                            Csize *= 0.75f;
-
-                            GameObject cis = Text_CommonSprite.Create(newargs, j + offset, Csize);
-                            SpriteSetup(cis, Cposition, BuildTextEffectSet(j + offset));
-
-                            specialSprites.Add(cis);
+                            specialSprites.Add(bbs);
 
                             offset++;
-                        }
-                        else
-                        {
+                            break;
+                        case TagEntry.TextTag.Item:
+                        case TagEntry.TextTag.ItemSprite:
                             offset++;
 
-                            Vector3 Cposition;
-                            float Csize;
-                            (Csize, Cposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+                            Vector3 Iposition;
+                            float Isize;
+                            (Isize, Iposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
 
-                            Csize *= 0.75f;
+                            GameObject its = Text_ItemSprite.Create(tags[i].args, j + offset, Isize);
+                            SpriteSetup(its, Iposition, BuildTextEffectSet(j + offset));
 
-                            GameObject cis = Text_CommonSprite.Create(tags[i].args, j + offset, Csize);
-
-                            SpriteSetup(cis, Cposition, BuildTextEffectSet(j + offset));
-
-                            specialSprites.Add(cis);
+                            specialSprites.Add(its);
 
                             offset++;
-                        }
-                        break;
-                    case TagEntry.TextTag.Misc:
-                    case TagEntry.TextTag.MiscSprite:
-                        offset++;
+                            break;
+                        case TagEntry.TextTag.KeyItem:
+                        case TagEntry.TextTag.KeyItemSprite:
+                            offset++;
 
-                        Vector3 Mposition;
-                        float Msize;
-                        (Msize, Mposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+                            Vector3 Kposition;
+                            float Ksize;
+                            (Ksize, Kposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
 
-                        GameObject mis = Text_MiscSprite.Create(tags[i].args, j + offset, Msize);
-                        SpriteSetup(mis, Mposition, BuildTextEffectSet(j + offset));
+                            GameObject kits = Text_KeyItemSprite.Create(tags[i].args, j + offset, Ksize);
+                            SpriteSetup(kits, Kposition, BuildTextEffectSet(j + offset));
 
-                        specialSprites.Add(mis);
+                            specialSprites.Add(kits);
 
-                        offset++;
-                        break;
-                    */
+                            offset++;
+                            break;
+                        case TagEntry.TextTag.Badge:
+                        case TagEntry.TextTag.BadgeSprite:
+                            offset++;
+
+                            Vector3 BAposition;
+                            float BAsize;
+                            (BAsize, BAposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+
+                            GameObject bas = Text_BadgeSprite.Create(tags[i].args, j + offset, BAsize);
+                            SpriteSetup(bas, BAposition, BuildTextEffectSet(j + offset));
+
+                            specialSprites.Add(bas);
+
+                            offset++;
+                            break;
+                        case TagEntry.TextTag.Ribbon:
+                        case TagEntry.TextTag.RibbonSprite:
+                            offset++;
+
+                            Vector3 Rposition;
+                            float Rsize;
+                            (Rsize, Rposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+
+                            GameObject ris = Text_RibbonSprite.Create(tags[i].args, j + offset, Rsize);
+                            SpriteSetup(ris, Rposition, BuildTextEffectSet(j + offset));
+
+                            specialSprites.Add(ris);
+
+                            offset++;
+                            break;
+                        case TagEntry.TextTag.HP:
+                        case TagEntry.TextTag.EP:
+                        case TagEntry.TextTag.SE:
+                        case TagEntry.TextTag.SP:
+                        case TagEntry.TextTag.Stamina:
+                        case TagEntry.TextTag.Carrot:
+                        case TagEntry.TextTag.Clock:
+                        case TagEntry.TextTag.Coin:
+                        case TagEntry.TextTag.SilverCoin:
+                        case TagEntry.TextTag.GoldCoin:
+                        case TagEntry.TextTag.Shard:
+                        case TagEntry.TextTag.XP:
+                        case TagEntry.TextTag.AstralToken:
+                        case TagEntry.TextTag.Common:
+                        case TagEntry.TextTag.CommonSprite:
+                            //Debug.Log(tags[i].tag + " " + cleanString);
+                            if (tags[i].tag != TagEntry.TextTag.Common && tags[i].tag != TagEntry.TextTag.CommonSprite)
+                            {
+                                //construct a new args array
+                                string[] newargs = new string[1 + tags[i].args.Length];
+                                newargs[0] = tags[i].tag.ToString();
+                                for (int c = 0; c < tags[i].args.Length; c++)
+                                {
+                                    newargs[c + 1] = tags[i].args[c];
+                                }
+
+                                offset++;
+
+                                //Debug.Log(tags[i].tag);
+
+                                Vector3 Cposition;
+                                float Csize;
+                                (Csize, Cposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+
+                                Csize *= 0.75f;
+
+                                GameObject cis = Text_CommonSprite.Create(newargs, j + offset, Csize);
+                                SpriteSetup(cis, Cposition, BuildTextEffectSet(j + offset));
+
+                                specialSprites.Add(cis);
+
+                                offset++;
+                            }
+                            else
+                            {
+                                offset++;
+
+                                Vector3 Cposition;
+                                float Csize;
+                                (Csize, Cposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+
+                                Csize *= 0.75f;
+
+                                GameObject cis = Text_CommonSprite.Create(tags[i].args, j + offset, Csize);
+
+                                SpriteSetup(cis, Cposition, BuildTextEffectSet(j + offset));
+
+                                specialSprites.Add(cis);
+
+                                offset++;
+                            }
+                            break;
+                        case TagEntry.TextTag.Misc:
+                        case TagEntry.TextTag.MiscSprite:
+                            offset++;
+
+                            Vector3 Mposition;
+                            float Msize;
+                            (Msize, Mposition) = SpritePosition(textInfo, j + offset, Text_SpecialSprite.MULTIPLIER);
+
+                            GameObject mis = Text_MiscSprite.Create(tags[i].args, j + offset, Msize);
+                            SpriteSetup(mis, Mposition, BuildTextEffectSet(j + offset));
+
+                            specialSprites.Add(mis);
+
+                            offset++;
+                            break;
+                        */
                 }
             }
 

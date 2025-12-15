@@ -365,6 +365,42 @@ public class TMPString
                 }
                 break;
             */
+            case TagEntry.TextTag.Piece:
+            case TagEntry.TextTag.PieceSprite:
+                if (tag.args == null || tag.args.Length == 0)
+                {
+                    break;
+                }
+                output = "<size=1%>I</size><space=" + Text_PieceSprite.GetWidth(tag.args[0]) + "><size=1%>I</size>";
+                //output = "z";
+                break;
+            case TagEntry.TextTag.Consumable:
+            case TagEntry.TextTag.ConsumableSprite:
+                if (tag.args == null || tag.args.Length == 0)
+                {
+                    break;
+                }
+                output = "<size=1%>I</size><space=" + Text_ConsumableSprite.GetWidth(tag.args[0]) + "><size=1%>I</size>";
+                //output = "z";
+                break;
+            case TagEntry.TextTag.Badge:
+            case TagEntry.TextTag.BadgeSprite:
+                if (tag.args == null || tag.args.Length == 0)
+                {
+                    break;
+                }
+                output = "<size=1%>I</size><space=" + Text_BadgeSprite.GetWidth(tag.args[0]) + "><size=1%>I</size>";
+                //output = "z";
+                break;
+            case TagEntry.TextTag.Boss:
+            case TagEntry.TextTag.BossSprite:
+                if (tag.args == null || tag.args.Length == 0)
+                {
+                    break;
+                }
+                output = "<size=1%>I</size><space=" + Text_BossSprite.GetWidth(tag.args[0]) + "><size=1%>I</size>";
+                //output = "z";
+                break;
             /*
             case TagEntry.TextTag.Effect:
             case TagEntry.TextTag.EffectSprite:
@@ -1034,7 +1070,9 @@ public class TagEntry
 
         PieceSprite,
         EffectSprite,
-        ModifierSprite,
+        ConsumableSprite,
+        BadgeSprite,
+        BossSprite,
 
         //Equivalents to above
         /*
@@ -1051,7 +1089,9 @@ public class TagEntry
 
         Piece,
         Effect,
-        Modifier,
+        Consumable,
+        Badge,
+        Boss,
 
         //hacky fix for certain things
         ZeroSpace,  //zero width space

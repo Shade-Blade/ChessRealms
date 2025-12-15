@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.U2D;
 using static Move;
 using static Piece;
 
@@ -42,6 +43,8 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     public List<LineRenderer> relayDefendersList;   //Light part is the end point
     public List<LineRenderer> relayAttackedList;    //Light part is the start point
 
+    public GameObject selectObject;
+
     public virtual void Start()
     {
         trashCan = FindObjectOfType<TrashCanScript>();
@@ -66,7 +69,21 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         string hoverText = "";
 
         //piece name
-        hoverText += Piece.GetPieceName(Piece.GetPieceType(piece)) + "\n";
+        switch (Piece.GetPieceAlignment(piece))
+        {
+            case PieceAlignment.White:
+                hoverText += "<outlinecolor,#f2f2f2>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
+                break;
+            case PieceAlignment.Black:
+                hoverText += "<outlinecolor,#808080>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
+                break;
+            case PieceAlignment.Neutral:
+                hoverText += "<outlinecolor,#f2f266>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
+                break;
+            case PieceAlignment.Crystal:
+                hoverText += "<outlinecolor,#f266f2>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
+                break;
+        }
 
         PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(piece);
         hoverText += "Value: " + ((pte.pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) / 2f);
@@ -350,25 +367,38 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             }
 
             Vector3 offset = (Vector3.up + Vector3.right) * 0.5f;
-            text.transform.localPosition = offset;
+            text.transform.localPosition = offset + Vector3.back * 0.05f;
             backSprite.transform.localPosition = offset;
             text.transform.localScale = Vector3.one * 2;
-            backSprite.transform.localScale = Vector3.one * 1.6f;
+            backSprite.transform.localScale = Vector3.one * 2f;
             bc.center = offset;
             bc.size = new Vector3(2,2,0.1f);
         } else
         {
-            text.transform.localPosition = Vector3.zero;
+            text.transform.localPosition = Vector3.back * 0.05f;
             backSprite.transform.localPosition = Vector3.zero;
             text.transform.localScale = Vector3.one;
-            backSprite.transform.localScale = Vector3.one * 0.8f;
+            backSprite.transform.localScale = Vector3.one;
             bc.center = Vector3.zero;
             bc.size = new Vector3(1, 1, 0.1f);
         }
 
+        backSprite.sprite = Text_PieceSprite.GetPieceSprite(Piece.GetPieceType(piece));
+        backSprite.material = Text_PieceSprite.GetMaterial(Piece.GetPieceModifier(piece));
+        MaterialPropertyBlock mpb = Text_PieceSprite.SetupMaterialProperties(Piece.GetPieceStatusEffect(piece), null);
+        mpb.SetTexture("_MainTex", backSprite.sprite.texture);
+        backSprite.SetPropertyBlock(mpb);
 
-        text.text = Piece.GetPieceName(Piece.GetPieceType(piece)); //Piece.GetPieceType(piece).ToString();
+        if (MainManager.Instance.pieceTextVisible)
+        {
+            text.text = Piece.GetPieceName(Piece.GetPieceType(piece)); //Piece.GetPieceType(piece).ToString();
+        }
+        else
+        {
+            text.text = ""; //Piece.GetPieceType(piece).ToString();
+        }
 
+        /*
         if (Piece.GetPieceModifier(piece) != 0)
         {
             text.text = text.text + "\n" + Piece.GetPieceModifier(piece);
@@ -378,6 +408,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         {
             text.text = text.text + "\n" + Piece.GetPieceStatusEffect(piece); // + " " + (Piece.GetPieceStatusDuration(piece));
         }
+        */
 
         /*
         if (Piece.GetPieceSpecialData(piece) != 0)
@@ -481,7 +512,8 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         }
 
         backSprite.color = Piece.GetPieceColor(Piece.GetPieceAlignment(piece));
-        backSprite.color = new Color(1 - backSprite.color.r, backSprite.color.g, backSprite.color.b, 1);
+        //backSprite.color = new Color(1 - backSprite.color.r, backSprite.color.g, backSprite.color.b, 1);
+        selectObject.SetActive(true);
 
         bs.SelectPiece(this);
         isSelected = true;
@@ -490,6 +522,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     public void OnDeselect()
     {
         backSprite.color = Piece.GetPieceColor(Piece.GetPieceAlignment(piece));
+        selectObject.SetActive(false);
         if (bs.selectedPiece == null || bs.selectedPiece == this)
         {
             bs.ResetSelected(false);

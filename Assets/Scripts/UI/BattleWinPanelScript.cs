@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -5,10 +6,14 @@ using UnityEngine;
 
 public class BattleWinPanelScript : MonoBehaviour
 {
-    public BoardScript bs;
+    public BattleBoardScript bs;
     public TextDisplayer text;
     public float lifetime;
     Board.VictoryType vt;
+
+    public GameObject subobject;
+
+    public Action awaitAction;
 
     public void Setup(Board.VictoryType vt)
     {
@@ -22,6 +27,13 @@ public class BattleWinPanelScript : MonoBehaviour
         if (lifetime > 0.2f)
         {
             transform.localPosition = MainManager.EasingQuadraticTime(transform.localPosition, Vector3.zero, MainManager.EasingQuadraticForce(500, 0.25f));
+        }
+
+        if (awaitAction != null && !bs.animating)
+        {
+            //do the action
+            awaitAction.Invoke();
+            awaitAction = null;
         }
     }
 
@@ -41,6 +53,13 @@ public class BattleWinPanelScript : MonoBehaviour
     }
 
     public void ContinueButton()
+    {
+        bs.StartAnimtingEndAnimation();
+        subobject.SetActive(false);
+        awaitAction = () => ExecuteContinue();
+    }
+
+    public void ExecuteContinue()
     {
         if (bs.board.globalData.enemyModifier != 0)
         {

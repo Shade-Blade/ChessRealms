@@ -1711,13 +1711,13 @@ public static class Piece
         switch (pa)
         {
             case PieceAlignment.White:
-                return Color.white;
+                return new Color(0.95f, 0.95f, 0.95f, 1);
             case PieceAlignment.Black:
-                return Color.black;
+                return new Color(0.4f, 0.4f, 0.4f, 1);
             case PieceAlignment.Neutral:
-                return Color.yellow;
+                return new Color(0.95f, 0.95f, 0.4f, 1);
             case PieceAlignment.Crystal:
-                return Color.magenta;
+                return new Color(0.95f, 0.4f, 0.95f, 1);
         }
 
         return Color.blue;
@@ -1795,23 +1795,23 @@ public static class Piece
         switch (pse)
         {
             case PieceStatusEffect.Bloodlust:
-                return new Color(1, 0, 0, 1);
+                return new Color(1, 0.5f, 0.5f, 1);
             case PieceStatusEffect.Sparked:
-                return new Color(1, 0.5f, 0, 1);
+                return new Color(1, 0.75f, 0.5f, 1);
             case PieceStatusEffect.Poisoned:
-                return new Color(0, 0.5f, 0, 1);
+                return new Color(0.5f, 1f, 0.5f, 1);
             case PieceStatusEffect.Frozen:
                 return new Color(0.5f, 1, 1, 1);
             case PieceStatusEffect.Soaked:
-                return new Color(0, 0, 1, 1);
+                return new Color(0.5f, 0.5f, 1f, 1f);
             case PieceStatusEffect.Ghostly:
                 return new Color(0.75f, 0.5f, 1f, 1);
             case PieceStatusEffect.Fragile:
-                return new Color(1, 1, 0.5f, 1);
+                return new Color(0.5f, 1f, 0.75f, 1);
             case PieceStatusEffect.Heavy:
-                return new Color(0.25f, 0.25f, 0.25f, 1);
+                return new Color(0.7f, 0.7f, 0.3f, 1f);
             case PieceStatusEffect.Light:
-                return new Color(0.5f, 1, 0.5f, 1);
+                return new Color(0.5f, 0.75f, 1f, 1f);
         }
         return new Color(0, 0, 0, 1);
     }

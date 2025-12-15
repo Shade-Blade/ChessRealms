@@ -3678,6 +3678,7 @@ GameObject:
   - component: {fileID: 719647005}
   - component: {fileID: 719647007}
   - component: {fileID: 719647006}
+  - component: {fileID: 719647008}
   m_Layer: 0
   m_Name: ThinkingText
   m_TagString: Untagged
@@ -3801,6 +3802,27 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 719647004}
   m_CullTransparentMesh: 1
+--- !u!114 &719647008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 719647004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9bb94cb65c7e0e842a3400b4e2e7c765, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  textMesh: {fileID: 719647006}
+  inputString: 
+  cleanString: 
+  charsVisible: 0
+  scrollDone: 0
+  lockButtons: 0
+  aPressTime: 0
+  bPress: 0
+  hasTextChanged: 0
 --- !u!1 &736306179
 GameObject:
   m_ObjectHideFlags: 0
@@ -4787,7 +4809,7 @@ MonoBehaviour:
   bs: {fileID: 306476180}
   cps: {fileID: 2118658797}
   battleOnlyUI: {fileID: 1993255308}
-  thinkingText: {fileID: 719647006}
+  thinkingText: {fileID: 719647008}
   turnText: {fileID: 394969161}
   pieceText: {fileID: 70862388}
   pmps: {fileID: 1661146173}
@@ -7727,7 +7749,7 @@ Transform:
   - {fileID: 2120585630}
   - {fileID: 2118658796}
   - {fileID: 306476179}
-  m_Father: {fileID: 1834247067}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1562991785
 MonoBehaviour:
@@ -8235,7 +8257,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.8207547, b: 0.8207547, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -8481,7 +8503,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 7482667652216324306, guid: 4a6775cc5adf90c4bb3a7ed9ad70d993, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -8512,6 +8534,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   backSprite: {fileID: 1661146171}
+  pieceImageSprite: {fileID: 1623467315}
   pieceNameText: {fileID: 775694710}
   singleSquareTemplate: {fileID: 4440345964834148188, guid: 3593789ae98c0c7429db176cc4161400, type: 3}
   trailTemplate: {fileID: 4440345964834148188, guid: c47ae4fc81b22964cb89ce66e7faa8df, type: 3}
@@ -8914,7 +8937,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 863851216}
-  m_Father: {fileID: 1834247067}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -9210,8 +9233,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: e76f543228128e446a427e728eab24a4, type: 3}
-  m_Type: 2
+  m_Sprite: {fileID: 21300000, guid: 2c51dab8e1690ab4c8b826a93538fedc, type: 3}
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -9219,7 +9242,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 12
+  m_PixelsPerUnitMultiplier: 6
 --- !u!222 &1756460786
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9642,7 +9665,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: e76f543228128e446a427e728eab24a4, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 2c51dab8e1690ab4c8b826a93538fedc, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -9651,7 +9674,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 12
+  m_PixelsPerUnitMultiplier: 6
 --- !u!222 &1805771766
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -9864,9 +9887,7 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1715835532}
-  - {fileID: 1562991784}
+  m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1834247068
@@ -9885,6 +9906,14 @@ MonoBehaviour:
   currentDragged: {fileID: 0}
   currentSelected: {fileID: 0}
   sameFrameSelected: 0
+  text_PieceSprite: {fileID: 0}
+  text_ConsumableSprite: {fileID: 0}
+  text_BossSprite: {fileID: 0}
+  text_BadgeSprite: {fileID: 0}
+  pieceSprites: []
+  consumableSprites: []
+  bossSprites: []
+  badgeSprites: []
   playerData:
     army: 00000000000000000600000005000000020000000000000000000000000000000000000000000000070000000700000007000000070000000000000000000000
     consumables: 0000000000000000000000000000000000000000000000000000000000000000
@@ -9897,6 +9926,7 @@ MonoBehaviour:
     nodesComplete: 0
     realmRouteChoices: 
     seed: 5
+    animationSpeed: 36
     undosLeft: 3
     retriesLeft: 1
   bitboardTest: 
@@ -9963,6 +9993,8 @@ MonoBehaviour:
     y: 0
     range: 0
     rangeType: 0
+  pieceMaterials: []
+  guiPieceMaterials: []
 --- !u!114 &1834247070
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10461,6 +10493,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2120585630}
     m_Modifications:
+    - target: {fileID: 2884773147272950959, guid: 48e985f37d3aaa74bb92a31ba3b65144, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: a6ef1b1812b6e53428c9b2159fbcf403, type: 2}
     - target: {fileID: 4197352749022661507, guid: 48e985f37d3aaa74bb92a31ba3b65144, type: 3}
       propertyPath: m_LocalPosition.x
       value: 4.5
@@ -12304,4 +12340,6 @@ SceneRoots:
   m_Roots:
   - {fileID: 519420032}
   - {fileID: 1834247067}
+  - {fileID: 1715835532}
+  - {fileID: 1562991784}
   - {fileID: 811195773}

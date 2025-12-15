@@ -51,7 +51,7 @@ public class TrashCanScript : MonoBehaviour
             }
             else
             {
-                sprite.color = new Color(1, 0.4f, 0.4f, 1);
+                sprite.color = new Color(0.75f, 0.2f, 0.2f, 1);
             }
         }
         active = false;

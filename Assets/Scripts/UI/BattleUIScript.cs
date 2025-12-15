@@ -16,7 +16,7 @@ public class BattleUIScript : MonoBehaviour
 
     public GameObject battleOnlyUI;
 
-    public TMPro.TMP_Text thinkingText;
+    public TextDisplayer thinkingText;
     public TMPro.TMP_Text turnText;
     //public TMPro.TMP_Text scoreText;
     public TMPro.TMP_Text pieceText;

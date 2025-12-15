@@ -8,10 +8,12 @@ using UnityEngine.UI;
 using static Move;
 using static MoveGeneratorInfoEntry;
 using static Piece;
+using static Unity.Burst.Intrinsics.X86.Avx;
 
 public class PieceMovePanelScript : MonoBehaviour
 {
     public Image backSprite;
+    public Image pieceImageSprite;
     public TMPro.TMP_Text pieceNameText;
     public GameObject singleSquareTemplate;
     public GameObject trailTemplate;
@@ -92,6 +94,8 @@ public class PieceMovePanelScript : MonoBehaviour
         pieceInfoText.text = "";
         pieceValueText.text = "";
         pieceClassText.text = "";
+        pieceImageSprite.sprite = null;
+        pieceImageSprite.color = new Color(0, 0, 0, 0);
         ResetGridColor();
     }
 
@@ -104,12 +108,19 @@ public class PieceMovePanelScript : MonoBehaviour
     public void SetBadge(Board.PlayerModifier pm)
     {
         ResetAll();
+        pieceImageSprite.sprite = Text_BadgeSprite.GetBadgeSprite(pm);
+        pieceImageSprite.material = Text_PieceSprite.GetMaterialGUI(0);
+        pieceImageSprite.color = new Color(1, 1, 1, 1);
         pieceNameText.text = Board.GetPlayerModifierName(pm);
         pieceInfoText.text = Board.GetPlayerModifierDescription(pm);        
     }
 
     public void SetConsumable(Move.ConsumableMoveType cmt)
     {
+        ResetAll();
+        pieceImageSprite.sprite = Text_ConsumableSprite.GetConsumableSprite(cmt);
+        pieceImageSprite.material = Text_PieceSprite.GetMaterialGUI(0);
+        pieceImageSprite.color = new Color(1, 1, 1, 1);
         pieceNameText.text = Board.GetConsumableName(cmt);
         pieceInfoText.text = Board.GetConsumableDescription(cmt);
     }
@@ -270,6 +281,10 @@ public class PieceMovePanelScript : MonoBehaviour
         PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(piece);
         Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(piece);
         Piece.PieceModifier pm = Piece.GetPieceModifier(piece);
+
+        pieceImageSprite.sprite = Text_PieceSprite.GetPieceSprite(pte.type);
+        pieceImageSprite.material = Text_PieceSprite.GetMaterialGUI(pm);
+        pieceImageSprite.color = Piece.GetPieceColor(Piece.GetPieceAlignment(piece));
 
         ResetGridColor();
         pieceNameText.text = Piece.GetPieceName(pte.type) + "";

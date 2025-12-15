@@ -24,10 +24,15 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
     public bool canInteract;
 
     public ShopItemScript sis;
+    public GameObject selectObject;
 
     public void SetShopItemScript(ShopItemScript sis)
     {
         this.sis = sis;
+    }
+    public void ResetHomePosition(Vector3 homePos)
+    {
+        this.homePos = homePos;
     }
 
 
@@ -61,7 +66,16 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
         backSprite.enabled = true;
         bc.enabled = true;
 
-        text.text = Board.GetConsumableName(cmt);
+        backSprite.sprite = Text_ConsumableSprite.GetConsumableSprite(cmt);
+
+        if (MainManager.Instance.pieceTextVisible)
+        {
+            text.text = Board.GetConsumableName(cmt);
+        }
+        else
+        {
+            text.text = "";
+        }
     }
 
     public virtual void ForceDeselect()
@@ -75,7 +89,7 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
     public void OnSelect()
     {
         backSprite.color = new Color(1, 1, 1, 1);
-        backSprite.color = new Color(1 - backSprite.color.r, backSprite.color.g, backSprite.color.b, 1);
+        selectObject.SetActive(true);
 
         bs.SelectConsumable(this);
     }
@@ -83,6 +97,7 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
     public void OnDeselect()
     {
         backSprite.color = new Color(1, 1, 1, 1);
+        selectObject.SetActive(false);
         if (bs.selectedConsumable == null || bs.selectedConsumable == this)
         {
             if (bs.selectedPiece == null && bs.selectedBadge == null)

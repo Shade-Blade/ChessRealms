@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static Unity.Burst.Intrinsics.X86.Avx;
 
 public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListener, IShopItem
 {
@@ -23,11 +24,17 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
     public bool canInteract;
     public ShopItemScript sis;
+    public GameObject selectObject;
 
     public void SetShopItemScript(ShopItemScript sis)
     {
         this.sis = sis;
     }
+    public void ResetHomePosition(Vector3 homePos)
+    {
+        this.homePos = homePos;
+    }
+
     public virtual void Start()
     {
         homePos = transform.position;
@@ -58,7 +65,16 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         backSprite.enabled = true;
         bc.enabled = true;
 
-        text.text = Board.GetPlayerModifierName(pm);
+        backSprite.sprite = Text_BadgeSprite.GetBadgeSprite(pm);
+
+        if (MainManager.Instance.pieceTextVisible)
+        {
+            text.text = Board.GetPlayerModifierName(pm);
+        }
+        else
+        {
+            text.text = "";
+        }
     }
 
     public virtual void ForceDeselect()
@@ -72,7 +88,8 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     public void OnSelect()
     {
         backSprite.color = new Color(1, 1, 1, 1);
-        backSprite.color = new Color(1 - backSprite.color.r, backSprite.color.g, backSprite.color.b, 1);
+        selectObject.SetActive(true);
+        //backSprite.color = new Color(1 - backSprite.color.r, backSprite.color.g, backSprite.color.b, 1);
 
         if (bs != null)
         {
@@ -83,6 +100,7 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     public void OnDeselect()
     {
         backSprite.color = new Color(1, 1, 1, 1);
+        selectObject.SetActive(false);
         if (bs != null && (bs.selectedBadge == null || bs.selectedBadge == this))
         {
             if (bs.selectedPiece == null && bs.selectedConsumable == null)

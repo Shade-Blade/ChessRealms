@@ -71,11 +71,15 @@ public sealed class GlobalPieceManager : MonoBehaviour
     public MoveGeneratorInfoEntry forestModifierMove;
     public MoveGeneratorInfoEntry flyingGeneralModifierMove;
 
+    public Material[] pieceMaterials;
+    public Material[] guiPieceMaterials;
+
     public void Awake()
     {
         intInstance = this;
         LoadPieceTable();
         LoadPieceClassTable();
+        LoadMaterials();
 
         LoadPieceSquareTables();
         LoadOrbiterDirections();
@@ -103,6 +107,33 @@ public sealed class GlobalPieceManager : MonoBehaviour
         flyingGeneralModifierMove = new MoveGeneratorInfoEntry();
         flyingGeneralModifierMove.atom = MoveGeneratorAtom.R;
         flyingGeneralModifierMove.modifier = MoveGeneratorPreModifier.k;
+    }
+
+    public void LoadMaterials()
+    {
+        pieceMaterials = new Material[10];
+        pieceMaterials[0] = Resources.Load<Material>("Materials/Piece/Normal");
+        pieceMaterials[1] = Resources.Load<Material>("Materials/Piece/Vengeful");
+        pieceMaterials[2] = Resources.Load<Material>("Materials/Piece/Phoenix");
+        pieceMaterials[3] = Resources.Load<Material>("Materials/Piece/Radiant");
+        pieceMaterials[4] = Resources.Load<Material>("Materials/Piece/Winged");
+        pieceMaterials[5] = Resources.Load<Material>("Materials/Piece/Spectral");
+        pieceMaterials[6] = Resources.Load<Material>("Materials/Piece/Immune");
+        pieceMaterials[7] = Resources.Load<Material>("Materials/Piece/Warped");
+        pieceMaterials[8] = Resources.Load<Material>("Materials/Piece/Shielded");
+        pieceMaterials[9] = Resources.Load<Material>("Materials/Piece/HalfShielded");
+
+        guiPieceMaterials = new Material[10];
+        guiPieceMaterials[0] = Resources.Load<Material>("Materials/Piece/GUI_Normal");
+        guiPieceMaterials[1] = Resources.Load<Material>("Materials/Piece/GUI_Vengeful");
+        guiPieceMaterials[2] = Resources.Load<Material>("Materials/Piece/GUI_Phoenix");
+        guiPieceMaterials[3] = Resources.Load<Material>("Materials/Piece/GUI_Radiant");
+        guiPieceMaterials[4] = Resources.Load<Material>("Materials/Piece/GUI_Winged");
+        guiPieceMaterials[5] = Resources.Load<Material>("Materials/Piece/GUI_Spectral");
+        guiPieceMaterials[6] = Resources.Load<Material>("Materials/Piece/GUI_Immune");
+        guiPieceMaterials[7] = Resources.Load<Material>("Materials/Piece/GUI_Warped");
+        guiPieceMaterials[8] = Resources.Load<Material>("Materials/Piece/GUI_Shielded");
+        guiPieceMaterials[9] = Resources.Load<Material>("Materials/Piece/GUI_HalfShielded");
     }
 
     public void LoadRays()

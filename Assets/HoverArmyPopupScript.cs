@@ -13,6 +13,7 @@ public class HoverArmyPopupScript : HoverPopupScript
     public GameObject squareHolder;
 
     public List<HoverPopupPieceScript> hppsList;
+    int rows;
 
     public void SetArmy(Piece.PieceType[] army)
     {
@@ -26,11 +27,12 @@ public class HoverArmyPopupScript : HoverPopupScript
 
             rows = 1 + (i >> 3);
         }
+        this.rows = rows;
 
         baseBox.rectTransform.sizeDelta = new Vector2(260, 30 + 30 * rows);
         borderBox.rectTransform.sizeDelta = new Vector2(260, 30 + 30 * rows);
         textMesh.rectTransform.sizeDelta = new Vector2(240, 10 + 30 * rows);
-        armyHolder.GetComponent<RectTransform>().localPosition = Vector3.down * (5 + 15 * rows);
+        armyHolder.GetComponent<RectTransform>().localPosition = Vector3.down * (-10 + baseBox.rectTransform.sizeDelta.y / 2); //Vector3.down * (5 + 15 * rows);
 
         this.army = army;
 
@@ -84,6 +86,16 @@ public class HoverArmyPopupScript : HoverPopupScript
 
     public override void RecalculateBoxSize()
     {
-        //remove it completely, force box to stay same size
+        //new: constrain the box
+        float width = Mathf.Min(Mathf.Max(textMesh.GetRenderedValues()[0] + 3, 240), 290);
+
+        textMesh.rectTransform.sizeDelta = new Vector2(width, rows * 30 + textMesh.GetRenderedValues()[1] + 0); //baseBox.rectTransform.sizeDelta.y);
+        //do it again for good measure (actually just make sure the height value fixes itself)
+        textMesh.rectTransform.sizeDelta = new Vector2(width, rows * 30 + textMesh.GetRenderedValues()[1] + 0); //baseBox.rectTransform.sizeDelta.y);
+
+        baseBox.rectTransform.sizeDelta = new Vector2(width + 20, rows * 30 + textMesh.GetRenderedValues()[1] + 20); //baseBox.rectTransform.sizeDelta.y);
+        borderBox.rectTransform.sizeDelta = new Vector2(width + 20, rows * 30 + textMesh.GetRenderedValues()[1] + 20); //baseBox.rectTransform.sizeDelta.y);
+
+        armyHolder.GetComponent<RectTransform>().localPosition = Vector3.down * (-10 + baseBox.rectTransform.sizeDelta.y / 2); //Vector3.down * (5 + 15 * rows);
     }
 }

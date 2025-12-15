@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,13 +6,18 @@ using UnityEngine.UI;
 
 public class BattleLosePanelScript : MonoBehaviour
 {
+    public BattleBoardScript bs;
     public Image loseButton;
     public Image loseButtonBorder;
     public TMPro.TMP_Text loseButtonText;
     public TextDisplayer runStats;
 
+    public GameObject subobject;
+
     public float lifetime;
     Board.VictoryType vt;
+
+    public Action awaitAction;
 
     public void Setup(Board.VictoryType vt)
     {
@@ -41,6 +47,13 @@ public class BattleLosePanelScript : MonoBehaviour
         {
             transform.localPosition = MainManager.EasingQuadraticTime(transform.localPosition, Vector3.zero, MainManager.EasingQuadraticForce(500, 0.25f));
         }
+
+        if (awaitAction != null && !bs.animating)
+        {
+            //do the action
+            awaitAction.Invoke();
+            awaitAction = null;
+        }
     }
 
     public void RetryButton()
@@ -50,12 +63,39 @@ public class BattleLosePanelScript : MonoBehaviour
             return;
         }
 
+        //block input while awaiting something
+        if (awaitAction != null)
+        {
+            return;
+        }
+
+        bs.StartAnimtingEndAnimation();
+        subobject.SetActive(false);
+        awaitAction = () => ExecuteRetry();
+    }
+
+    public void ExecuteRetry()
+    {
         MainManager.Instance.playerData.retriesLeft--;
         FindObjectOfType<OverworldScript>().ReturnFromNode(false);
         Destroy(gameObject);
     }
 
     public void GiveUpButton()
+    {
+        //block input while awaiting something
+        if (awaitAction != null)
+        {
+            return;
+        }
+
+        bs.StartAnimtingEndAnimation();
+        //subobject.SetActive(false);
+        //awaitAction = () => ExecuteGiveUp();
+        ExecuteGiveUp();
+    }
+
+    public void ExecuteGiveUp()
     {
         MainManager.Instance.EndRun();
     }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Unity.Burst.Intrinsics;
 using UnityEngine;
 
-public class ShopScript : MonoBehaviour
+public class ShopScript : MonoBehaviour, IEvent
 {
     public GameObject shopItemTemplate;
     public GameObject pieceTemplate;
@@ -22,6 +22,9 @@ public class ShopScript : MonoBehaviour
 
     public BoardScript bs;
 
+    public float lifetime;
+    public bool startAnimationDone;
+
     public static ShopScript CreateShop(BoardScript bs, Piece.PieceClass pc, int pieceCount, int consumableCount, int badgeCount)
     {
         GameObject go = Instantiate(Resources.Load<GameObject>("Events/Shop"));
@@ -32,6 +35,31 @@ public class ShopScript : MonoBehaviour
         ss.consumableCount = consumableCount;
         ss.badgeCount = badgeCount;
         return ss;
+    }
+
+    public IEnumerator FadeOut()
+    {
+        transform.position = Vector3.zero;
+        foreach (ShopItemScript sis in GetComponentsInChildren<ShopItemScript>())
+        {
+            sis.canInteract = false;
+        }
+
+        float animationDuration = 9f / MainManager.Instance.playerData.animationSpeed;
+        if (animationDuration > 1)
+        {
+            animationDuration = 1;
+        }
+
+        float duration = 0;
+        while (duration < animationDuration)
+        {
+            transform.position = Vector3.up * 10 * (MainManager.EasingQuadratic(duration / animationDuration, 1));
+            yield return null;
+            duration += Time.deltaTime;
+        }
+
+        transform.position = Vector3.up * 10;
     }
 
     // Start is called before the first frame update
@@ -153,5 +181,38 @@ public class ShopScript : MonoBehaviour
             go.GetComponent<BadgeScript>().bs = bs;
             go.GetComponent<BadgeScript>().Setup(badges[i]);
         }
+
+        transform.position = Vector3.up * 10;
+        foreach (ShopItemScript sis in GetComponentsInChildren<ShopItemScript>())
+        {
+            sis.canInteract = false;
+        }
+    }
+
+    public void Update()
+    {
+        float animationDuration = 9f / MainManager.Instance.playerData.animationSpeed;
+        if (animationDuration > 1)
+        {
+            animationDuration = 1;
+        }
+        if (!startAnimationDone)
+        {
+            if (lifetime >= animationDuration)
+            {
+                transform.position = Vector3.zero;
+                foreach (ShopItemScript sis in GetComponentsInChildren<ShopItemScript>())
+                {
+                    sis.canInteract = true;
+                    sis.ResetHomePosition();
+                }
+                startAnimationDone = true;
+            }
+            else
+            {
+                transform.position = Vector3.up * 10 * (1 - (MainManager.EasingQuadratic(lifetime / animationDuration, 1)));
+            }
+        }
+        lifetime += Time.deltaTime;
     }
 }

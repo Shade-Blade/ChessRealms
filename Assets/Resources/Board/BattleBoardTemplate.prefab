@@ -280,6 +280,7 @@ MonoBehaviour:
   enemyMoveList: 
   illegalMoveTrail: {fileID: 0}
   checkMoveTrail: {fileID: 0}
+  onlyConsumableMoves: 0
   extraMoveTrails: []
   animating: 0
   lastMovedPiece: {fileID: 0}
@@ -301,6 +302,7 @@ MonoBehaviour:
   awaitingMove: 0
   errorMove: 0
   rightClick: 0
+  arrow: {fileID: 0}
 --- !u!1 &2255433947139563736
 GameObject:
   m_ObjectHideFlags: 0
@@ -360,7 +362,7 @@ Transform:
   m_GameObject: {fileID: 8255928490224298917}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.4}
+  m_LocalPosition: {x: 0, y: 0, z: 0.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -475,7 +477,7 @@ Transform:
   m_GameObject: {fileID: 8995855366243572400}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.5}
+  m_LocalPosition: {x: 0, y: 0, z: 1}
   m_LocalScale: {x: 8.5, y: 8.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

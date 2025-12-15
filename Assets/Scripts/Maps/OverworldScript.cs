@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Net;
@@ -28,6 +29,8 @@ public class OverworldScript : MonoBehaviour
 
     public BattleUIScript bus;
 
+    public Action awaitInvoke;
+
     public void Start()
     {
         //redundant?
@@ -46,7 +49,12 @@ public class OverworldScript : MonoBehaviour
 
     public void EnterNode(MapNodeScript ms)
     {
-        if (worldMapMode)
+        if (awaitInvoke != null)
+        {
+            return;
+        }
+
+        Action afterWorld = () =>
         {
             worldMap.current = ms;
             worldMap.gameObject.SetActive(false);
@@ -71,10 +79,14 @@ public class OverworldScript : MonoBehaviour
                     realmMap.Init();
                     setupBoard.SetTheme(realmMap.pieceClass);
                     worldMapMode = false;
+
+                    //so it isn't null but does nothing
+                    awaitInvoke = () => { };
+                    StartCoroutine(RealmMapFadeIn());
                     break;
             }
-        }
-        else
+        };
+        Action afterRealm = () =>
         {
             realmMap.current = ms;
             realmMap.gameObject.SetActive(false);
@@ -99,6 +111,17 @@ public class OverworldScript : MonoBehaviour
                 case MapNodeScript.MapNodeType.Event:
                     break;
             }
+        };
+
+        if (worldMapMode)
+        {
+            awaitInvoke = afterWorld;
+            StartCoroutine(WorldMapFadeOut());
+        }
+        else
+        {
+            awaitInvoke = afterRealm;
+            StartCoroutine(RealmMapFadeOut());
         }
     }
 
@@ -120,11 +143,15 @@ public class OverworldScript : MonoBehaviour
 
         MainManager.Instance.currentSelected = null;
 
+        //so it isn't null but does nothing
+        awaitInvoke = () => { };
+        StartCoroutine(RealmMapFadeIn());
+
         bus.turnText.text = "";
         //bus.scoreText.text = "";
         bus.pieceText.text = "";
         bus.pmps.ResetAll();
-        bus.thinkingText.text = "";
+        bus.thinkingText.SetText("", true, true);
     }
 
     public void ReturnFromRealmMap()
@@ -148,11 +175,15 @@ public class OverworldScript : MonoBehaviour
 
         MainManager.Instance.currentSelected = null;
 
+        //so it isn't null but does nothing
+        awaitInvoke = () => { };
+        StartCoroutine(WorldMapFadeIn());
+
         bus.turnText.text = "";
         //bus.scoreText.text = "";
         bus.pieceText.text = "";
         bus.pmps.ResetAll();
-        bus.thinkingText.text = "";
+        bus.thinkingText.SetText("", true, true);
     }
 
     public void ReturnFromWorldMap()
@@ -170,8 +201,118 @@ public class OverworldScript : MonoBehaviour
 
         worldMap.lastRealm = oldClass;
 
+        MainManager.Instance.currentSelected = null;
+
+        //so it isn't null but does nothing
+        awaitInvoke = () => { };
+        StartCoroutine(WorldMapFadeIn());
+
         worldMap.os = this;
         worldMap.Init();
         setupBoard.SetTheme(Piece.PieceClass.None);
+    }
+
+    public IEnumerator RealmMapFadeIn()
+    {
+        float animationDuration = 9f / MainManager.Instance.playerData.animationSpeed;
+        if (animationDuration > 1)
+        {
+            animationDuration = 1;
+        }
+        float time = 0;
+
+        while (time < animationDuration)
+        {
+            realmMap.transform.localPosition = UnityEngine.Vector3.up * 10 * (1 - (MainManager.EasingQuadratic(time / animationDuration, 1)));
+            yield return null;
+
+            time += Time.deltaTime;
+        }
+
+        realmMap.transform.localPosition = UnityEngine.Vector3.zero;
+
+        if (awaitInvoke != null)
+        {
+            awaitInvoke.Invoke();
+            awaitInvoke = null;
+        }
+    }
+
+    public IEnumerator RealmMapFadeOut()
+    {
+        float animationDuration = 9f / MainManager.Instance.playerData.animationSpeed;
+        if (animationDuration > 1)
+        {
+            animationDuration = 1;
+        }
+        float time = 0;
+
+        while (time < animationDuration)
+        {
+            realmMap.transform.localPosition = UnityEngine.Vector3.up * 10 * (MainManager.EasingQuadratic(time / animationDuration, 1));
+            yield return null;
+
+            time += Time.deltaTime;
+        }
+
+        realmMap.transform.localPosition = UnityEngine.Vector3.up * 10;
+
+        if (awaitInvoke != null)
+        {
+            awaitInvoke.Invoke();
+            awaitInvoke = null;
+        }
+    }
+
+    public IEnumerator WorldMapFadeIn()
+    {
+        float animationDuration = 9f / MainManager.Instance.playerData.animationSpeed;
+        if (animationDuration > 1)
+        {
+            animationDuration = 1;
+        }
+        float time = 0;
+
+        while (time < animationDuration)
+        {
+            worldMap.transform.localPosition = UnityEngine.Vector3.up * 10 * (1 - (MainManager.EasingQuadratic(time / animationDuration, 1)));
+            yield return null;
+
+            time += Time.deltaTime;
+        }
+
+        worldMap.transform.localPosition = UnityEngine.Vector3.zero;
+
+        if (awaitInvoke != null)
+        {
+            awaitInvoke.Invoke();
+            awaitInvoke = null;
+        }
+    }
+
+    public IEnumerator WorldMapFadeOut()
+    {
+        float animationDuration = 9f / MainManager.Instance.playerData.animationSpeed;
+        if (animationDuration > 1)
+        {
+            animationDuration = 1;
+        }
+        float time = 0;
+
+        while (time < animationDuration)
+        {
+            worldMap.transform.localPosition = UnityEngine.Vector3.up * 10 * (MainManager.EasingQuadratic(time / animationDuration, 1));
+            yield return null;
+
+            time += Time.deltaTime;
+        }
+
+        worldMap.transform.localPosition = UnityEngine.Vector3.up * 10;
+
+        if (awaitInvoke != null)
+        {
+            awaitInvoke.Invoke();
+            awaitInvoke = null;
+        }
     }
 }
