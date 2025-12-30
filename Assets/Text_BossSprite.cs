@@ -64,6 +64,6 @@ public class Text_BossSprite : Text_SpecialSprite
             return MainManager.Instance.bossSprites[MainManager.Instance.bossSprites.Length - 1];
         }
 
-        return MainManager.Instance.bossSprites[(int)(MainManager.PopBitboardLSB1((ulong)bossType)) - 1];
+        return MainManager.Instance.bossSprites[(int)(MainManager.PopBitboardLSB1((ulong)bossType))];
     }
 }

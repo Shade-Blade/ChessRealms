@@ -26,6 +26,9 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     public ShopItemScript sis;
     public GameObject selectObject;
 
+    public bool isHover;
+    public bool lastIsHover;
+
     public void SetShopItemScript(ShopItemScript sis)
     {
         this.sis = sis;
@@ -124,7 +127,8 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     {
     }
     public void OnDragStay()
-    {       
+    {
+        isHover = true;
         if (trashCan != null && badgeIndex >= 0 && bs != null && bs.setupMoves)
         {
             trashCan.text.text = "Sell: $" + GetCost();
@@ -175,10 +179,27 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         cps.FixInventory();
     }
 
+    public string GetHoverText()
+    {
+        return "<outlinecolor,#c0c0ff>" + Board.GetPlayerModifierName(pm) + "</outlinecolor><line>" + Board.GetPlayerModifierDescription(pm);
+    }
+
+    public void OnMouseOver()
+    {
+        isHover = true;
+    }
+
     public virtual void Update()
     {
         dob.canDrag = bs.CanSelectPieces() && canInteract;
         bc.enabled = bs.CanSelectPieces() && text.enabled;
+
+        if (isHover && bs.CanSelectPieces())
+        {
+            HoverTextMasterScript.Instance.SetHoverText(GetHoverText());
+        }
+        lastIsHover = isHover;
+        isHover = false;
     }
 
     public void EnableInteraction()

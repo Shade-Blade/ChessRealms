@@ -87,10 +87,10 @@ public static class Piece
         RelayRook,
         RelayQueen,
         Runner,
-        SwiftBishop,
-        SwiftRook,
-        SwiftQueen,
-        FastPawn,
+        RushBishop,
+        RushRook,
+        RushQueen,
+        RushPawn,
         CoastGuard,
         Boat,
         Skipper,
@@ -103,7 +103,7 @@ public static class Piece
         PushRook,
         PushQueen,
         PushPawn,
-        StickyMan,
+        StickyGuard,
         StickyBishop,
         StickyRook,
         StickyQueen,
@@ -215,7 +215,7 @@ public static class Piece
         Hawk,
         Eagle,
         Fledgling,
-        SwitchPaladin,
+        SwitchDuke,
         SwitchTower,
         SwitchFrog,
         SwitchKnight,
@@ -225,9 +225,9 @@ public static class Piece
         WarBishop,
         WarKnight,
         BerserkerPawn,
-        Hopper,
         Locust,
-        KingHopper,
+        LocustQueen,
+        KingChecker,
         Checker,
         Revenant,
         Abomination,
@@ -516,7 +516,7 @@ public static class Piece
         Armored,
         Explosive,
         Relay,
-        Swift,
+        Rush,
         Boat,
         Push,
         Sticky,
@@ -990,13 +990,13 @@ public static class Piece
             case Aura.Watchtower:
                 return "(Enchant) Enemies can't move onto these squares unless they are moving 1 square at a time.";
             case Aura.Fan:
-                return "Enemies in range are pushed forwards.";
+                return "(Terrain) Enemies in range are pushed forwards.";
             case Aura.Hanged:
                 return "Enemies in range move upside down.";
             case Aura.Rough:
-                return "Enemies must stop on rough squares.";
+                return "(Terrain) Enemies must stop on rough squares.";
             case Aura.Water:
-                return "Enemies in range can't capture.";
+                return "(Terrain) Enemies in range can't capture.";
             case Aura.Immune:
                 return "Allies in range are immune to enchantments.";
         }
@@ -1225,9 +1225,9 @@ public static class Piece
             case PieceProperty.InvincibleJustice:
                 return "Can't be attacked if the enemy captured last turn.";
             case PieceProperty.Relay:
-                return "Allies defended by this piece gain its movement power.";
+                return "Nonpawn allies defended by this piece gain its movement power.";
             case PieceProperty.RelayBishop:
-                return "Allies in Bishop range gain Bishop movement.";
+                return "Nonpawn allies in Bishop range gain Bishop movement.";
             case PieceProperty.RelayImmune:
                 return "Allies adjacent to this piece are immune to negative effects.";
             case PieceProperty.OnlyCapturePawns:
@@ -1393,7 +1393,7 @@ public static class Piece
             case PiecePropertyB.InvincibleNoEnemyAdjacent:
                 return "Invincible if no enemy is adjacent (not including the attacker).";
             case PiecePropertyB.ShiftImmune:
-                return "Can't be displaced by any effects.";
+                return "Can't be displaced by any effects, including ally effects.";
             case PiecePropertyB.Giant:
                 return "Takes up 4 squares. Can capture up to 4 enemies at once but can be captured on any of its 4 squares.";
             case PiecePropertyB.InvincibleFar:
@@ -1407,17 +1407,17 @@ public static class Piece
             case PiecePropertyB.BounceMomentum:
                 return "Move 1 square along after it moves. (Momentum is inverted when it hits an obstacle.).";
             case PiecePropertyB.TandemMover:
-                return "Move adjacent allies along itself.";
+                return "Move adjacent allies along itself one square.";
             case PiecePropertyB.TandemMoverDiag:
-                return "Move diagonally adjacent allies along itself.";
+                return "Move diagonally adjacent allies along itself one square.";
             case PiecePropertyB.TandemMoverOrtho:
-                return "Move orthogonally adjacent allies along itself.";
+                return "Move orthogonally adjacent allies along itself one square.";
             case PiecePropertyB.EnemyTandemMover:
-                return "Move adjacent enemies along itself.";
+                return "Move adjacent enemies along itself one square.";
             case PiecePropertyB.EnemyTandemMoverOrtho:
-                return "Move orthogonally adjacent enemies along itself.";
+                return "Move orthogonally adjacent enemies along itself one square.";
             case PiecePropertyB.AnyTandemMover:
-                return "Move adjacent pieces along itself.";
+                return "Move adjacent pieces along itself one square.";
             case PiecePropertyB.HoneyExplode:
                 return "Explode to fill all adjacent squares with Honey Puddles.";
             case PiecePropertyB.NaturalWinged:
@@ -1443,9 +1443,9 @@ public static class Piece
             case PieceType.ArcanaEmpress:
                 return "Ally pieces in range 2 can move diagonally 1 square. This Relay works on any piece except Kings.";
             case PieceType.ArcanaMoon:
-                return "After Move: Spawn a Moon Illusion.\nMoon Illusions can be moved like Arcana Moon. When an ally Arcana Moon or an ally Moon Illusion is destroyed, all of them are destroyed.";
+                return "After Move: Spawn a Moon Illusion at its previous location.\nMoon Illusions can be moved like Arcana Moon. When an ally Arcana Moon or an ally Moon Illusion is destroyed, all of them are destroyed.";
             case PieceType.MoonIllusion:
-                return "After Move: Become Arcana Moon and spawn a Moon Illusion.\nMoon Illusions can be moved like Arcana Moon. When an ally Arcana Moon or an ally Moon Illusion is destroyed, all of them are destroyed.";
+                return "After Move: Become Arcana Moon and spawn a Moon Illusion at its previous location.\nMoon Illusions can be moved like Arcana Moon. When an ally Arcana Moon or an ally Moon Illusion is destroyed, all of them are destroyed.";
             case PieceType.Revenant:
                 return "When destroyed, respawns as far back as possible (Single Use).";
             case PieceType.Necromancer:
@@ -1464,9 +1464,9 @@ public static class Piece
                 return "If no allies are adjacent, become Invincible.";
             case PieceType.EliteMilitia:
             case PieceType.Militia:
-                return "Can't move to the far half of the board.";
+                return "Can't move to the enemy half of the board.";
             case PieceType.EdgeRook:
-                return "Can't move to the center 4 files.";
+                return "Can't move to the center 4x4 area.";
             case PieceType.CornerlessBishop:
                 return "Can't move to within 2 orthogonal steps from the corners of the board.";
             case PieceType.CenterQueen:
@@ -1494,9 +1494,9 @@ public static class Piece
             case PieceType.Zombie:
                 return "After Enemy Move: When an ally piece is captured, move forwards one square.";
             case PieceType.ClockworkSnapper:
-                return "After Enemy Move: When an enemy is in front of this piece, capture that piece. (Can't capture Kings.)";
+                return "After Enemy Move: When an enemy is in front of this piece, capture that piece. (Can't capture Kings automatically.)";
             case PieceType.BladeBeast:
-                return "After Enemy Move: When an enemy is orthogonally adjacent to this piece, capture that piece. (Can't capture Kings.)";
+                return "After Enemy Move: When an enemy is orthogonally adjacent to this piece, capture that piece. (Can't capture Kings automatically.)";
             case PieceType.Temperance:
                 return "Can't capture pieces of 4.5 value or less. Threshold decreases by 0.5 for each ally piece lost.";
             case PieceType.ClockworkTowerB:
@@ -1507,54 +1507,84 @@ public static class Piece
                 return "After Move: Transforms into Clockwork Walker.";
             case PieceType.ClockworkWalker:
                 return "After Move: Transforms into Clockwork Leaper.";
+            case PieceType.Cannon:
+                return "Aim move is Fire Capture (Burn an enemy piece without moving.)";
             case PieceType.MegaCannon:
-                return "Aim at a target to charge an attack to destroy 5 squares surrounding the target. Charging takes 7 turns and ticks down after your turn. While charging, Mega Cannon is Invincible but can't move.";
+                return "Aim at a target to charge an attack to destroy the target and the 4 orthogonal squares surrounding the target. Charging takes 7 turns and ticks down after your turn. While charging, Mega Cannon is Invincible but can't move.";
             case PieceType.MetalFox:
                 return "After Enemy Move: When an enemy appears in the targetted square, capture that enemy.";
             case PieceType.ChargeCannon:
                 return "Fire Capture gains range for each charge.";
             case PieceType.DayPawn:
-                return "After Turn: Transforms into Night Pawn.";
+                return "After Enemy Turn: Transforms into Night Pawn.";
             case PieceType.DayBishop:
-                return "After Turn: Transforms into Night Knight.";
+                return "After Enemy Turn: Transforms into Night Knight.";
             case PieceType.DayQueen:
-                return "After Turn: Transforms into Night Queen.";
+                return "After Enemy Turn: Transforms into Night Queen.";
             case PieceType.NightPawn:
-                return "After Turn: Transforms into Day Pawn.";
+                return "After Enemy Turn: Transforms into Day Pawn.";
             case PieceType.NightKnight:
-                return "After Turn: Transforms into Day Bishop.";
+                return "After Enemy Turn: Transforms into Day Bishop.";
             case PieceType.NightQueen:
-                return "After Turn: Transforms into Day Queen.";
+                return "After Enemy Turn: Transforms into Day Queen.";
             case PieceType.SummerPawn:
-                return "After 5 Turns: Transforms into Winter Pawn.";
+                return "Every 5 Turns (After Enemy Turn): Transforms into Winter Pawn.";
             case PieceType.SummerRook:
-                return "After 5 Turns: Transforms into Winter Bishop.";
+                return "Every 5 Turns (After Enemy Turn): Transforms into Winter Bishop.";
             case PieceType.SummerQueen:
-                return "After 5 Turns: Transforms into Winter Queen.";
+                return "Every 5 Turns (After Enemy Turn): Transforms into Winter Queen.";
             case PieceType.WinterPawn:
-                return "After 5 Turns: Transforms into Summer Pawn.";
+                return "Every 5 Turns (After Enemy Turn): Transforms into Summer Pawn.";
             case PieceType.WinterBishop:
-                return "After 5 Turns: Transforms into Summer Rook.";
+                return "Every 5 Turns (After Enemy Turn): Transforms into Summer Rook.";
             case PieceType.WinterQueen:
-                return "After 5 Turns: Transforms into Summer Queen.";
+                return "Every 5 Turns (After Enemy Turn): Transforms into Summer Queen.";
             case PieceType.SpringKnight:
-                return "After 5 Turns: Transforms into Fall Knight.";
+                return "Every 5 Turns (After Enemy Turn): Transforms into Fall Knight.";
             case PieceType.SpringPawn:
-                return "After 5 Turns: Transforms into Fall Pawn.";
+                return "Every 5 Turns (After Enemy Turn): Transforms into Fall Pawn.";
             case PieceType.FallKnight:
-                return "After 5 Turns: Transforms into Spring Knight.";
+                return "Every 5 Turns (After Enemy Turn): Transforms into Spring Knight.";
             case PieceType.FallPawn:
-                return "After 5 Turns: Transforms into Spring Pawn.";
+                return "Every 5 Turns (After Enemy Turn): Transforms into Spring Pawn.";
             case PieceType.RockEgg:
-                return "After Enemy Move: Hatches into Mountain Tortoise when it has 8 allies adjacent.";
+                return "After Enemy Turn: Hatches into Mountain Tortoise when it has 8 allies adjacent.";
             case PieceType.WaveEgg:
-                return "After Enemy Move: Hatches into Ocean Serpent when it has 0 allies adjacent.";
+                return "After Enemy Turn: Hatches into Ocean Serpent when it has 0 allies adjacent.";
             case PieceType.FlameEgg:
-                return "After Enemy Move: Hatches into Dragon when its file has no enemies in it.";
+                return "After Enemy Turn: Hatches into Dragon when its file has no enemies in it.";
             case PieceType.Imitator:
                 return "Copy the non special movement of the last moved enemy piece. (Can't copy Arcana Fool or Imitator.).";
         }
         return "";
+    }
+
+    public static int GetModifierValue(PieceModifier pm)
+    {
+        switch (pm)
+        {
+            case PieceModifier.Vengeful:
+                return Board.GetConsumableCost(Move.ConsumableMoveType.Horns);
+            case PieceModifier.Phoenix:
+                return Board.GetConsumableCost(Move.ConsumableMoveType.Torch);
+            case PieceModifier.Radiant:
+                return Board.GetConsumableCost(Move.ConsumableMoveType.Ring);
+            case PieceModifier.Winged:
+                return Board.GetConsumableCost(Move.ConsumableMoveType.Feather);
+            case PieceModifier.Spectral:
+                return Board.GetConsumableCost(Move.ConsumableMoveType.Glass);
+            case PieceModifier.Immune:
+                return Board.GetConsumableCost(Move.ConsumableMoveType.Bottle);
+            case PieceModifier.Warped:
+                return Board.GetConsumableCost(Move.ConsumableMoveType.Cap);
+            case PieceModifier.Shielded:
+                return Board.GetConsumableCost(Move.ConsumableMoveType.Shield);
+            case PieceModifier.None:
+            case PieceModifier.HalfShielded:
+            case PieceModifier.NoSpecial:
+                break;
+        }
+        return 0;
     }
 
     public static uint PackPieceData(PieceType pt, byte pspd, PieceModifier pm, PieceStatusEffect pse, byte psed, PieceAlignment pa)

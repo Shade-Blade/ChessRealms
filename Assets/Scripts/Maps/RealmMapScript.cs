@@ -67,11 +67,11 @@ public class RealmMapScript : MonoBehaviour
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(1, 51253));
         MapNodeScript a = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.2f) + delta * UnityEngine.Random.Range(-0.2f, 0.2f), baseDifficulty, (int)Mathf.Clamp(4 + (baseDifficulty / 10f), 4, 7), MapNodeScript.MapNodeType.Shop);
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(2, 51253));
-        MapNodeScript b1 = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.4f) + delta * UnityEngine.Random.Range(-0.8f, -0.6f), Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 1.9f)), 3, MapNodeScript.MapNodeType.Battle);
+        MapNodeScript b1 = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.4f) + delta * UnityEngine.Random.Range(-0.8f, -0.6f), Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 1.9f)), 3, MapNodeScript.MapNodeType.Battle);
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(3, 51253));
-        MapNodeScript b2 = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.4f) + delta * UnityEngine.Random.Range(0.6f, 0.8f), Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 1)), 3, MapNodeScript.MapNodeType.Battle);
+        MapNodeScript b2 = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.4f) + delta * UnityEngine.Random.Range(0.6f, 0.8f), Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 1)), 3, MapNodeScript.MapNodeType.Battle);
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(4, 51253));
-        MapNodeScript c = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.6f) + delta * UnityEngine.Random.Range(0.6f, 0.8f), Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 2)), 3, MapNodeScript.MapNodeType.Battle);
+        MapNodeScript c = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.6f) + delta * UnityEngine.Random.Range(0.6f, 0.8f), Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 2)), 3, MapNodeScript.MapNodeType.Battle);
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(5, 51253));
         MapNodeScript d = MakeMapNodeScript(Vector3.Lerp(startPos, endPos, 0.8f) + delta * UnityEngine.Random.Range(-0.2f, 0.2f), baseDifficulty, (int)Mathf.Clamp(4 + (baseDifficulty / 10f), 4, 7), MapNodeScript.MapNodeType.Shop);
 
@@ -83,7 +83,7 @@ public class RealmMapScript : MonoBehaviour
         c.children.Add(d);
 
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(6, 51253));
-        mns = MakeMapNodeScript(endPos, Mathf.Min(500, baseDifficulty * Mathf.Pow(1.2f, 3)), 5, MapNodeScript.MapNodeType.BossBattle);
+        mns = MakeMapNodeScript(endPos, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 3)), 5, MapNodeScript.MapNodeType.BossBattle);
         d.children.Add(mns);
 
         lastNode = mns;

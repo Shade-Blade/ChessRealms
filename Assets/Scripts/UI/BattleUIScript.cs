@@ -54,6 +54,7 @@ public class BattleUIScript : MonoBehaviour
         difficultySlider.value = (MainManager.Instance.playerData.difficulty - 1) / 4f;
         this.bs = bs;
         cps.SetBoardScript(bs);
+        cps.FixInventory();
         debugConsumable.bs = bs;
         debugSetupPiece.bs = bs;
         debugBadge.bs = bs;
@@ -163,7 +164,7 @@ public class BattleUIScript : MonoBehaviour
             Piece.PieceType[] army = ArmyGenerator.GenerateArmy(tryValue, typeValue, 0.5f, 0.5f, classValue, em);
 
             MainManager.Instance.playerData.GenerateSeed();
-            bbs.ResetBoard(MainManager.Instance.playerData.army, army, pm, em, classValue);
+            bbs.ResetBoard(MainManager.Instance.playerData.army, ArmyGenerator.ConvertPieceTypeArray(army), pm, em, classValue);
         }
     }
 

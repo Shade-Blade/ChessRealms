@@ -109,7 +109,8 @@ public class PieceMovePanelScript : MonoBehaviour
     {
         ResetAll();
         pieceImageSprite.sprite = Text_BadgeSprite.GetBadgeSprite(pm);
-        pieceImageSprite.material = Text_PieceSprite.GetMaterialGUI(0);
+        //don't do the color change thing
+        pieceImageSprite.material = null;
         pieceImageSprite.color = new Color(1, 1, 1, 1);
         pieceNameText.text = Board.GetPlayerModifierName(pm);
         pieceInfoText.text = Board.GetPlayerModifierDescription(pm);        
@@ -119,7 +120,8 @@ public class PieceMovePanelScript : MonoBehaviour
     {
         ResetAll();
         pieceImageSprite.sprite = Text_ConsumableSprite.GetConsumableSprite(cmt);
-        pieceImageSprite.material = Text_PieceSprite.GetMaterialGUI(0);
+        //don't do the color change thing
+        pieceImageSprite.material = null;
         pieceImageSprite.color = new Color(1, 1, 1, 1);
         pieceNameText.text = Board.GetConsumableName(cmt);
         pieceInfoText.text = Board.GetConsumableDescription(cmt);
@@ -1670,7 +1672,7 @@ public class PieceMovePanelScript : MonoBehaviour
         int effectiveRange = mgie.range;
         if (effectiveRange == 0)
         {
-            effectiveRange = 7;
+            effectiveRange = 16;
         }
         effectiveRange -= lostRange;
         if (effectiveRange <= 0)
@@ -1793,10 +1795,34 @@ public class PieceMovePanelScript : MonoBehaviour
         GameObject go = Instantiate(trailTemplate, trailHolder.transform);
         PieceMovePanelTrailScript pmpts = go.GetComponent<PieceMovePanelTrailScript>();
 
+        bool leapTrail = false;
+        if (xa - xb > 1 || xa - xb < -1 || ya - yb > 1 || ya - yb < -1)
+        {
+            leapTrail = true;
+        }
+
         Color c = GetColorFromSpecialType(sp);
         c = Color.Lerp(c, Color.white, 0.2f); //new Color(0.2f + (c.r) * 0.8f, 0.2f + (c.g) * 0.8f, 0.2f + (c.b) * 0.8f, 0.5f);
-        pmpts.Setup(GetSquare(xa, ya).rectTransform.localPosition, GetSquare(xb, yb).rectTransform.localPosition, c);
-        lines.Add(pmpts);
+        if (leapTrail)
+        {
+            Vector3 cross = Vector3.Cross(Vector3.forward, GetSquare(xa, ya).rectTransform.localPosition - GetSquare(xb, yb).rectTransform.localPosition);
+            cross = cross.normalized;
+            float distance = (GetSquare(xa, ya).rectTransform.localPosition - GetSquare(xb, yb).rectTransform.localPosition).magnitude;
+            Vector3 midpoint = Vector3.Lerp(GetSquare(xa, ya).rectTransform.localPosition, GetSquare(xb, yb).rectTransform.localPosition, 0.5f);
+            midpoint += cross * distance * 0.1f;
+            pmpts.Setup(GetSquare(xa, ya).rectTransform.localPosition, midpoint, c);
+            lines.Add(pmpts);
+
+            go = Instantiate(trailTemplate, trailHolder.transform);
+            PieceMovePanelTrailScript pmptsB = go.GetComponent<PieceMovePanelTrailScript>();
+            pmptsB.Setup(midpoint, GetSquare(xb, yb).rectTransform.localPosition, c);
+            lines.Add(pmptsB);
+        }
+        else
+        {
+            pmpts.Setup(GetSquare(xa, ya).rectTransform.localPosition, GetSquare(xb, yb).rectTransform.localPosition, c);
+            lines.Add(pmpts);
+        }
     }
     public PieceMovePanelSquareScript GetSquare(int x, int y)
     {

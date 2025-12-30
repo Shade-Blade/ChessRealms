@@ -65,6 +65,7 @@ public class Text_BadgeSprite : Text_SpecialSprite
 
     public static Sprite GetBadgeSprite(Board.PlayerModifier pm)
     {
-        return MainManager.Instance.badgeSprites[(int)(MainManager.PopBitboardLSB1((ulong)pm)) - 1];
+        //note that 1 << 0 has lsb1 = 0
+        return MainManager.Instance.badgeSprites[(int)(MainManager.PopBitboardLSB1((ulong)pm))];
     }
 }

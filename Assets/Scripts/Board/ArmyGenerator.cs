@@ -5,6 +5,22 @@ using static Piece;
 
 public static class ArmyGenerator
 {
+    public static uint[] ConvertPieceTypeArray(Piece.PieceType[] pieceTypeArray)
+    {
+        uint[] output = new uint[pieceTypeArray.Length];
+        for (int i = 0; i < output.Length; i++)
+        {
+            if (pieceTypeArray[i] == PieceType.Null)
+            {
+                output[i] = 0;
+            } else
+            {
+                output[i] = Piece.SetPieceType(pieceTypeArray[i], 0);
+            }
+        }
+        return output;
+    }
+
     public static Piece.PieceType[] GenerateArmy(float targetNonKingValue, int pieceTypes, float lowPieceBias, float lowComplexityBias, Piece.PieceClass pieceClass, Board.EnemyModifier em)
     {
         int typeValue = pieceTypes;
@@ -42,7 +58,7 @@ public static class ArmyGenerator
         float cumulativeValueCount = 0;
         int cumulativeCount = 0;
         int giantCount = 0;
-        int immobileCount = 0;
+        int restrictedCount = 0;
 
         //force this not to be an infinite loop if you give it an impossible task
         //(i.e. try to get above 9 * 23 value with normal chess pieces because the queen is already 9 value)
@@ -181,7 +197,7 @@ public static class ArmyGenerator
                     continue;
                 }
 
-                if (pteTarget.immobile && immobileCount > Mathf.CeilToInt(cumulativeCount / 3f))
+                if ((pteTarget.immobile || pteTarget.nonattacking) && restrictedCount > Mathf.CeilToInt(cumulativeCount / 3f))
                 {
                     continue;
                 }
@@ -199,18 +215,18 @@ public static class ArmyGenerator
                 cumulativeCount++;
             }
 
-            if (pteTarget.immobile)
+            if ((pteTarget.immobile || pteTarget.nonattacking))
             {
-                immobileCount++;
+                restrictedCount++;
             }
 
             subArmy.Add(pteTarget);
 
-            while ((cumulativeCount >= 23 || giantCount > 4 || immobileCount > Mathf.CeilToInt(cumulativeCount / 3f)) && cumulativeValueCount < tryValue)
+            while ((cumulativeCount >= 23 || giantCount > 4 || restrictedCount > Mathf.CeilToInt(cumulativeCount / 3f)) && cumulativeValueCount < tryValue)
             {
                 subArmy.Sort((a, b) => (EffectiveValue(a) - EffectiveValue(b)));
                 //remove the bottom 10 valued pieces
-                while (cumulativeCount >= 10 || giantCount > 4 || immobileCount > Mathf.CeilToInt(cumulativeCount / 3f))
+                while (cumulativeCount >= 10 || giantCount > 4 || restrictedCount > Mathf.CeilToInt(cumulativeCount / 3f))
                 {
                     cumulativeValueCount -= subArmy[0].pieceValueX2 / 2f;
                     if (EffectiveValue(subArmy[0]) > lowerBound)
@@ -228,15 +244,15 @@ public static class ArmyGenerator
                         cumulativeCount--;
                     }
 
-                    if (pteTarget.immobile)
+                    if ((pteTarget.immobile || pteTarget.nonattacking))
                     {
-                        immobileCount--;
+                        restrictedCount--;
                     }
 
                     subArmy.RemoveAt(0);
                 }
                 //add in some of the highest valued things
-                while (cumulativeCount <= 20 && giantCount < 4 && immobileCount < Mathf.CeilToInt(cumulativeCount / 3f) && cumulativeValueCount < tryValue)
+                while (cumulativeCount <= 20 && giantCount < 4 && restrictedCount < Mathf.CeilToInt(cumulativeCount / 3f) && cumulativeValueCount < tryValue)
                 {
                     int index = subArmy.Count - 1 - UnityEngine.Random.Range(0, 7);
                     if (index < 0)
@@ -255,9 +271,9 @@ public static class ArmyGenerator
                         cumulativeCount++;
                     }
 
-                    if (pteTarget.immobile)
+                    if ((pteTarget.immobile || pteTarget.nonattacking))
                     {
-                        immobileCount++;
+                        restrictedCount++;
                     }
 
                     subArmy.Insert(0, subArmy[index]);
@@ -583,7 +599,7 @@ public static class ArmyGenerator
 
         for (int i = 0; i < GlobalPieceManager.pieceTable.Length; i++)
         {
-            if (GlobalPieceManager.pieceTable[i] == null || GlobalPieceManager.pieceTable[i].type == Piece.PieceType.King || GlobalPieceManager.pieceTable[i].type == Piece.PieceType.Rock)
+            if (GlobalPieceManager.pieceTable[i] == null || GlobalPieceManager.pieceTable[i].type == Piece.PieceType.King)
             {
                 continue;
             }

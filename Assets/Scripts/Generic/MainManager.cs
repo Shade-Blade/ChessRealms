@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unity.Burst.Intrinsics;
 using Unity.VisualScripting;
-using UnityEditor.Search;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using static Unity.Burst.Intrinsics.X86.Bmi1;
@@ -13,8 +12,9 @@ using static Unity.Burst.Intrinsics.X86.Popcnt;
 [System.Serializable]
 public class PlayerData
 {
-    public Piece.PieceType[] army;
+    public uint[] army;
 
+    public bool[] consumablesDisabled;  
     public Move.ConsumableMoveType[] consumables;
     public Board.PlayerModifier[] badges;
 
@@ -34,18 +34,24 @@ public class PlayerData
 
     public PlayerData()
     {
-        army = new Piece.PieceType[16];
+        army = new uint[16];
 
         consumables = new Move.ConsumableMoveType[4];
+        consumablesDisabled = new bool[4];
         badges = new Board.PlayerModifier[4];
 
         difficulty = 3;
         coins = 5;
 
         //the normal king position to start with
-        army[5] = Piece.PieceType.King;
+        army[2] = Piece.SetPieceType(Piece.PieceType.Bishop, 0);
+        army[3] = Piece.SetPieceType(Piece.PieceType.Knight, 0);
+        army[4] = Piece.SetPieceType(Piece.PieceType.King, 0);
+        army[10] = Piece.SetPieceType(Piece.PieceType.Pawn, 0);
+        army[11] = Piece.SetPieceType(Piece.PieceType.Pawn, 0);
+        army[12] = Piece.SetPieceType(Piece.PieceType.Pawn, 0);
+        army[13] = Piece.SetPieceType(Piece.PieceType.Pawn, 0);
 
-        coins = 0;
         realmsComplete = 0;
         realmBattlesComplete = 0;
         battlesComplete = 0;
@@ -94,6 +100,14 @@ public class PlayerData
             output |= badges[i];
         }
         return output;
+    }
+
+    public void ResetConsumablesUsed()
+    {
+        for (int i = 0; i < MainManager.Instance.playerData.consumablesDisabled.Length; i++)
+        {
+            MainManager.Instance.playerData.consumablesDisabled[i] = false;
+        }
     }
 } 
 
@@ -161,7 +175,9 @@ public class MainManager : MonoBehaviour
     public string bitboardTest = "";
     public string lastTextboxMenuResult;
 
-    public bool pieceTextVisible = true;
+    public bool pieceTextVisible = false;
+
+    public float scalingFactor = 1.175f;
 
     public enum GameConst
     {
@@ -185,15 +201,25 @@ public class MainManager : MonoBehaviour
 
     private void Awake()
     {
-        intInstance = this;
-        playerData.GenerateSeed();
-        DontDestroyOnLoad(gameObject);
-        LoadAssets();
+        if (intInstance != this && intInstance != null)
+        {
+            Destroy(gameObject);
+        } else
+        {
+            intInstance = this;
+            playerData.GenerateSeed();
+            DontDestroyOnLoad(gameObject);
+            LoadAssets();
+        }
     }
 
     // Start is called before the first frame update
     void Start()
     {
+        if (intInstance != this && intInstance != null)
+        {
+            Destroy(gameObject);
+        }
         Application.targetFrameRate = 60;
 
         //GlobalPieceManager.GetPieceTableEntry(Piece.PieceType.King);
@@ -285,6 +311,10 @@ public class MainManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (canvas == null)
+        {
+            canvas = FindObjectOfType<Canvas>();
+        }
         /*
         if (bitboardTest.Length > 0)
         {
@@ -388,10 +418,18 @@ public class MainManager : MonoBehaviour
         return (Screen.width / (0.0f + Screen.height)) * 450;
     }
 
+    public void StartRun()
+    {
+        playerData = new PlayerData();
+        playerData.GenerateSeed();
+        SceneManager.LoadScene("GameScene");
+    }
 
     public void EndRun()
     {
         //go back to main menu
+        playerData = new PlayerData();
+        playerData.GenerateSeed();
         SceneManager.LoadScene("MainMenuScene");
     }
 

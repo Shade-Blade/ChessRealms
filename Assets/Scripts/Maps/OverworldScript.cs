@@ -127,6 +127,7 @@ public class OverworldScript : MonoBehaviour
 
     public void ReturnFromNode(bool complete = true)
     {
+        MainManager.Instance.playerData.ResetConsumablesUsed();
         //use ms to do stuff
         if (mapNodeSubobject != null)
         {
@@ -156,6 +157,8 @@ public class OverworldScript : MonoBehaviour
 
     public void ReturnFromRealmMap()
     {
+        MainManager.Instance.playerData.ResetConsumablesUsed();
+
         MainManager.Instance.playerData.realmsComplete++;
         MainManager.Instance.playerData.realmBattlesComplete = 0;
 

@@ -432,9 +432,9 @@ public class Board
         SpectralWall = 1 << 20,     //Pieces on rank 3 act as Spectral for you
         ImmunityZone = 1 << 21,     //Middle 4 squares of home row cure your pieces effects and apply StatusImmune
         WarpZone = 1 << 22,     //Center 4x4 your pieces act like they are Warped (for non giants)
-        ShieldZone = 1 << 23,      //Bishop + Knight pawn squares apply InvincibleFar2 (so they are invincible from long range)
+        ShieldZone = 1 << 24,      //Bishop + Knight pawn squares apply InvincibleFar2 (so they are invincible from long range)
 
-        Seafaring = 1 << 24,    //All pieces on edge files get a special move to the opposite side (Mirror move) (Cylindrical like)
+        Seafaring = 1 << 23,    //All pieces on edge files get a special move to the opposite side (Mirror move) (Cylindrical like)
         Backdoor = 1 << 25,     //Pieces on king / queen normal start squares get a special move to the opposite top side (Sneaky like)
         Mirror = 1 << 26,       //Mirror teleport
 
@@ -452,13 +452,13 @@ public class Board
     {
         None = 0,
 
-        Blinking = 1u << 1,    //Pieces you move must alternate starting on black and white squares
-        Complacent = 1u << 2,  //Can't capture 2 turns in a row
-        Defensive = 1u << 3,   //All black pieces get infinite backwards Rook / Bishop movement (move only)
-        Envious = 1u << 4, //King copies the movement of your highest valued piece (Movement copied stays the same over the course of the game)
-        Fusion = 1u << 5,  //King has the normal movement of all ally pieces
-        Greedy = 1u << 6,  //First X captures the enemy gets Convert instead of capture
-        Hidden = 1,     //~14 are compatible with no king (about half) (so about half are king affecting and half aren't)
+        Blinking = 1u << 0,    //Pieces you move must alternate starting on black and white squares
+        Complacent = 1u << 1,  //Can't capture 2 turns in a row
+        Defensive = 1u << 2,   //All black pieces get infinite backwards Rook / Bishop movement (move only)
+        Envious = 1u << 3, //King copies the movement of your highest valued piece (Movement copied stays the same over the course of the game)
+        Fusion = 1u << 4,  //King has the normal movement of all ally pieces
+        Greedy = 1u << 5,  //First X captures the enemy gets Convert instead of capture
+        Hidden = 1u << 6,     //~14 are compatible with no king (about half) (so about half are king affecting and half aren't)
         Isolated = 1u << 7, //Pieces with enemies and no allies next to them can't move
         Jester = 1u << 8, //Spawn 4 Jesters on the black side
         Knave = 1u << 9, //All enemy pieces are Sneaky (can cross bottom to top without capturing)
@@ -624,11 +624,11 @@ public class Board
 
         PostSetupInit();
     }
-    public void Setup(Piece.PieceType[] warmy, Piece.PieceType[] barmy, PlayerModifier pm, EnemyModifier em)
+    public void Setup(uint[] warmy, uint[] barmy, PlayerModifier pm, EnemyModifier em)
     {
         Init();
 
-        Piece.PieceType[] ptList = warmy;
+        uint[] ptList = warmy;
 
         for (int i = 0; i < pieces.Length; i++)
         {
@@ -645,7 +645,7 @@ public class Board
                 continue;
             }
 
-            Piece.PieceType pt = ptList[indexToRead];
+            Piece.PieceType pt = Piece.GetPieceType(ptList[indexToRead]);
 
             if (pt == PieceType.Null)
             {
@@ -657,7 +657,7 @@ public class Board
                 Debug.Log(pt);
             }
 
-            pieces[i] = Piece.PackPieceData(pt, i < 32 ? PieceAlignment.White : PieceAlignment.Black);
+            pieces[i] = Piece.PackPieceData(pt, Piece.GetPieceModifier(ptList[indexToRead]), i < 32 ? PieceAlignment.White : PieceAlignment.Black);
 
             if ((GlobalPieceManager.GetPieceTableEntry(pt).piecePropertyB & PiecePropertyB.Giant) != 0)
             {
@@ -680,11 +680,11 @@ public class Board
 
         PostSetupInit();
     }
-    public void Setup(Piece.PieceType[] warmy, Piece.PieceType[] barmy, PlayerModifier pm, EnemyModifier em, Piece.PieceClass pieceClass)
+    public void Setup(uint[] warmy, uint[] barmy, PlayerModifier pm, EnemyModifier em, Piece.PieceClass pieceClass)
     {
         Init();
 
-        Piece.PieceType[] ptList = warmy;
+        uint[] ptList = warmy;
 
         for (int i = 0; i < pieces.Length; i++)
         {
@@ -701,7 +701,7 @@ public class Board
                 continue;
             }
 
-            Piece.PieceType pt = ptList[indexToRead];
+            Piece.PieceType pt = Piece.GetPieceType(ptList[indexToRead]);
 
             if (pt == PieceType.Null)
             {
@@ -713,7 +713,7 @@ public class Board
                 Debug.Log(pt);
             }
 
-            pieces[i] = Piece.PackPieceData(pt, i < 32 ? PieceAlignment.White : PieceAlignment.Black);
+            pieces[i] = Piece.PackPieceData(pt, Piece.GetPieceModifier(ptList[indexToRead]), i < 32 ? PieceAlignment.White : PieceAlignment.Black);
 
             if ((GlobalPieceManager.GetPieceTableEntry(pt).piecePropertyB & PiecePropertyB.Giant) != 0)
             {
@@ -751,6 +751,11 @@ public class Board
             while (attempts < 1000)
             {
                 int randPosition = UnityEngine.Random.Range(16, 32);
+                if (st == Square.SquareType.Promotion)
+                {
+                    //row 6 or 7
+                    randPosition = UnityEngine.Random.Range(8, 24);
+                }
 
                 if (globalData.squares[randPosition].type == Square.SquareType.Normal && globalData.squares[63 - randPosition].type == Square.SquareType.Normal)
                 {
@@ -1202,7 +1207,7 @@ public class Board
         Piece.PieceType[] ptList = new Piece.PieceType[]
         {
             PieceType.CrookedBishop, PieceType.CrookedRook, PieceType.Lobster, PieceType.Shrimp, PieceType.King, PieceType.Stronghold, PieceType.Spy, PieceType.Warship,
-            PieceType.CrookedPawn, PieceType.ArcanaFortune, PieceType.Tardigrade, PieceType.Ranger, PieceType.Moon, PieceType.FastPawn, PieceType.Runner, PieceType.Canoe,
+            PieceType.CrookedPawn, PieceType.ArcanaFortune, PieceType.Tardigrade, PieceType.Ranger, PieceType.Moon, PieceType.RushPawn, PieceType.Runner, PieceType.Canoe,
             0,0,0,0,0,0,0,0,
             0,0,0,0,0,0,0,0
         };
@@ -1298,7 +1303,7 @@ public class Board
         Piece.PieceType[] ptList = new Piece.PieceType[]
         {
             PieceType.PushRook, PieceType.Pusher, PieceType.PushBishop, PieceType.PushQueen, PieceType.King, PieceType.StickyQueen, PieceType.StickyBishop, PieceType.StickyRook,
-            PieceType.PushPawn, PieceType.PushPawn, PieceType.Pawn, PieceType.Pawn, PieceType.Pawn, PieceType.Pawn, PieceType.StickyMan, PieceType.StickyPawn,
+            PieceType.PushPawn, PieceType.PushPawn, PieceType.Pawn, PieceType.Pawn, PieceType.Pawn, PieceType.Pawn, PieceType.StickyGuard, PieceType.StickyPawn,
             PieceType.Pawn,PieceType.Pawn,0,0,0,0,PieceType.StickyPawn,PieceType.StickyPawn,
             0,0,0,0,0,0,0,0
         };
@@ -1434,7 +1439,7 @@ public class Board
 
         Piece.PieceType[] ptList = new Piece.PieceType[]
         {
-            PieceType.SwitchTower, PieceType.SwitchFrog, PieceType.SwitchKnight, PieceType.SwitchPaladin, PieceType.King, PieceType.SwitchKnight, PieceType.SwitchFrog, PieceType.SwitchTower,
+            PieceType.SwitchTower, PieceType.SwitchFrog, PieceType.SwitchKnight, PieceType.SwitchDuke, PieceType.King, PieceType.SwitchKnight, PieceType.SwitchFrog, PieceType.SwitchTower,
             PieceType.SwitchSquire, PieceType.SwitchSquire, PieceType.SwitchSquire, PieceType.SwitchSquire, PieceType.SwitchSquire, PieceType.SwitchSquire, PieceType.SwitchSquire, PieceType.SwitchSquire,
             0,0,0,0,0,0,0,0,
             0,0,0,0,0,0,0,0
@@ -6277,6 +6282,7 @@ public class Board
         PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pieces[x + (y << 3)]);
         uint targetPiece = pieces[x + (y << 3)];
         globalData.bitboard_updatedPieces |= (1uL << (x + (y << 3)));
+        globalData.bitboard_updatedEmpty = 0;
         switch (cmt)
         {
             case ConsumableMoveType.None:
@@ -6344,7 +6350,7 @@ public class Board
             case ConsumableMoveType.Ring:
                 pieces[x + (y << 3)] = Piece.SetPieceModifier(PieceModifier.Radiant, pieces[x + (y << 3)]);
                 break;
-            case ConsumableMoveType.Wings:
+            case ConsumableMoveType.Feather:
                 pieces[x + (y << 3)] = Piece.SetPieceModifier(PieceModifier.Winged, pieces[x + (y << 3)]);
                 break;
             case ConsumableMoveType.Glass:
@@ -7320,7 +7326,7 @@ public class Board
         if (pieceValue != 0)
         {
             //force you to use 0
-            PlaceGiant(Piece.SetPieceSpecialData(0, piece), x - dx, y - dy);
+            DeleteGiant(Piece.SetPieceSpecialData(0, piece), x - dx, y - dy);
             return;
         }
 
@@ -8725,18 +8731,24 @@ public class Board
             }
             */
 
+            Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(piece);
+
             if (black && (i >= 2 && i <= 5) && immuneZone)
             {
                 pieces[i] = Piece.SetPieceStatusEffect(0, Piece.SetPieceStatusDuration(0, piece));
+                if (pse != PieceStatusEffect.None)
+                {
+                    if (boardUpdateMetadata != null)
+                    {
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, pieces[i], BoardUpdateMetadata.BoardUpdateType.StatusCure));
+                    }
+                }
                 continue;
             }
-
-            Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(piece);
 
             psed--;
             if (psed == 0)
             {
-
                 //Rip
                 if (pse <= PieceStatusEffect.Poisoned)
                 {
@@ -8768,8 +8780,12 @@ public class Board
                 }
 
                 pieces[i] = Piece.SetPieceStatusEffect(0, piece);
+                if (boardUpdateMetadata != null)
+                {
+                    boardUpdateMetadata.Add(new BoardUpdateMetadata(i & 7, i >> 3, Piece.SetPieceStatusDuration(0, pieces[i]), BoardUpdateMetadata.BoardUpdateType.StatusCure));
+                }
             }
-            pieces[i] = Piece.SetPieceStatusDuration(psed, piece);
+            pieces[i] = Piece.SetPieceStatusDuration(psed, pieces[i]);
 
             switch (pse)
             {
@@ -8907,7 +8923,7 @@ public class Board
         int py = y + dy;
 
         bool pincer = false;
-        if ((((px | y) & -8) != 0))
+        if ((((px | py) & -8) != 0))
         {
             pincer = true;
         } else
@@ -9507,7 +9523,7 @@ public class Board
                 }
             }
 
-            if (!modifierMovement && (fanBitboard != 0 || ((1uL << lastMoveIndex) & globalData.bitboard_square_normal) != 0) && (((pte.pieceProperty & (PieceProperty.NoTerrain)) == 0 && (pte.piecePropertyB & PiecePropertyB.TrueShiftImmune) == 0)))
+            if (!modifierMovement && (fanBitboard != 0 || ((1uL << lastMoveIndex) & globalData.bitboard_square_normal) == 0) && (((pte.pieceProperty & (PieceProperty.NoTerrain)) == 0 && (pte.piecePropertyB & PiecePropertyB.TrueShiftImmune) == 0)))
             {
                 bool fan = false;
 
@@ -9671,20 +9687,27 @@ public class Board
                         case Square.SquareType.Promotion:
                             if (pte.promotionType != PieceType.Null)
                             {
+                                bool skip = false;
                                 switch (Piece.GetPieceAlignment(pieces[lastMoveIndex]))
                                 {
                                     case PieceAlignment.White:
-                                        if (((lastMoveIndex & 56) >> 3 <= 3))
+                                        if ((lastMoveIndex < 32))
                                         {
+                                            skip = true;
                                             break;
                                         }
                                         break;
                                     case PieceAlignment.Black:
-                                        if (((lastMoveIndex & 56) >> 3 > 3))
+                                        if ((lastMoveIndex >= 32))
                                         {
+                                            skip = true;
                                             break;
                                         }
                                         break;
+                                }
+                                if (skip)
+                                {
+                                    break;
                                 }
 
                                 pieces[lastMoveIndex] = Piece.SetPieceType(pte.promotionType, pieces[lastMoveIndex]);
@@ -10004,11 +10027,11 @@ public class Board
                 case Square.SquareType.Promotion:
                     if (pteI.promotionType != PieceType.Null)
                     {
-                        if (Piece.GetPieceAlignment(pieces[index]) == PieceAlignment.White && ((index & 56) >> 3 <= 3))
+                        if (Piece.GetPieceAlignment(pieces[index]) == PieceAlignment.White && (index < 32))
                         {
                             break;
                         }
-                        if (Piece.GetPieceAlignment(pieces[index]) == PieceAlignment.Black && ((index & 56) >> 3 > 3))
+                        if (Piece.GetPieceAlignment(pieces[index]) == PieceAlignment.Black && (index >= 32))
                         {
                             break;
                         }
@@ -10217,7 +10240,7 @@ public class Board
                     return false;
                 }
                 return true; //IsMoveLegal(ref b, move, false);
-            case ConsumableMoveType.Wings:
+            case ConsumableMoveType.Feather:
                 if (pte == null || Piece.GetPieceAlignment(targetPiece) != PieceAlignment.White || !Move.IsModifierCompatible(PieceModifier.Winged, pte))
                 {
                     return false;
@@ -10543,6 +10566,23 @@ public class Board
             return;
         }
 
+        uint oldPiece = pieces[(Move.GetFromX(move)) + ((Move.GetFromY(move) << 3))];
+        if (giant)
+        {
+            globalData.bitboard_updatedPieces |= (1uL << (Move.GetFromXYInt(move)));
+            globalData.bitboard_updatedPieces |= (1uL << (Move.GetToXYInt(move)));
+            globalData.bitboard_updatedPieces |= (1uL << (Move.GetFromXYInt(move)) + 1);
+            globalData.bitboard_updatedPieces |= (1uL << (Move.GetToXYInt(move)) + 1);
+            globalData.bitboard_updatedPieces |= (1uL << (Move.GetFromXYInt(move)) + 8);
+            globalData.bitboard_updatedPieces |= (1uL << (Move.GetToXYInt(move)) + 8);
+            globalData.bitboard_updatedPieces |= (1uL << (Move.GetFromXYInt(move)) + 9);
+            globalData.bitboard_updatedPieces |= (1uL << (Move.GetToXYInt(move)) + 9);
+
+            DeleteGiant(oldPiece, Move.GetFromX(move), Move.GetFromY(move));
+            PlaceGiant(oldPiece, Move.GetToX(move), Move.GetToY(move));
+            return;
+        }
+
         //Execute the move
 
         globalData.bitboard_updatedPieces |= (1uL << (Move.GetFromXYInt(move)));
@@ -10552,7 +10592,6 @@ public class Board
         //swap the 2 places
 
         //Very straightforward
-        uint oldPiece = pieces[(Move.GetFromX(move)) + ((Move.GetFromY(move) << 3))];
         SetPieceAtCoordinate(Move.GetFromX(move), Move.GetFromY(move), pieces[(Move.GetToX(move)) + ((Move.GetToY(move) << 3))]);
         SetPieceAtCoordinate(Move.GetToX(move), Move.GetToY(move), oldPiece);
 
@@ -11116,49 +11155,49 @@ public class Board
         switch (cmt)
         {
             case ConsumableMoveType.PocketRock:
-                return 1;
+                return 3;
             case ConsumableMoveType.PocketRockslide:
-                return 7;
+                return 9;
             case ConsumableMoveType.PocketPawn:
-                return 1;
+                return 7;
             case ConsumableMoveType.PocketKnight:
-                return 4;
+                return 8;
             case ConsumableMoveType.Horns:
-                return 4;
+                return 6;
             case ConsumableMoveType.Torch:
-                return 6;
+                return 8;
             case ConsumableMoveType.Ring:
-                return 4;
-            case ConsumableMoveType.Wings:
                 return 6;
+            case ConsumableMoveType.Feather:
+                return 7;
             case ConsumableMoveType.Glass:
-                return 6;
+                return 10;
             case ConsumableMoveType.Bottle:
-                return 3;
-            case ConsumableMoveType.Shield:
-                return 5;
-            case ConsumableMoveType.Cap:
-                return 3;
-            case ConsumableMoveType.Grail:
-                return 5;
-            case ConsumableMoveType.WarpBack:
-                return 2;
-            case ConsumableMoveType.SplashFreeze:
-                return 3;
-            case ConsumableMoveType.SplashPhantom:
-                return 2;
-            case ConsumableMoveType.SplashCure:
-                return 1;
-            case ConsumableMoveType.SplashAir:
-                return 1;
-            case ConsumableMoveType.SplashVortex:
-                return 1;
-            case ConsumableMoveType.Fan:
                 return 4;
+            case ConsumableMoveType.Shield:
+                return 6;
+            case ConsumableMoveType.Cap:
+                return 5;
+            case ConsumableMoveType.Grail:
+                return 16;
+            case ConsumableMoveType.WarpBack:
+                return 4;
+            case ConsumableMoveType.SplashFreeze:
+                return 12;
+            case ConsumableMoveType.SplashPhantom:
+                return 12;
+            case ConsumableMoveType.SplashCure:
+                return 3;
+            case ConsumableMoveType.SplashAir:
+                return 4;
+            case ConsumableMoveType.SplashVortex:
+                return 4;
+            case ConsumableMoveType.Fan:
+                return 6;
             case ConsumableMoveType.MegaFan:
-                return 6;
+                return 10;
             case ConsumableMoveType.Bag:
-                return 6;
+                return 12;
         }
         return 5;
     }
@@ -11169,7 +11208,7 @@ public class Board
             case ConsumableMoveType.Horns:
             case ConsumableMoveType.Torch:
             case ConsumableMoveType.Ring:
-            case ConsumableMoveType.Wings:
+            case ConsumableMoveType.Feather:
             case ConsumableMoveType.Glass:
             case ConsumableMoveType.Bottle:
             case ConsumableMoveType.Shield:
@@ -11221,7 +11260,7 @@ public class Board
                 return "Imbue the target ally with Phoenix for the rest of the battle. (Phoenix: When destroyed, respawn as far back as possible and lose this Modifier.)";
             case ConsumableMoveType.Ring:
                 return "Imbue the target ally with Radiant for the rest of the battle. (Radiant: When this piece captures, spawn a Pawn as far back as possible.)";
-            case ConsumableMoveType.Wings:
+            case ConsumableMoveType.Feather:
                 return "Imbue the target ally with Winged for the rest of the battle. (Winged: Ignore the first obstacle but can't capture after leaping over the obstacle.)";
             case ConsumableMoveType.Glass:
                 return "Imbue the target ally with Spectral for the rest of the battle. (Spectral: Ally pieces are not blocked by this piece.)";
@@ -11329,7 +11368,7 @@ public class Board
             case PlayerModifier.Recall:
                 return "Your pieces can teleport move or swap back to the home row.";
             case PlayerModifier.Tempering:
-                return "Capture Only moves now allow movement as well.";
+                return "Capture Only moves now allow passive movement as well.";
             case PlayerModifier.Rockfall:
                 return "Spawn 16 rocks on the board.";
             case PlayerModifier.Promoter:
@@ -11753,7 +11792,7 @@ public static class Move
         Horns,  //vengeful imbuer
         Torch,  //phoenix imbuer
         Ring,   //golden imbuer
-        Wings,  //winged imbuer
+        Feather,  //winged imbuer
         Glass,  //spectral imbuer
         Bottle, //immune imbuer
         Shield, //shielded imbuer
@@ -12814,7 +12853,7 @@ public static class Move
             case SpecialType.SelfMove:
                 return "Stay in place";
             case SpecialType.Castling:
-                return "Move towards an ally non-pawn piece beyond the square moved to, moving that ally behind you. Only usable once per battle.";
+                return "(Castling) Move towards an ally non-pawn piece beyond the square moved to, moving that ally behind you. Only usable once per battle.";
             case SpecialType.Convert:
                 return "(Enchant) Move or Convert an enemy piece to your side.";
             case SpecialType.ConvertCaptureOnly:
@@ -12849,9 +12888,9 @@ public static class Move
                 }
                 return "Spawn a piece on this square.";
             case SpecialType.FireCapture:
-                return "Move or Burn an enemy piece.";
+                return "Move or Burn an enemy piece without moving.";
             case SpecialType.FireCaptureOnly:
-                return "Burn an enemy piece.";
+                return "Burn an enemy piece without moving.";
             case SpecialType.LongLeaper:
                 return "(Ignores Obstacles)(Indirect Capture) Leap over pieces, destroying all enemies between the start and endpoint.";
             case SpecialType.LongLeaperCaptureOnly:
@@ -13013,7 +13052,7 @@ public static class Move
                 switch (pte.type)
                 {
                     case PieceType.Hypnotist:
-                        return "(Enchant) Move enemy pieces in this area.";
+                        return "(Enchant) Move enemy pieces in this area.\n(Note that you can't move the exact same piece your enemy did last turn.)";
                     case PieceType.Envy:
                         return "Copy non special enemy movement in this area.";
                 }

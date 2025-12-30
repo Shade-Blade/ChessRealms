@@ -8,10 +8,13 @@ public class HoverPopupPieceScript : MonoBehaviour
     public TMPro.TMP_Text text;
     public Image backSprite;
 
-    public void Setup(Piece.PieceType pieceType)
+    public void Setup(uint piece)
     {
+        Piece.PieceType pieceType = Piece.GetPieceType(piece);
+        Piece.PieceModifier pieceModifier = Piece.GetPieceModifier(piece);
+
         backSprite.sprite = Text_PieceSprite.GetPieceSprite(pieceType);
-        backSprite.material = Text_PieceSprite.GetMaterialGUI(0);
+        backSprite.material = Text_PieceSprite.GetMaterialGUI(pieceModifier);
         backSprite.color = Piece.GetPieceColor(Piece.PieceAlignment.Black);
 
         if (MainManager.Instance.pieceTextVisible)
@@ -27,7 +30,7 @@ public class HoverPopupPieceScript : MonoBehaviour
         if (giant)
         {
             backSprite.rectTransform.localPosition = new Vector3(15, 15, 0);
-            backSprite.rectTransform.sizeDelta = new Vector2(48, 48);
+            backSprite.rectTransform.sizeDelta = new Vector2(54, 54);
             text.rectTransform.localPosition = new Vector3(15, 15, 0);
             text.rectTransform.sizeDelta = new Vector2(48, 48);
         } else

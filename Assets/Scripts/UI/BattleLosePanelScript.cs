@@ -7,9 +7,12 @@ using UnityEngine.UI;
 public class BattleLosePanelScript : MonoBehaviour
 {
     public BattleBoardScript bs;
-    public Image loseButton;
-    public Image loseButtonBorder;
-    public TMPro.TMP_Text loseButtonText;
+    public Image retryButton;
+    public Image retryButtonBorder;
+    public TMPro.TMP_Text retryButtonText;
+    public Image undoButton;
+    public Image undoButtonBorder;
+    public TMPro.TMP_Text undoButtonText;
     public TextDisplayer runStats;
 
     public GameObject subobject;
@@ -29,11 +32,18 @@ public class BattleLosePanelScript : MonoBehaviour
     {
         transform.localPosition = Vector3.up * 500;
 
-        loseButtonText.text = "Retry <size=50%>(" + MainManager.Instance.playerData.retriesLeft + " left)</size>";
+        retryButtonText.text = "Retry <size=50%>(" + MainManager.Instance.playerData.retriesLeft + " left)</size>";
         if (MainManager.Instance.playerData.retriesLeft == 0)
         {
-            loseButton.color = new Color(0.5f, 0.5f, 0.5f);
-            loseButtonBorder.color = new Color(0.75f, 0.75f, 0.75f);
+            retryButton.color = new Color(0.5f, 0.5f, 0.5f);
+            retryButtonBorder.color = new Color(0.75f, 0.75f, 0.75f);
+        }
+
+        undoButtonText.text = "Undo <size=50%>(" + MainManager.Instance.playerData.undosLeft + " left)</size>";
+        if (MainManager.Instance.playerData.undosLeft == 0)
+        {
+            undoButton.color = new Color(0.5f, 0.5f, 0.5f);
+            undoButtonBorder.color = new Color(0.75f, 0.75f, 0.75f);
         }
 
         runStats.SetText("Lost by " + vt.ToString() + " Victory.\nMade it to Realm " + (MainManager.Instance.playerData.realmsComplete + 1) + ", Battle " + (MainManager.Instance.playerData.realmBattlesComplete + 1), true, true);
@@ -98,5 +108,16 @@ public class BattleLosePanelScript : MonoBehaviour
     public void ExecuteGiveUp()
     {
         MainManager.Instance.EndRun();
+    }
+
+    public void UndoButton()
+    {
+        if (MainManager.Instance.playerData.undosLeft == 0)
+        {
+            return;
+        }
+
+        bs.DoubleUndo();
+        Destroy(gameObject);
     }
 }

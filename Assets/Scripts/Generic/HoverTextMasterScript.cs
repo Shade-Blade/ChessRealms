@@ -61,6 +61,12 @@ public class HoverTextMasterScript : MonoBehaviour
 
     public void MakeHoverPopup(string s)
     {
+        if (s.Length == 0)
+        {
+            //Refuse to make an empty hover popup
+            return;
+        }
+
         GameObject o = Instantiate(hoverPopupPrototype, MainManager.Instance.Canvas.transform);
         HoverPopupScript hps = o.GetComponent<HoverPopupScript>();
         hps.SetText(s, true, true);
@@ -69,7 +75,7 @@ public class HoverTextMasterScript : MonoBehaviour
         hoverPopup = hps;
     }
 
-    public string ArmyToString(Piece.PieceType[] army)
+    public string ArmyToString(uint[] army)
     {
         string output = "*";
 
@@ -84,7 +90,7 @@ public class HoverTextMasterScript : MonoBehaviour
         return output;
     }
 
-    public void MakeHoverPopup(Piece.PieceType[] army, string text)
+    public void MakeHoverPopup(uint[] army, string text)
     {
         //there already is a army popup
         if (hoverText != null && hoverText.Equals(ArmyToString(army)))

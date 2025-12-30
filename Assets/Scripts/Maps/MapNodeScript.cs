@@ -25,7 +25,7 @@ public class MapNodeScript : MonoBehaviour
     public float pieceValueTotal;
     public int pieceTypes;
     public Piece.PieceClass pieceClass;
-    public Piece.PieceType[] army;          //Reused for the free pieces or shop pieces
+    public uint[] army;          //Reused for the free pieces or shop pieces
     public Board.EnemyModifier em;
 
     public bool active;
@@ -226,7 +226,7 @@ public class MapNodeScript : MonoBehaviour
         {
             em = Board.EnemyModifier.Zenith;
         }
-        army = ArmyGenerator.GenerateArmy(truePieceValueTotal, pieceTypes, truePieceValueTotal > 15f ? 0.5f + ((10f * 0.25f) / (truePieceValueTotal - 5)) : 0.75f, 0.5f, pieceClass, em);
+        army = ArmyGenerator.ConvertPieceTypeArray(ArmyGenerator.GenerateArmy(truePieceValueTotal, pieceTypes, truePieceValueTotal > 15f ? 0.5f + ((10f * 0.25f) / (truePieceValueTotal - 5)) : 0.75f, 0.5f, pieceClass, em));
         //Recount piece value because it could be off by 1 or something
         pieceValueTotal = 0;
         for (int i = 0; i < army.Length; i++)
@@ -271,10 +271,10 @@ public class MapNodeScript : MonoBehaviour
                     break;
                 case MapNodeType.BossBattle:
                 case MapNodeType.FinalBossBattle:
-                    HoverTextMasterScript.Instance.MakeHoverPopup(army, "Army Value: " + pieceValueTotal + "\n<boss," + em.ToString() + "> Boss: " + em.ToString() + "\n" + Board.GetEnemyModifierDescription(em));
+                    HoverTextMasterScript.Instance.MakeHoverPopup(army, "Army Value: " + pieceValueTotal + "<line><boss," + em.ToString() + "> Boss: " + em.ToString() + "\n" + Board.GetEnemyModifierDescription(em));
                     break;
                 case MapNodeType.WorldNode:
-                    HoverTextMasterScript.Instance.SetHoverText(GlobalPieceManager.GetPieceClassEntry(pieceClass).name + " Realm\nBase Power: " + truePieceValueTotal);
+                    HoverTextMasterScript.Instance.SetHoverText("<outlinecolor," + MainManager.ColorToString(GlobalPieceManager.GetPieceClassEntry(pieceClass).squareColorLight) + ">" + GlobalPieceManager.GetPieceClassEntry(pieceClass).name + " Realm</color></font><line>" + GlobalPieceManager.GetPieceClassEntry(pieceClass).description + "<line>Base Power: " + truePieceValueTotal);
                     break;
                 default:
                     HoverTextMasterScript.Instance.SetHoverText(nodeType.ToString());

@@ -27,11 +27,34 @@ public class HoverPopupScript : TextDisplayer
     }
     public virtual void PositionUpdate()
     {
-        rectTransform.anchoredPosition = MainManager.Instance.RealMousePos() + (baseBox.rectTransform.sizeDelta.x * Vector2.right * 0.5f) + (baseBox.rectTransform.sizeDelta.y * Vector2.down * 0.5f) + new Vector2(5,-10);
-
-        if (baseBox.rectTransform.sizeDelta.x + rectTransform.anchoredPosition.x > MainManager.CanvasWidth())
+        if (textMesh.text.Length == 0)
         {
-            rectTransform.anchoredPosition = MainManager.Instance.RealMousePos() - (baseBox.rectTransform.sizeDelta.x * Vector2.right * 0.5f) + (baseBox.rectTransform.sizeDelta.y * Vector2.down * 0.5f) + new Vector2(-5, -10);
+            rectTransform.anchoredPosition = Vector3.one * 1000;
+            return;
+        }
+
+        if (MainManager.Instance.RealMousePos().y - (baseBox.rectTransform.sizeDelta.y) < 20)
+        {
+            //hover popup
+            if ((baseBox.rectTransform.sizeDelta.x) + MainManager.Instance.RealMousePos().x > MainManager.CanvasWidth() - 20)
+            {
+                rectTransform.anchoredPosition = MainManager.Instance.RealMousePos() - (baseBox.rectTransform.sizeDelta.x * Vector2.right * 0.5f) + (baseBox.rectTransform.sizeDelta.y * Vector2.up * 0.5f) + new Vector2(-5, 10);
+            }
+            else
+            {
+                rectTransform.anchoredPosition = MainManager.Instance.RealMousePos() + (baseBox.rectTransform.sizeDelta.x * Vector2.right * 0.5f) + (baseBox.rectTransform.sizeDelta.y * Vector2.up * 0.5f) + new Vector2(5, 10);
+            }
+        }
+        else
+        {
+            if ((baseBox.rectTransform.sizeDelta.x) + MainManager.Instance.RealMousePos().x > MainManager.CanvasWidth() - 20)
+            {
+                rectTransform.anchoredPosition = MainManager.Instance.RealMousePos() - (baseBox.rectTransform.sizeDelta.x * Vector2.right * 0.5f) + (baseBox.rectTransform.sizeDelta.y * Vector2.down * 0.5f) + new Vector2(-5, -10);
+            }
+            else
+            {
+                rectTransform.anchoredPosition = MainManager.Instance.RealMousePos() + (baseBox.rectTransform.sizeDelta.x * Vector2.right * 0.5f) + (baseBox.rectTransform.sizeDelta.y * Vector2.down * 0.5f) + new Vector2(5, -10);
+            }
         }
     }
 
@@ -50,6 +73,11 @@ public class HoverPopupScript : TextDisplayer
     }
     public override void SetText(string text, string[] vars, bool complete = true, bool forceOpaque = true, float fontSize = -1)
     {
+        if (text.Length == 0)
+        {
+            return;
+        }
+
         //textMesh = GetComponentInChildren<TMPro.TMP_Text>();
         //baseBox = GetComponentInChildren<Image>();
 
@@ -62,6 +90,11 @@ public class HoverPopupScript : TextDisplayer
     }
     public override void SetText(string text, bool complete = true, bool forceOpaque = true, float fontSize = -1)
     {
+        if (text.Length == 0)
+        {
+            return;
+        }
+
         //textMesh = GetComponentInChildren<TMPro.TMP_Text>();
         //baseBox = GetComponentInChildren<Image>();
 
@@ -77,11 +110,26 @@ public class HoverPopupScript : TextDisplayer
     {
         float width = Mathf.Min(textMesh.GetRenderedValues()[0] + 3, 290);
 
-        textMesh.rectTransform.sizeDelta = new Vector2(width, textMesh.GetRenderedValues()[1] + 0); //baseBox.rectTransform.sizeDelta.y);
-        //do it again for good measure (actually just make sure the height value fixes itself)
-        textMesh.rectTransform.sizeDelta = new Vector2(width, textMesh.GetRenderedValues()[1] + 0); //baseBox.rectTransform.sizeDelta.y);
+        //As it turns out, if it tries to render no text the rendered values are very negative
+        //This causes problems
+        //Creates the phantom hitbox that prevents me from pressing the undo button on the lose screen???
+        if (width < 0)
+        {
+            width = 0;
+        }
 
-        baseBox.rectTransform.sizeDelta = new Vector2(width + 20, textMesh.GetRenderedValues()[1] + 20); //baseBox.rectTransform.sizeDelta.y);
-        borderBox.rectTransform.sizeDelta = new Vector2(width + 20, textMesh.GetRenderedValues()[1] + 20); //baseBox.rectTransform.sizeDelta.y);
+        float height = textMesh.GetRenderedValues()[1];
+
+        if (height < 0)
+        {
+            height = 0;
+        }
+
+        textMesh.rectTransform.sizeDelta = new Vector2(width, height + 0); //baseBox.rectTransform.sizeDelta.y);
+        //do it again for good measure (actually just make sure the height value fixes itself)
+        textMesh.rectTransform.sizeDelta = new Vector2(width, height + 0); //baseBox.rectTransform.sizeDelta.y);
+
+        baseBox.rectTransform.sizeDelta = new Vector2(width + 20, height + 20); //baseBox.rectTransform.sizeDelta.y);
+        borderBox.rectTransform.sizeDelta = new Vector2(width + 20, height + 20); //baseBox.rectTransform.sizeDelta.y);
     }
 }

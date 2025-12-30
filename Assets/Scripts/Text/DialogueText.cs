@@ -371,7 +371,7 @@ public class TMPString
                 {
                     break;
                 }
-                output = "<size=1%>I</size><space=" + Text_PieceSprite.GetWidth(tag.args[0]) + "><size=1%>I</size>";
+                output = "<size=1%>I</size><space=" + Text_PieceSprite.GetWidth(tag.args[0], tag.args.Length > 1 ? tag.args[1] : null) + "><size=1%>I</size>";
                 //output = "z";
                 break;
             case TagEntry.TextTag.Consumable:

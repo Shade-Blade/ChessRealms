@@ -124,16 +124,16 @@ public sealed class GlobalPieceManager : MonoBehaviour
         pieceMaterials[9] = Resources.Load<Material>("Materials/Piece/HalfShielded");
 
         guiPieceMaterials = new Material[10];
-        guiPieceMaterials[0] = Resources.Load<Material>("Materials/Piece/GUI_Normal");
-        guiPieceMaterials[1] = Resources.Load<Material>("Materials/Piece/GUI_Vengeful");
-        guiPieceMaterials[2] = Resources.Load<Material>("Materials/Piece/GUI_Phoenix");
-        guiPieceMaterials[3] = Resources.Load<Material>("Materials/Piece/GUI_Radiant");
-        guiPieceMaterials[4] = Resources.Load<Material>("Materials/Piece/GUI_Winged");
-        guiPieceMaterials[5] = Resources.Load<Material>("Materials/Piece/GUI_Spectral");
-        guiPieceMaterials[6] = Resources.Load<Material>("Materials/Piece/GUI_Immune");
-        guiPieceMaterials[7] = Resources.Load<Material>("Materials/Piece/GUI_Warped");
-        guiPieceMaterials[8] = Resources.Load<Material>("Materials/Piece/GUI_Shielded");
-        guiPieceMaterials[9] = Resources.Load<Material>("Materials/Piece/GUI_HalfShielded");
+        guiPieceMaterials[0] = Resources.Load<Material>("Materials/Piece/Normal_GUI");
+        guiPieceMaterials[1] = Resources.Load<Material>("Materials/Piece/Vengeful_GUI");
+        guiPieceMaterials[2] = Resources.Load<Material>("Materials/Piece/Phoenix_GUI");
+        guiPieceMaterials[3] = Resources.Load<Material>("Materials/Piece/Radiant_GUI");
+        guiPieceMaterials[4] = Resources.Load<Material>("Materials/Piece/Winged_GUI");
+        guiPieceMaterials[5] = Resources.Load<Material>("Materials/Piece/Spectral_GUI");
+        guiPieceMaterials[6] = Resources.Load<Material>("Materials/Piece/Immune_GUI");
+        guiPieceMaterials[7] = Resources.Load<Material>("Materials/Piece/Warped_GUI");
+        guiPieceMaterials[8] = Resources.Load<Material>("Materials/Piece/Shielded_GUI");
+        guiPieceMaterials[9] = Resources.Load<Material>("Materials/Piece/HalfShielded_GUI");
     }
 
     public void LoadRays()
@@ -537,6 +537,7 @@ public sealed class PieceTableEntry
     public bool hasAdvancedMagic;
 
     public bool immobile;           //Naturally immobile: avoid making the army have too many of these (quota = 1/3 piece population?)
+    public bool nonattacking;           //likewise
     public bool wingedCompatible;
     public Piece.PieceClass pieceClass;
 
@@ -699,7 +700,7 @@ public sealed class PieceTableEntry
         bool forbidWinged = false;
         switch (output.type)
         {
-            case Piece.PieceType.Locust:
+            case Piece.PieceType.LocustQueen:
                 forbidWinged = true;
                 break;
         }
@@ -753,18 +754,50 @@ public sealed class PieceTableEntry
 
             //probably legal move
             immobile = false;
+            break;
         }
         for (int i = 0; i < output.enhancedMoveInfo.Length; i++)
         {
-            if ((output.enhancedMoveInfo[i].modifier & (MoveGeneratorPreModifier.c | MoveGeneratorPreModifier.a | MoveGeneratorPreModifier.n | MoveGeneratorPreModifier.e)) != 0)
+            if ((output.enhancedMoveInfo[i].modifier & (MoveGeneratorPreModifier.m | MoveGeneratorPreModifier.a | MoveGeneratorPreModifier.n | MoveGeneratorPreModifier.e)) != 0)
             {
                 continue;
             }
 
             //probably legal move
             immobile = false;
+            break;
+        }
+        bool nonattacking = true;
+        for (int i = 0; i < output.moveInfo.Length; i++)
+        {
+            if ((output.moveInfo[i].modifier & (MoveGeneratorPreModifier.m | MoveGeneratorPreModifier.a | MoveGeneratorPreModifier.n)) != 0)
+            {
+                continue;
+            }
+
+            //probably legal move
+            nonattacking = false;
+            break;
+        }
+        for (int i = 0; i < output.enhancedMoveInfo.Length; i++)
+        {
+            if ((output.enhancedMoveInfo[i].modifier & (MoveGeneratorPreModifier.m | MoveGeneratorPreModifier.a | MoveGeneratorPreModifier.n)) != 0)
+            {
+                continue;
+            }
+
+            //probably legal move
+            nonattacking = false;
+            break;
+        }
+        switch (output.type)
+        {
+            case PieceType.Phantom:
+                nonattacking = true;
+                break;
         }
         output.immobile = immobile;
+        output.nonattacking = nonattacking;
 
         //Has advanced magic
         //Stuff I didn't make properties for
@@ -991,7 +1024,7 @@ public sealed class MoveGeneratorInfoEntry
         vh = v | h,
 
         DirectionModifiers = f | b | v | h,     //All directions bitmask
-        Flippable = f | b,
+        fb = f | b,
 
         i = 1<<6,  //Initial (first 2 rows only)
         r = 1<<7,  //rifle capture
@@ -1421,6 +1454,7 @@ public sealed class PieceClassEntry
 {
     public int index;
     public string name; //to do later: move this to a text only file
+    public string description; //to do later: move this to a text only file
 
     public Color squareColorLight;
     public Color squareColorDark;
@@ -1481,26 +1515,23 @@ public sealed class PieceClassEntry
 
         if (tableRow.Length > 4)
         {
+            output.description = tableRow[4];
+        }
+
+        if (tableRow.Length > 5)
+        {
             Climate c;
-            Enum.TryParse(tableRow[4], out c);
+            Enum.TryParse(tableRow[5], out c);
             output.climate = c;
         }
 
         //Debug.Log(tableRow[5] + " " + tableRow[6] + " " + tableRow[7] + " " + tableRow[8]);
-        if (tableRow.Length > 5)
-        {
-            Color c;
-            c = MainManager.ParseColor(tableRow[5]).GetValueOrDefault();
-            c.a = 1;
-            output.squareColorLight = c;
-        }
-
         if (tableRow.Length > 6)
         {
             Color c;
             c = MainManager.ParseColor(tableRow[6]).GetValueOrDefault();
             c.a = 1;
-            output.squareColorDark = c;
+            output.squareColorLight = c;
         }
 
         if (tableRow.Length > 7)
@@ -1508,7 +1539,7 @@ public sealed class PieceClassEntry
             Color c;
             c = MainManager.ParseColor(tableRow[7]).GetValueOrDefault();
             c.a = 1;
-            output.backgroundColorLight = c;
+            output.squareColorDark = c;
         }
 
         if (tableRow.Length > 8)
@@ -1516,19 +1547,27 @@ public sealed class PieceClassEntry
             Color c;
             c = MainManager.ParseColor(tableRow[8]).GetValueOrDefault();
             c.a = 1;
-            output.backgroundColorDark = c;
+            output.backgroundColorLight = c;
         }
 
         if (tableRow.Length > 9)
         {
-            int t;
-            int.TryParse(tableRow[9], out t);
-            output.tier = t;
+            Color c;
+            c = MainManager.ParseColor(tableRow[9]).GetValueOrDefault();
+            c.a = 1;
+            output.backgroundColorDark = c;
         }
 
         if (tableRow.Length > 10)
         {
-            string[] nearbyClasses = tableRow[10].Split("|");
+            int t;
+            int.TryParse(tableRow[10], out t);
+            output.tier = t;
+        }
+
+        if (tableRow.Length > 11)
+        {
+            string[] nearbyClasses = tableRow[11].Split("|");
 
             List<Piece.PieceClass> nearbyClassesList = new List<PieceClass>();
             for (int j = 0; j < nearbyClasses.Length; j++)
@@ -1552,7 +1591,11 @@ public sealed class PieceClassEntry
             if (GlobalPieceManager.pieceTable[j] != null && GlobalPieceManager.pieceTable[j].pieceClass == i)
             {
                 //forbidden
-                if (GlobalPieceManager.pieceTable[j].type == PieceType.GeminiTwin || GlobalPieceManager.pieceTable[j].type == PieceType.MoonIllusion || GlobalPieceManager.pieceTable[j].type == PieceType.Rock)
+                if (GlobalPieceManager.pieceTable[j].type == PieceType.GeminiTwin || GlobalPieceManager.pieceTable[j].type == PieceType.MoonIllusion)
+                {
+                    continue;
+                }
+                if (GlobalPieceManager.pieceTable[j].pieceValueX2 == 0)
                 {
                     continue;
                 }
@@ -1561,9 +1604,9 @@ public sealed class PieceClassEntry
         }
         output.normalPieces = normalPieces.ToArray();
 
-        if (tableRow.Length > 11)
+        if (tableRow.Length > 12)
         {
-            string[] terrains = tableRow[11].Split("|");
+            string[] terrains = tableRow[12].Split("|");
 
             List<Square.SquareType> terrainList = new List<Square.SquareType>();
             for (int j = 0; j < terrains.Length; j++)
@@ -1594,10 +1637,10 @@ public sealed class PieceClassEntry
             output.terrainTypes = terrainList.ToArray();
         }
 
-        if (tableRow.Length > 12)
+        if (tableRow.Length > 13)
         {
             List<Piece.PieceType> extraPiecesList = new List<PieceType>();
-            string[] extraPieces = tableRow[12].Split("|");
+            string[] extraPieces = tableRow[13].Split("|");
             for (int j = 0; j < extraPieces.Length; j++)
             {
                 Piece.PieceType pt = PieceType.Null;

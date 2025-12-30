@@ -37,10 +37,12 @@ public class ShopItemScript : MonoBehaviour
             if (MainManager.Instance.playerData.coins >= cost)
             {
                 shopItem.EnableInteraction();
+                text.color = new Color(1, 1, 0, 1);
             }
             else
             {
                 shopItem.DisableInteraction();
+                text.color = new Color(1, 0.25f, 0, 1);
             }
         }
         else

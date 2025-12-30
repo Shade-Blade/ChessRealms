@@ -1,15 +1,25 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEngine;
 
 public class Text_PieceSprite : Text_SpecialSprite
 {
     //text width number
-    public static string GetWidth(string b)
+    public static string GetWidth(string b, string size)
     {
+        if (size == null)
+        {
+            //use em
+            return (WIDTH) + "em";
+        }
+
+        float fsize = 1;
+        float.TryParse(size, NumberStyles.Any, CultureInfo.InvariantCulture, out fsize); 
+
         //use em
-        return (WIDTH) + "em";
+        return (WIDTH * fsize) + "em";
     }
 
     //public string[] args;
@@ -19,6 +29,7 @@ public class Text_PieceSprite : Text_SpecialSprite
     public const float WIDTH = 1.5f;
 
     public Sprite itemSprite;
+    public float scale;
 
     //build an item sprite with given args
     //position is handled by the thing that makes the item sprites
@@ -29,18 +40,24 @@ public class Text_PieceSprite : Text_SpecialSprite
         Text_PieceSprite its = obj.GetComponent<Text_PieceSprite>();
         its.args = args;
         its.index = index;
-        its.relativeSize = relativeSize;
-
         if (args != null && args.Length > 0)
         {
             its.itemSprite = GetPieceSprite(args[0]);
             its.baseBox.sprite = its.itemSprite;
+
+            if (args.Length > 1)
+            {
+                float newscale = 1;
+                float.TryParse(args[1], NumberStyles.Any, CultureInfo.InvariantCulture, out newscale);
+                its.scale = newscale;
+            }
         }
         else
         {
             its.itemSprite = null;
             its.baseBox.sprite = its.itemSprite;
         }
+        its.relativeSize = relativeSize * its.scale;
 
         return obj;
     }

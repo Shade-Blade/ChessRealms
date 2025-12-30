@@ -84,7 +84,7 @@ public class SquareScript : MonoBehaviour
                 HoverStop();
             }
         }
-        if (isHover)
+        if (isHover && bs.CanSelectPieces())
         {
             HoverTextMasterScript.Instance.SetHoverText(GetHoverText());
         }
@@ -110,10 +110,7 @@ public class SquareScript : MonoBehaviour
 
     public void HoverStart()
     {
-        if (sq.type != Square.SquareType.Normal)
-        {
-            Debug.Log("Hover start " + sq.type);
-        }
+
     }
     public void HoverStay()
     {
@@ -462,22 +459,22 @@ public class SquareScript : MonoBehaviour
         {
             if (specialMoveType)
             {
-                moveHighlight.color = new Color(0.6f, 0.55f, 0.4f, 0.8f);
+                moveHighlight.color = new Color(0.75f, 0.75f, 0.55f, 0.8f);
             }
             else
             {
-                moveHighlight.color = new Color(0.4f, 0.4f, 0.4f, 0.8f);
+                moveHighlight.color = new Color(0.55f, 0.55f, 0.55f, 0.8f);
             }
         }
         else
         {
             if (specialMoveType)
             {
-                moveHighlight.color = new Color(0f, 1f, 1f, 0.8f);
+                moveHighlight.color = new Color(0.3f, 1f, 1f, 0.8f);
             }
             else
             {
-                moveHighlight.color = new Color(0f, 0f, 1f, 0.8f);
+                moveHighlight.color = new Color(0.3f, 0.3f, 1f, 0.8f);
             }
         }
         isHighlightedLegal = true;
@@ -492,22 +489,22 @@ public class SquareScript : MonoBehaviour
         {
             if (specialMoveType)
             {
-                moveHighlight.color = new Color(0.6f, 0.45f, 0.4f, 0.8f);
+                moveHighlight.color = new Color(0.75f, 0.65f, 0.55f, 0.8f);
             }
             else
             {
-                moveHighlight.color = new Color(0.6f, 0.4f, 0.4f, 0.8f);
+                moveHighlight.color = new Color(0.75f, 0.55f, 0.55f, 0.8f);
             }
         }
         else
         {
             if (specialMoveType)
             {
-                moveHighlight.color = new Color(1f, 0.5f, 0f, 0.8f);
+                moveHighlight.color = new Color(1f, 0.75f, 0.3f, 0.8f);
             }
             else
             {
-                moveHighlight.color = new Color(1f, 0f, 0f, 0.8f);
+                moveHighlight.color = new Color(1f, 0.3f, 0.3f, 0.8f);
             }
         }
         isHighlightedIllegal = true;

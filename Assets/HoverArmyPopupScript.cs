@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class HoverArmyPopupScript : HoverPopupScript
 {
-    public Piece.PieceType[] army;
+    public uint[] army;
 
     public GameObject hoverPiecePrototype;
     public GameObject squarePrototype;
@@ -15,17 +15,28 @@ public class HoverArmyPopupScript : HoverPopupScript
     public List<HoverPopupPieceScript> hppsList;
     int rows;
 
-    public void SetArmy(Piece.PieceType[] army)
+    public void SetArmy(uint[] army)
     {
         int rows = 2;
         for (int i = 0; i < army.Length; i++)
         {
-            if (army[i] == Piece.PieceType.Null)
+            if (army[i] == 0)
             {
                 continue;
             }
 
-            rows = 1 + (i >> 3);
+            if (rows < 1 + (i >> 3))
+            {
+                rows = 1 + (i >> 3);
+            }
+
+            if ((GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(army[i])).piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
+            {
+                if (rows < 2 + (i >> 3))
+                {
+                    rows = 2 + (i >> 3);
+                }
+            }
         }
         this.rows = rows;
 
@@ -59,7 +70,7 @@ public class HoverArmyPopupScript : HoverPopupScript
                 squareImage.rectTransform.localPosition = new Vector3(-105 + 30 * (i & 7), 15 + 30 * (i >> 3), 0);
             }
 
-            if (army[i] == Piece.PieceType.Null)
+            if (army[i] == 0)
             {
                 continue;
             }
@@ -75,11 +86,28 @@ public class HoverArmyPopupScript : HoverPopupScript
 
     public override void PositionUpdate()
     {
-        rectTransform.anchoredPosition = MainManager.Instance.RealMousePos() + (baseBox.rectTransform.sizeDelta.x * Vector2.right * 0.5f) + (baseBox.rectTransform.sizeDelta.y * Vector2.down * 0.5f) + new Vector2(-5, -10);
-
-        if (baseBox.rectTransform.sizeDelta.x + rectTransform.anchoredPosition.x > MainManager.CanvasWidth())
+        if (MainManager.Instance.RealMousePos().y - (baseBox.rectTransform.sizeDelta.y) < 20)
         {
-            rectTransform.anchoredPosition = MainManager.Instance.RealMousePos() - (baseBox.rectTransform.sizeDelta.x * Vector2.right * 0.5f) + (baseBox.rectTransform.sizeDelta.y * Vector2.down * 0.5f) + new Vector2(5, -10);
+            //hover popup
+            if ((baseBox.rectTransform.sizeDelta.x) + MainManager.Instance.RealMousePos().x > MainManager.CanvasWidth() - 20)
+            {
+                rectTransform.anchoredPosition = MainManager.Instance.RealMousePos() - (baseBox.rectTransform.sizeDelta.x * Vector2.right * 0.5f) + (baseBox.rectTransform.sizeDelta.y * Vector2.up * 0.5f) + new Vector2(-5, 10);
+            }
+            else
+            {
+                rectTransform.anchoredPosition = MainManager.Instance.RealMousePos() + (baseBox.rectTransform.sizeDelta.x * Vector2.right * 0.5f) + (baseBox.rectTransform.sizeDelta.y * Vector2.up * 0.5f) + new Vector2(5, 10);
+            }
+        }
+        else
+        {
+            if ((baseBox.rectTransform.sizeDelta.x) + MainManager.Instance.RealMousePos().x > MainManager.CanvasWidth() - 20)
+            {
+                rectTransform.anchoredPosition = MainManager.Instance.RealMousePos() - (baseBox.rectTransform.sizeDelta.x * Vector2.right * 0.5f) + (baseBox.rectTransform.sizeDelta.y * Vector2.down * 0.5f) + new Vector2(-5, -10);
+            }
+            else
+            {
+                rectTransform.anchoredPosition = MainManager.Instance.RealMousePos() + (baseBox.rectTransform.sizeDelta.x * Vector2.right * 0.5f) + (baseBox.rectTransform.sizeDelta.y * Vector2.down * 0.5f) + new Vector2(5, -10);
+            }
         }
     }
 

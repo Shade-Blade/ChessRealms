@@ -96,7 +96,7 @@ public class ShopScript : MonoBehaviour, IEvent
                     bool noAdd = false;
                     for (int j = 0; j < MainManager.Instance.playerData.army.Length; j++)
                     {
-                        if (MainManager.Instance.playerData.army[j] == GlobalPieceManager.pieceTable[i].type)
+                        if (Piece.GetPieceType(MainManager.Instance.playerData.army[j]) == GlobalPieceManager.pieceTable[i].type)
                         {
                             noAdd = true;
                             break;

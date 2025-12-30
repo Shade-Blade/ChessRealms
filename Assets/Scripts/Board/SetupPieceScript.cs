@@ -76,6 +76,7 @@ public class SetupPieceScript : PieceScript, IShopItem
 
     public override void OnDragStay()
     {
+        isHover = true;
         //giant is offset by 0.5
         if (isGiant)
         {

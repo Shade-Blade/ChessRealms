@@ -1078,6 +1078,21 @@ MonoBehaviour:
     m_Scale: 1
     m_AtlasIndex: 0
     m_ClassDefinitionType: 0
+  - m_Index: 599
+    m_Metrics:
+      m_Width: 32.3125
+      m_Height: 30.78125
+      m_HorizontalBearingX: 3.875
+      m_HorizontalBearingY: 65.703125
+      m_HorizontalAdvance: 40.046875
+    m_GlyphRect:
+      m_X: 368
+      m_Y: 895
+      m_Width: 34
+      m_Height: 32
+    m_Scale: 1
+    m_AtlasIndex: 0
+    m_ClassDefinitionType: 0
   - m_Index: 600
     m_Metrics:
       m_Width: 53.734375
@@ -1333,21 +1348,6 @@ MonoBehaviour:
     m_Scale: 1
     m_AtlasIndex: 0
     m_ClassDefinitionType: 0
-  - m_Index: 599
-    m_Metrics:
-      m_Width: 32.3125
-      m_Height: 30.78125
-      m_HorizontalBearingX: 3.875
-      m_HorizontalBearingY: 65.703125
-      m_HorizontalAdvance: 40.046875
-    m_GlyphRect:
-      m_X: 368
-      m_Y: 895
-      m_Width: 34
-      m_Height: 32
-    m_Scale: 1
-    m_AtlasIndex: 0
-    m_ClassDefinitionType: 0
   m_CharacterTable:
   - m_ElementType: 1
     m_Unicode: 32
@@ -1366,6 +1366,10 @@ MonoBehaviour:
     m_GlyphIndex: 665
     m_Scale: 1
   - m_ElementType: 1
+    m_Unicode: 37
+    m_GlyphIndex: 699
+    m_Scale: 1
+  - m_ElementType: 1
     m_Unicode: 39
     m_GlyphIndex: 642
     m_Scale: 1
@@ -1376,6 +1380,10 @@ MonoBehaviour:
   - m_ElementType: 1
     m_Unicode: 41
     m_GlyphIndex: 616
+    m_Scale: 1
+  - m_ElementType: 1
+    m_Unicode: 42
+    m_GlyphIndex: 599
     m_Scale: 1
   - m_ElementType: 1
     m_Unicode: 43
@@ -1688,14 +1696,6 @@ MonoBehaviour:
   - m_ElementType: 1
     m_Unicode: 8230
     m_GlyphIndex: 592
-    m_Scale: 1
-  - m_ElementType: 1
-    m_Unicode: 37
-    m_GlyphIndex: 699
-    m_Scale: 1
-  - m_ElementType: 1
-    m_Unicode: 42
-    m_GlyphIndex: 599
     m_Scale: 1
   m_AtlasTextures:
   - {fileID: 4846226264606435562}
@@ -2377,7 +2377,9 @@ MonoBehaviour:
   m_FontFeatureTable:
     m_GlyphPairAdjustmentRecords: []
   fallbackFontAssets: []
-  m_FallbackFontAssetTable: []
+  m_FallbackFontAssetTable:
+  - {fileID: 11400000, guid: bc039ff091691664c968b40bfbec359a, type: 2}
+  - {fileID: 11400000, guid: 42c1f7b094c7ee94db8ac6f97095fd55, type: 2}
   m_CreationSettings:
     sourceFontFileName: 
     sourceFontFileGUID: 6318355cf78cde34aab15aacf4694ad4

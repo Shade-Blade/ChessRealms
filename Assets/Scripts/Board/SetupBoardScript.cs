@@ -20,13 +20,18 @@ public class SetupBoardScript : BoardScript
 
         board = new Board();
 
-        Piece.PieceType[] oldArmy = new Piece.PieceType[16];
+        uint[] oldArmy = new uint[16];
 
         for (int i = 0; i < 16; i++)
         {
             oldArmy[i] = MainManager.Instance.playerData.army[i];
         }
-        board.Setup(oldArmy, new Piece.PieceType[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, Board.PlayerModifier.None, Board.EnemyModifier.Hidden);
+
+        //Note: this is a board where black has nothing
+        //Hidden enemy modifier so that it doesn't block your moves due to King Capture
+        //(Because the logic of setup moves forbids King Capture)
+        //Can't delete that logic because white king should not be blocked
+        board.Setup(oldArmy, new uint[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, Board.PlayerModifier.None, Board.EnemyModifier.Hidden);
 
         for (int i = 0; i < 16; i++)
         {
@@ -175,7 +180,7 @@ public class SetupBoardScript : BoardScript
                 MainManager.Instance.playerData.army[i] = 0;
                 continue;
             }
-            MainManager.Instance.playerData.army[i] = Piece.GetPieceType(board.pieces[i]);
+            MainManager.Instance.playerData.army[i] = board.pieces[i];
         }
     }
 

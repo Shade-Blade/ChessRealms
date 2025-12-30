@@ -95,6 +95,7 @@ GameObject:
   - component: {fileID: 7391665080411660083}
   - component: {fileID: 4880215988665978317}
   - component: {fileID: 724773517529419481}
+  - component: {fileID: 6129162091564890233}
   m_Layer: 0
   m_Name: SpecialText
   m_TagString: Untagged
@@ -183,7 +184,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: b2,King
+  m_text: "\u2198"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6f10f5d5c961b364a87876ce9d8c6076, type: 2}
   m_sharedMaterial: {fileID: 2100000, guid: 163e2635b68b32d4baa147bd2b10d75c, type: 2}
@@ -255,6 +256,27 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 4880215988665978317}
   m_maskType: 0
+--- !u!114 &6129162091564890233
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3766697702567493392}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9bb94cb65c7e0e842a3400b4e2e7c765, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  textMesh: {fileID: 724773517529419481}
+  inputString: 
+  cleanString: 
+  charsVisible: 0
+  scrollDone: 0
+  lockButtons: 0
+  aPressTime: 0
+  bPress: 0
+  hasTextChanged: 0
 --- !u!1 &4046893580336200054
 GameObject:
   m_ObjectHideFlags: 0
@@ -664,7 +686,7 @@ MonoBehaviour:
   bc: {fileID: 6342896625213762319}
   trashCan: {fileID: 0}
   canDelete: 0
-  specialText: {fileID: 724773517529419481}
+  specialText: {fileID: 6129162091564890233}
   statusText: {fileID: 3461887250432290903}
   squareBelow: {fileID: 0}
   relayDefenders: 0

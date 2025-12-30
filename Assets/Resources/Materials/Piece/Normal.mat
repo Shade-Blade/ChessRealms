@@ -73,9 +73,9 @@ Material:
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _Leak: 1
-    - _LightDesaturation: 0.5
+    - _LightDesaturation: 0.1
     - _Metallic: 0
-    - _Midpoint: 0.5
+    - _Midpoint: 0.51
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
@@ -89,10 +89,10 @@ Material:
     - _YOffset: 1
     - _ZWrite: 1
     m_Colors:
-    - _BlackColor: {r: 0, g: 0, b: 0, a: 0}
+    - _BlackColor: {r: 0, g: 0, b: 0, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _GrayColor: {r: 0, g: 0, b: 0, a: 0}
+    - _GrayColor: {r: 0, g: 0, b: 0, a: 1}
     - _OverlayColor: {r: 0, g: 0, b: 0, a: 0}
-    - _WhiteColor: {r: 0, g: 0, b: 0, a: 0}
+    - _WhiteColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []

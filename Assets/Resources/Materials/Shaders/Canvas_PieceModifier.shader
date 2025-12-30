@@ -139,7 +139,11 @@ Shader "UI/PieceModifier" {
 
             fixed4 frag(v2f IN) : SV_Target
             {
-                half4 c = (tex2D(_MainTex, IN.texcoord) + _TextureSampleAdd) * IN.color;
+                half4 c = (tex2D(_MainTex, IN.texcoord) + _TextureSampleAdd);
+
+                //new: saturated colors are lighter if dark
+			    float m = min(c.r, min(c.g, c.b));
+			    float saturation = max(c.r - m, max(c.g - m, c.b - m));
 
                 fixed4 b = fixed4(0,0,0,0);
 		        if (c.a != 0) {
@@ -169,10 +173,12 @@ Shader "UI/PieceModifier" {
                 float lightness = IN.color.r + IN.color.g + IN.color.b;
 
 			    float factor = lerp(0, 1, saturate(lightness * 2 - 1));
+			    float darkfactor = 1 - factor;
 
 			    //White pieces have pastel ish colors while Black pieces can have fully saturated colors
 			    //(This is probably the best way to have a bit of color on pieces?)
-			    c.rgb = lerp(c.rgb, float3(1,1,1), factor * _LightDesaturation);
+			    c.rgb = lerp(c.rgb, float3(1,1,1), factor * _LightDesaturation * (1 - saturation * 0.75)); //lerp(c.rgb, float3(1,1,1), factor * _LightDesaturation);
+                c.rgb *= lerp(IN.color, float4(1,1,1,1), saturation * 0.75);
 
                 fixed lerpCoeff = RGBToHSV(c.rgb).z;
 

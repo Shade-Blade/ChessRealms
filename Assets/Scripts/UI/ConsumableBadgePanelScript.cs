@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -79,6 +80,11 @@ public class ConsumableBadgePanelScript : MonoBehaviour
             if (cs.consumableIndex >= 0)
             {
                 MainManager.Instance.playerData.consumables[cs.consumableIndex] = Move.ConsumableMoveType.None;
+                MainManager.Instance.playerData.consumablesDisabled[i] = MainManager.Instance.playerData.consumablesDisabled[cs.consumableIndex];
+                MainManager.Instance.playerData.consumablesDisabled[cs.consumableIndex] = false;
+            } else
+            {
+                MainManager.Instance.playerData.consumablesDisabled[i] = false;
             }
             MainManager.Instance.playerData.consumables[i] = cs.cmt;
             return true;
@@ -89,6 +95,9 @@ public class ConsumableBadgePanelScript : MonoBehaviour
             if (cs.consumableIndex >= 0)
             {
                 MainManager.Instance.playerData.consumables[cs.consumableIndex] = MainManager.Instance.playerData.consumables[i];
+                bool csdisabled = MainManager.Instance.playerData.consumablesDisabled[cs.consumableIndex];
+                MainManager.Instance.playerData.consumablesDisabled[cs.consumableIndex] = MainManager.Instance.playerData.consumablesDisabled[i];
+                MainManager.Instance.playerData.consumablesDisabled[i] = csdisabled;
                 MainManager.Instance.playerData.consumables[i] = cs.cmt;
                 return true;
             } else
@@ -130,16 +139,17 @@ public class ConsumableBadgePanelScript : MonoBehaviour
     public void TryDeleteConsumable(ConsumableScript cs)
     {
         MainManager.Instance.playerData.consumables[cs.consumableIndex] = Move.ConsumableMoveType.None;
+        MainManager.Instance.playerData.consumablesDisabled[cs.consumableIndex] = false;
 
         //Todo: Consumable data table to determine what consumables cost
-        MainManager.Instance.playerData.coins += 5;
+        MainManager.Instance.playerData.coins += Board.GetConsumableCost(cs.cmt);
     }
     public void TryDeleteBadge(BadgeScript bs)
     {
         MainManager.Instance.playerData.badges[bs.badgeIndex] = 0;
 
         //Todo: Badge data table to determine what badges cost
-        MainManager.Instance.playerData.coins += 5;
+        MainManager.Instance.playerData.coins += Board.GetPlayerModifierCost(bs.pm);
     }
 
     public void FixInventory()
@@ -167,6 +177,7 @@ public class ConsumableBadgePanelScript : MonoBehaviour
                 //make a consumable
                 GameObject go = Instantiate(consumableTemplate, consumableSlots[i].transform);
                 consumables[i] = go.GetComponent<ConsumableScript>();
+                consumables[i].disabled = MainManager.Instance.playerData.consumablesDisabled[i];
                 consumables[i].Setup(MainManager.Instance.playerData.consumables[i]);
                 consumables[i].consumableIndex = i;
                 consumables[i].bs = bs;

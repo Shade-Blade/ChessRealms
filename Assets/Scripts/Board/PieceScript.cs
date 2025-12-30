@@ -31,7 +31,8 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     public TrashCanScript trashCan;
     public bool canDelete;
 
-    public TMPro.TMP_Text specialText;
+    //public TMPro.TMP_Text specialText;
+    public TextDisplayer specialText;
     public TMPro.TMP_Text statusText;
 
     public SquareScript squareBelow;
@@ -79,9 +80,14 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                 break;
             case PieceAlignment.Neutral:
                 hoverText += "<outlinecolor,#f2f266>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
+                hoverText += "<outlinecolor,#f2f266>Neutral</color></font> pieces can be moved or captured by either side.<line>";
+                hoverText += "Note that you can't move the exact same piece your enemy did last turn.<line>";
                 break;
             case PieceAlignment.Crystal:
                 hoverText += "<outlinecolor,#f266f2>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
+                hoverText += "<outlinecolor,#f266f2>Crystal</color></font> pieces can be moved by a side that is directly attacking this piece.<line>";
+                hoverText += "(i.e. an attack shown by Control Zones.)<line>";
+                hoverText += "Note that you can't move the exact same piece your enemy did last turn.<line>";
                 break;
         }
 
@@ -181,7 +187,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
         if (specialText != null)
         {
-            specialText.text = "";
+            specialText.SetText("", true, true); //text = "";
 
             Piece.PieceType pt = Piece.GetPieceType(piece);
             ushort specialData = Piece.GetPieceSpecialData(piece);
@@ -194,51 +200,51 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                 switch (GlobalPieceManager.GetPieceTableEntry(piece).enhancedMoveType)
                 {
                     case EnhancedMoveType.PartialForcedMoves:
-                        specialText.text = "■";
+                        specialText.SetText("■", true, true);
                         break;
                     case EnhancedMoveType.InverseForcedMoves:
-                        specialText.text = "■";
+                        specialText.SetText("■", true, true);
                         break;
                     case EnhancedMoveType.PartialForcedCapture:
-                        specialText.text = "■";
+                        specialText.SetText("■", true, true);
                         break;
                     case EnhancedMoveType.SwitchMover:
-                        specialText.text = "□";
+                        specialText.SetText("□", true, true);
                         break;
                     case EnhancedMoveType.WarMover:
-                        specialText.text = "■";
+                        specialText.SetText("■", true, true);
                         break;
                     case EnhancedMoveType.ShyMover:
-                        specialText.text = "■";
+                        specialText.SetText("■", true, true);
                         break;
                     case EnhancedMoveType.NoAllyMover:
-                        specialText.text = "□";
+                        specialText.SetText("□", true, true);
                         break;
                     case EnhancedMoveType.AllyMover:
-                        specialText.text = "□";
+                        specialText.SetText("□", true, true);
                         break;
                     case EnhancedMoveType.JusticeMover:
-                        specialText.text = "■";
+                        specialText.SetText("■", true, true);
                         break;
                     case EnhancedMoveType.DiligenceMover:
-                        specialText.text = "□";
+                        specialText.SetText("□", true, true);
                         break;
                     case EnhancedMoveType.VampireMover:
-                        specialText.text = "■";
+                        specialText.SetText("■", true, true);
                         break;
                     case EnhancedMoveType.FearfulMover:
-                        specialText.text = "■";
+                        specialText.SetText("■", true, true);
                         break;
                     case EnhancedMoveType.FarHalfMover:
-                        specialText.text = "■";
+                        specialText.SetText("■", true, true);
                         break;
                     case EnhancedMoveType.CloseHalfMover:
-                        specialText.text = "■";
+                        specialText.SetText("■", true, true);
                         break;
                     default:
                         if (pt == PieceType.ArcanaLovers)
                         {
-                            specialText.text = "■";
+                            specialText.SetText("■", true, true);
                         }
                         break;
                 }
@@ -259,7 +265,9 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                     }
                     if (last != PieceType.ArcanaFool && last != PieceType.Null)
                     {
-                        specialText.text = Piece.GetPieceName(last);
+                        specialText.SetText(Piece.GetPieceName(last), true, true);
+                        //specialText.SetText("<piece," + last + ",2>", true, true);
+                        //specialText.text = Piece.GetPieceName(last);
                     }
                     break;
                 case PieceType.Imitator:
@@ -275,13 +283,15 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                     }
                     if (elast != PieceType.Imitator && elast != PieceType.ArcanaFool && elast != PieceType.Null)
                     {
-                        specialText.text = Piece.GetPieceName(elast);
+                        specialText.SetText(Piece.GetPieceName(elast), true, true);
+                        //specialText.SetText("<piece," + elast + ",2>", true, true);
+                        //specialText.text = Piece.GetPieceName(elast);
                     }
                     break;
                 case Piece.PieceType.Revenant:
                     if (specialData != 0)
                     {
-                        specialText.text = "X";
+                        specialText.SetText("X", true, true);
                     }
                     break;
                 case Piece.PieceType.ChargeWarper:
@@ -295,16 +305,14 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                 case Piece.PieceType.Lich:
                     if (specialData != 0)
                     {
-                        specialText.text = specialData + "";
+                        specialText.SetText(specialData + "", true, true);
                     }
                     break;
                 case Piece.PieceType.MegaCannon:
                     if (specialData != 0)
                     {
                         ushort squareData = (ushort)(specialData & 63);
-                        specialText.text = Move.FileToLetter(squareData & 7) + "" + ((squareData >> 3) + 1);
-
-                        specialText.text = specialText.text + "," + (8 - (specialData >> 6));
+                        specialText.SetText(Move.FileToLetter(squareData & 7) + "" + ((squareData >> 3) + 1) + "," + (8 - (specialData >> 6)), true, true);
                     }
                     break;
                 case PieceType.WarpWeaver:
@@ -314,7 +322,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                 case Piece.PieceType.MetalFox:
                     if (specialData != 0)
                     {
-                        specialText.text = Move.FileToLetter(specialData & 7) + "" + ((specialData >> 3) + 1);
+                        specialText.SetText(Move.FileToLetter(specialData & 7) + "" + ((specialData >> 3) + 1), true, true);
                     }
                     break;
                 case Piece.PieceType.Tunnel:
@@ -324,7 +332,8 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                 case Piece.PieceType.Train:
                     if (specialData != 0)
                     {
-                        specialText.text = Piece.GetPieceName((Piece.PieceType)specialData) + "";
+                        specialText.SetText(Piece.GetPieceName((Piece.PieceType)specialData), true, true);
+                        //specialText.SetText("<piece," + Piece.GetPieceName((Piece.PieceType)specialData) + ",2>", true, true);
                     }
                     break;
                 case Piece.PieceType.Roller:
@@ -333,7 +342,34 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                 case Piece.PieceType.ReboundRook:
                     if (specialData != 0)
                     {
-                        specialText.text = (Dir)specialData + "";
+                        switch ((Dir)specialData)
+                        {
+                            case Dir.DownLeft:
+                                specialText.SetText("<dlarrow>", true, true);
+                                break;
+                            case Dir.Down:
+                                specialText.SetText("<darrow>", true, true);
+                                break;
+                            case Dir.DownRight:
+                                specialText.SetText("<drarrow>", true, true);
+                                break;
+                            case Dir.Left:
+                                specialText.SetText("<larrow>", true, true);
+                                break;
+                            case Dir.Right:
+                                specialText.SetText("<rarrow>", true, true);
+                                break;
+                            case Dir.UpLeft:
+                                specialText.SetText("<ularrow>", true, true);
+                                break;
+                            case Dir.Up:
+                                specialText.SetText("<uarrow>", true, true);
+                                break;
+                            case Dir.UpRight:
+                                specialText.SetText("<urarrow>", true, true);
+                                break;
+                        }
+                        //specialText.text = (Dir)specialData + "";
                     }
                     break;
             }
@@ -360,6 +396,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             {
                 text.enabled = false;
                 backSprite.enabled = false;
+                //transform.position = BoardScript.GetSpritePositionFromCoordinates(x, y, -0.5f);
                 bc.enabled = false;
                 this.x = x;
                 this.y = y;
@@ -370,7 +407,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             text.transform.localPosition = offset + Vector3.back * 0.05f;
             backSprite.transform.localPosition = offset;
             text.transform.localScale = Vector3.one * 2;
-            backSprite.transform.localScale = Vector3.one * 2f;
+            backSprite.transform.localScale = Vector3.one * 1.8f;
             selectObject.transform.localPosition = offset + Vector3.forward * 0.2f;
             selectObject.transform.localScale = Vector3.one * 2f;
             bc.center = offset;
@@ -380,7 +417,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             text.transform.localPosition = Vector3.back * 0.05f;
             backSprite.transform.localPosition = Vector3.zero;
             text.transform.localScale = Vector3.one;
-            backSprite.transform.localScale = Vector3.one;
+            backSprite.transform.localScale = Vector3.one * 0.9f;
             selectObject.transform.localPosition = Vector3.forward * 0.2f;
             selectObject.transform.localScale = Vector3.one;
             bc.center = Vector3.zero;
@@ -498,7 +535,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         dob.canDrag = bs.CanSelectPieces();
         bc.enabled = bs.CanSelectPieces() && text.enabled; //Become intangible while animating (Also be intangible if you are the wrong part of a giant)
 
-        if (isHover)
+        if (isHover && bs.CanSelectPieces())
         {
             HoverTextMasterScript.Instance.SetHoverText(GetHoverText());
         }
@@ -554,7 +591,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
         if (Piece.GetPieceModifier(piece) != 0)
         {
-            cost += 5;
+            cost += Piece.GetModifierValue(Piece.GetPieceModifier(piece));
         }
 
         cost &= GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE;
@@ -568,6 +605,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     }
     public virtual void OnDragStay()
     {
+        isHover = true;
         (bs.hoverX, bs.hoverY) = bs.GetCoordinatesFromPosition(transform.position);            
         if (trashCan != null && bs.setupMoves)
         {

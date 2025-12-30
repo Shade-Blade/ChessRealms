@@ -69,7 +69,7 @@ public class BattleBoardScript : BoardScript
     public bool rightClick;
     public ArrowScript arrow;
 
-    public static BattleBoardScript CreateBoard(Piece.PieceType[] army, Board.PlayerModifier pm, Board.EnemyModifier em, Piece.PieceClass pieceClass)
+    public static BattleBoardScript CreateBoard(uint[] army, Board.PlayerModifier pm, Board.EnemyModifier em, Piece.PieceClass pieceClass)
     {
         GameObject go = Instantiate(Resources.Load<GameObject>("Board/BattleBoardTemplate"));
         BattleBoardScript bbs = go.GetComponent<BattleBoardScript>();
@@ -130,20 +130,20 @@ public class BattleBoardScript : BoardScript
 
         switch (difficulty)
         {
-            case -1:
-                moveThinkTime = 0.5f;
-                break;
-            case 0:
-                moveThinkTime = 1;
-                break;
             case 1:
-                moveThinkTime = 2;
+                moveThinkTime = 0.25f;
                 break;
             case 2:
-                moveThinkTime = 4;
+                moveThinkTime = 0.5f;
                 break;
             case 3:
-                moveThinkTime = 8;
+                moveThinkTime = 1;
+                break;
+            case 4:
+                moveThinkTime = 2;
+                break;
+            case 5:
+                moveThinkTime = 6;
                 break;
         }
         chessAI.InitAI(difficulty);
@@ -172,19 +172,25 @@ public class BattleBoardScript : BoardScript
 
         switch (difficulty)
         {
-            case -1:
-            case 0:
             case 1:
+                moveThinkTime = 0.25f;
+                break;
             case 2:
-                moveThinkTime = 4;
+                moveThinkTime = 0.5f;
                 break;
             case 3:
-                moveThinkTime = 8;
+                moveThinkTime = 1;
+                break;
+            case 4:
+                moveThinkTime = 2;
+                break;
+            case 5:
+                moveThinkTime = 6;
                 break;
         }
         chessAI.InitAI(difficulty);
     }
-    public void ResetBoard(Piece.PieceType[] warmy, Piece.PieceType[] barmy, Board.PlayerModifier pm, Board.EnemyModifier em)
+    public void ResetBoard(uint[] warmy, uint[] barmy, Board.PlayerModifier pm, Board.EnemyModifier em)
     {
         Debug.Log("Make board");
         DestroyLastMovedTrail();
@@ -209,19 +215,25 @@ public class BattleBoardScript : BoardScript
 
         switch (difficulty)
         {
-            case -1:
-            case 0:
             case 1:
+                moveThinkTime = 0.25f;
+                break;
             case 2:
-                moveThinkTime = 4;
+                moveThinkTime = 0.5f;
                 break;
             case 3:
-                moveThinkTime = 8;
+                moveThinkTime = 1;
+                break;
+            case 4:
+                moveThinkTime = 2;
+                break;
+            case 5:
+                moveThinkTime = 6;
                 break;
         }
         chessAI.InitAI(difficulty);
     }
-    public void ResetBoard(Piece.PieceType[] warmy, Piece.PieceType[] barmy, Board.PlayerModifier pm, Board.EnemyModifier em, Piece.PieceClass pieceClass)
+    public void ResetBoard(uint[] warmy, uint[] barmy, Board.PlayerModifier pm, Board.EnemyModifier em, Piece.PieceClass pieceClass)
     {
         if (pieceClass == PieceClass.None)
         {
@@ -252,14 +264,20 @@ public class BattleBoardScript : BoardScript
 
         switch (difficulty)
         {
-            case -1:
-            case 0:
             case 1:
+                moveThinkTime = 0.25f;
+                break;
             case 2:
-                moveThinkTime = 4;
+                moveThinkTime = 0.5f;
                 break;
             case 3:
-                moveThinkTime = 8;
+                moveThinkTime = 1;
+                break;
+            case 4:
+                moveThinkTime = 2;
+                break;
+            case 5:
+                moveThinkTime = 6;
                 break;
         }
         chessAI.InitAI(difficulty);
@@ -269,20 +287,20 @@ public class BattleBoardScript : BoardScript
     {
         switch (difficulty)
         {
-            case -1:
-                moveThinkTime = 0.5f;
-                break;
-            case 0:
-                moveThinkTime = 1;
-                break;
             case 1:
-                moveThinkTime = 2;
+                moveThinkTime = 0.25f;
                 break;
             case 2:
-                moveThinkTime = 4;
+                moveThinkTime = 0.5f;
                 break;
             case 3:
-                moveThinkTime = 8;
+                moveThinkTime = 1;
+                break;
+            case 4:
+                moveThinkTime = 2;
+                break;
+            case 5:
+                moveThinkTime = 6;
                 break;
         }
         chessAI.SetDifficulty(difficulty);
@@ -351,9 +369,14 @@ public class BattleBoardScript : BoardScript
 
     public bool ConsumableMovePossible()
     {
+        if (board.turn == 0)
+        {
+            return false;
+        }
+
         for (int i = 0; i < MainManager.Instance.playerData.consumables.Length; i++)
         {
-            if (MainManager.Instance.playerData.consumables[i] == Move.ConsumableMoveType.None)
+            if (MainManager.Instance.playerData.consumables[i] == Move.ConsumableMoveType.None || MainManager.Instance.playerData.consumablesDisabled[i])
             {
                 continue;
             }
@@ -362,7 +385,8 @@ public class BattleBoardScript : BoardScript
             {
                 for (int y = 0; y < 8; y++)
                 {
-                    if (Board.IsConsumableMoveValid(ref board, Move.EncodeConsumableMove(MainManager.Instance.playerData.consumables[i], i & 7, i >> 3)))
+                    uint move = Move.EncodeConsumableMove(MainManager.Instance.playerData.consumables[i], x, y);
+                    if (Board.IsConsumableMoveLegal(ref board, move))
                     {
                         return true;
                     }
@@ -406,22 +430,25 @@ public class BattleBoardScript : BoardScript
             }
         }
 
-        for (int i = 0; i < 64; i++)
+        if (board.turn > 0 && (cs.consumableIndex < 0 || !MainManager.Instance.playerData.consumablesDisabled[cs.consumableIndex]))
         {
-            //squares[i].showEnemyMove = isEnemy;
+            for (int i = 0; i < 64; i++)
+            {
+                //squares[i].showEnemyMove = isEnemy;
 
-            ulong bitIndex = 1uL << i;
-            if ((bitIndex & legalBitboard) != 0)
-            {
-                squares[i].showEnemyMove = false;
-                squares[i].HighlightLegal(specialColor, false);
-                continue;
-            }
-            if ((bitIndex & (bitboard)) != 0)
-            {
-                squares[i].showEnemyMove = false;
-                squares[i].HighlightIllegal(specialColor, false);
-                continue;
+                ulong bitIndex = 1uL << i;
+                if ((bitIndex & legalBitboard) != 0)
+                {
+                    squares[i].showEnemyMove = false;
+                    squares[i].HighlightLegal(specialColor, false);
+                    continue;
+                }
+                if ((bitIndex & (bitboard)) != 0)
+                {
+                    squares[i].showEnemyMove = false;
+                    squares[i].HighlightIllegal(specialColor, false);
+                    continue;
+                }
             }
         }
 
@@ -723,7 +750,8 @@ public class BattleBoardScript : BoardScript
             //Consume the consumable
             if (index >= 0)
             {
-                MainManager.Instance.playerData.consumables[index] = Move.ConsumableMoveType.None;
+                //MainManager.Instance.playerData.consumables[index] = Move.ConsumableMoveType.None;
+                MainManager.Instance.playerData.consumablesDisabled[index] = true;
             }
 
             List<BoardUpdateMetadata> boardUpdateMetadata = new List<BoardUpdateMetadata>();
@@ -1603,6 +1631,13 @@ public class BattleBoardScript : BoardScript
             return;
         }
         MainManager.Instance.playerData.undosLeft--;
+
+        BattleLosePanelScript losePanel = FindObjectOfType<BattleLosePanelScript>();
+        if (losePanel != null)
+        {
+            Destroy(losePanel.gameObject);
+        }
+
         /*
         if (historyIndex <= 1)
         {
@@ -2766,6 +2801,19 @@ public class BattleBoardScript : BoardScript
         copy.ApplyNullMove(false);
         MoveGenerator.GenerateMovesForPlayer(enemyMoveList, ref copy, copy.blackToMove ? PieceAlignment.Black : PieceAlignment.White, enemyMoveMetadata);
         //MoveGeneratorInfoEntry.GenerateMovesForPlayer(enemyMoveList, ref board, PieceAlignment.Black);
+
+        //without this the black enhanced stuff is 1 turn out of date (so if Black moves stuff and suddenly meets a condition it won't update on your turn)
+        //This should be correct?        
+        //Null move with no turn end does not reset last captured or most other stuff
+        //(Stuff like Diligence should mostly work right still since the null move erases the last moved location for the other player)
+        if (copy.blackToMove)
+        {
+            board.globalData.bitboard_enhancedBlack = copy.globalData.bitboard_enhancedBlack;
+        }
+        else
+        {
+            board.globalData.bitboard_enhancedWhite = copy.globalData.bitboard_enhancedWhite;
+        }
 
         if (copy.blackToMove)
         {

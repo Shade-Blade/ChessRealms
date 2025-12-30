@@ -2926,7 +2926,7 @@ internal static class MoveGenerator
                                         if ((pteH.piecePropertyB & Piece.PiecePropertyB.Giant) == 0)
                                         {
                                             //generate stuff at the target's location
-                                            GenerateMovesForPiece(moves, ref b, pa, Piece.SetPieceModifier(Piece.PieceModifier.Shielded, b.pieces[index]), index & 7, index >> 3, null, moveMetadata);
+                                            GenerateMovesForPiece(moves, ref b, Piece.GetPieceAlignment(b.pieces[index]), Piece.SetPieceModifier(Piece.PieceModifier.Shielded, b.pieces[index]), index & 7, index >> 3, null, moveMetadata);
                                         }
                                         else
                                         {
@@ -2938,7 +2938,7 @@ internal static class MoveGenerator
                                             newIndex += dy * 8;
 
                                             //generate stuff at the target's location
-                                            GenerateMovesForPiece(moves, ref b, pa, Piece.SetPieceModifier(Piece.PieceModifier.Shielded, b.pieces[index]), newIndex & 7, newIndex >> 3, null, moveMetadata);
+                                            GenerateMovesForPiece(moves, ref b, Piece.GetPieceAlignment(b.pieces[index]), Piece.SetPieceModifier(Piece.PieceModifier.Shielded, b.pieces[index]), newIndex & 7, newIndex >> 3, null, moveMetadata);
                                         }
                                     }
                                 }
@@ -3476,8 +3476,9 @@ internal static class MoveGenerator
         bool flip = false;
 
         ulong flipCheckBitboard = 0;
+        ulong bitindex = 1uL << (x + (y << 3));
 
-        bool symmetric = (mgie.modifier & MoveGeneratorPreModifier.Flippable) != 0;
+        bool symmetric = (mgie.modifier & MoveGeneratorPreModifier.fb) == 0;
 
         if (!symmetric)
         {
@@ -3943,7 +3944,7 @@ internal static class MoveGenerator
         if (pa == Piece.PieceAlignment.White)
         {
             //turn 1 no capture (To stop certain kinds of team building instant cheeses)
-            if (b.turn == 0 && b.bonusPly == 0)
+            if (b.turn == 0)
             {
                 if (pse == Piece.PieceStatusEffect.Bloodlust)
                 {
@@ -4064,11 +4065,11 @@ internal static class MoveGenerator
             switch (pa)
             {
                 case PieceAlignment.White:
-                    waterBitboard = b.globalData.bitboard_waterBlack;
+                    waterBitboard |= b.globalData.bitboard_waterBlack;
                     harpyBitboard = b.globalData.bitboard_harpyBlack;
                     break;
                 case PieceAlignment.Black:
-                    waterBitboard = b.globalData.bitboard_waterWhite;
+                    waterBitboard |= b.globalData.bitboard_waterWhite;
                     harpyBitboard = b.globalData.bitboard_harpyWhite;
                     break;
             }
@@ -4352,7 +4353,7 @@ internal static class MoveGenerator
         {
             if (!symmetric)
             {
-                flip = (flipCheckBitboard & (1uL << xy)) != 0;
+                flip = (flipCheckBitboard & (bitindex)) != 0;
             }
             //(int aX, int aY) = Move.TransformBasedOnAlignment(pa, 1, 1, flip);
             int flipValue = flip ? -1 : 1;
@@ -6953,6 +6954,7 @@ internal static class MoveGenerator
                     {
                         allyPawnsBitboard = b.globalData.bitboard_pawns & b.globalData.bitboard_piecesBlack;
                     }
+                    allyPawnsBitboard &= ~bitindex;
                     if (moveMetadata != null)
                     {
                         while (allyPawnsBitboard != 0)
@@ -6986,6 +6988,7 @@ internal static class MoveGenerator
                     {
                         allyBitboard = b.globalData.bitboard_piecesBlack;
                     }
+                    allyBitboard &= ~bitindex;
                     if (moveMetadata != null)
                     {
                         while (allyBitboard != 0)
@@ -7992,17 +7995,17 @@ internal static class MoveGenerator
                 }
             }
 
-            if (!keepGoing || specialType == SpecialType.LongLeaperCaptureOnly)
+            if (specialType == SpecialType.LongLeaperCaptureOnly)
             {
-                if (specialType == SpecialType.LongLeaperCaptureOnly)
+                uint obstaclePiece = b.pieces[tempX + (tempY << 3)];
+                if (obstaclePiece == 0 || Piece.GetPieceAlignment(obstaclePiece) == pa)
                 {
-                    uint obstaclePiece = b.pieces[tempX + (tempY << 3)];
-                    if (obstaclePiece == 0 || Piece.GetPieceAlignment(obstaclePiece) == pa)
-                    {
-                        return false;
-                    }
+                    return false;
                 }
+            }
 
+            if (!keepGoing)
+            {
                 //For antirange: if nothing was generated you have to generate something on the last square
                 //That means you hit an ally piece
                 //No mbt because the bit would already be set
@@ -9544,10 +9547,10 @@ internal static class MoveGenerator
             switch (pa)
             {
                 case PieceAlignment.White:
-                    roughTest = b.globalData.bitboard_roughBlack;
+                    roughTest |= b.globalData.bitboard_roughBlack;
                     break;
                 case PieceAlignment.Black:
-                    roughTest = b.globalData.bitboard_roughWhite;
+                    roughTest |= b.globalData.bitboard_roughWhite;
                     break;
             }
 

@@ -73,7 +73,7 @@ Material:
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _Leak: 1
-    - _LightDesaturation: 0.5
+    - _LightDesaturation: 0.1
     - _Metallic: 0
     - _Midpoint: 0.5
     - _Mode: 0

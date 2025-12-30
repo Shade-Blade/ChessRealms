@@ -26,6 +26,11 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
     public ShopItemScript sis;
     public GameObject selectObject;
 
+    public bool isHover;
+    public bool lastIsHover;
+
+    public bool disabled;
+
     public void SetShopItemScript(ShopItemScript sis)
     {
         this.sis = sis;
@@ -76,6 +81,14 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
         {
             text.text = "";
         }
+
+        if (disabled)
+        {
+            backSprite.color = new Color(0.75f, 0.75f, 0.75f, 0.5f);
+        } else
+        {
+            backSprite.color = new Color(1,1,1,1);
+        }
     }
 
     public virtual void ForceDeselect()
@@ -88,7 +101,14 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
 
     public void OnSelect()
     {
-        backSprite.color = new Color(1, 1, 1, 1);
+        if (disabled)
+        {
+            backSprite.color = new Color(0.75f, 0.75f, 0.75f, 0.5f);
+        }
+        else
+        {
+            backSprite.color = new Color(1, 1, 1, 1);
+        }
         selectObject.SetActive(true);
 
         bs.SelectConsumable(this);
@@ -96,7 +116,14 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
 
     public void OnDeselect()
     {
-        backSprite.color = new Color(1, 1, 1, 1);
+        if (disabled)
+        {
+            backSprite.color = new Color(0.75f, 0.75f, 0.75f, 0.5f);
+        }
+        else
+        {
+            backSprite.color = new Color(1, 1, 1, 1);
+        }
         selectObject.SetActive(false);
         if (bs.selectedConsumable == null || bs.selectedConsumable == this)
         {
@@ -122,6 +149,7 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
     }
     public void OnDragStay()
     {
+        isHover = true;
         (bs.hoverX, bs.hoverY) = bs.GetCoordinatesFromPosition(transform.position);
 
         if (trashCan != null && consumableIndex >= 0)
@@ -175,6 +203,12 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
                 return;
             }
 
+            if (disabled || bs.board.turn < 1)
+            {
+                ResetPosition();
+                return;
+            }
+
             //Setup mode
             if (bs.setupMoves)
             {
@@ -204,10 +238,27 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
         cps.FixInventory();
     }
 
+    public string GetHoverText()
+    {
+        return "<outlinecolor,#80ff80>" + Board.GetConsumableName(cmt) + "</outlinecolor><line>" + ((bs is BattleBoardScript && bs.board.turn < 1) ? "<color,#800000>(Can't use items on turn 1.)</color><line>" : "") + "" + (disabled ? "<color,#800000>(Already used: Will return after battle)</color><line>" : "") + Board.GetConsumableDescription(cmt);
+    }
+
+    public void OnMouseOver()
+    {
+        isHover = true;
+    }
+
     public virtual void Update()
     {
         dob.canDrag = bs.CanSelectPieces() && canInteract;
         bc.enabled = bs.CanSelectPieces() && text.enabled;
+
+        if (isHover && bs.CanSelectPieces())
+        {
+            HoverTextMasterScript.Instance.SetHoverText(GetHoverText());
+        }
+        lastIsHover = isHover;
+        isHover = false;
     }
 
     public void EnableInteraction()
