@@ -2113,19 +2113,20 @@ public class BattleBoardScript : BoardScript
             yield break;
         }
 
+        Vector3 targetPos = GetSpritePositionFromCoordinates(otx, oty, targetPiece.transform.position.z + 0.1f);
+
         if (targetPiece.isGiant)
         {
             int dx = Piece.GetPieceSpecialData(targetPiece.piece) & 1;
             int dy = (Piece.GetPieceSpecialData(targetPiece.piece) & 2) >> 1;
 
             ps = pieces[ps.x - dx + ((ps.y - dy) << 3)];
+            targetPos = GetSpritePositionFromCoordinates(otx - dx, oty - dy, targetPiece.transform.position.z + 0.1f);
             if (targetPiece == null)
             {
                 yield break;
             }
         }
-
-        Vector3 targetPos = GetSpritePositionFromCoordinates(otx, oty, targetPiece.transform.position.z + 0.1f);
 
         float duration = 0;
         float animationDuration = 3.6f / animationSpeed;

@@ -3056,7 +3056,15 @@ public class Board
                         wrathDestruction = true;
                     }
 
-                    if (!pieceChange && opt != PieceType.King && (wrathDestruction || (pteT.pieceProperty & PieceProperty.DestroyCapturer) != 0 || (pteO.pieceProperty & (PieceProperty.DestroyOnCapture)) != 0 || Piece.GetPieceStatusEffect(oldPiece) == PieceStatusEffect.Fragile || ((1uL << (fx + fy * 8) & hagBitboard) != 0) || Piece.GetPieceModifier(targetPiece) == PieceModifier.Vengeful) || (tpa == PieceAlignment.White && ((globalData.playerModifier & PlayerModifier.FinalVengeance) != 0) && whitePerPlayerInfo.pieceCount <= 6))
+                    if (!pieceChange && opt != PieceType.King && 
+                        (wrathDestruction || 
+                        (pteT.pieceProperty & PieceProperty.DestroyCapturer) != 0 || 
+                        (pteO.pieceProperty & (PieceProperty.DestroyOnCapture)) != 0 || 
+                        Piece.GetPieceStatusEffect(oldPiece) == PieceStatusEffect.Fragile || 
+                        ((1uL << (fx + fy * 8) & hagBitboard) != 0) || 
+                        Piece.GetPieceModifier(targetPiece) == PieceModifier.Vengeful || 
+                        (tpa == PieceAlignment.White && ((globalData.playerModifier & PlayerModifier.FinalVengeance) != 0) && whitePerPlayerInfo.pieceCount <= 6))
+                        )
                     {
                         oldPiece = 0;
                         if (opa == PieceAlignment.White)

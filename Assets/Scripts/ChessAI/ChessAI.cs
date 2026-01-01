@@ -1391,6 +1391,10 @@ public class ChessAI
                 if (localVersion == version)
                 {
                     Debug.LogError("Search thread stopped for some reason");
+                    //force an error state to hopefully recover?
+                    moveFound = true;
+                    keepSearching = false;
+                    searchTime = 0;
                 }
                 yield break;
             }

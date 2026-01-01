@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Unity.VisualScripting;
 using UnityEngine;
 using static Move;
@@ -4474,6 +4475,8 @@ internal static class MoveGenerator
                                 bool wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                 if (moveMetadata != null && (wasGenerated))
                                 {
+                                    tx = WrapCoordinate(tx);
+                                    ty = WrapCoordinate(ty);
                                     //It is possible for wasGenerated to be false but I still need to report the middling step
                                     //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                     //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -4492,17 +4495,19 @@ internal static class MoveGenerator
                                 wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                 if (moveMetadata != null && (wasGenerated))
                                 {
+                                    tx = WrapCoordinate(tx);
+                                    ty = WrapCoordinate(ty);
                                     //It is possible for wasGenerated to be false but I still need to report the middling step
                                     //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                     //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
                                     uint key = Move.PackMove((byte)x, (byte)y, (byte)(tx), (byte)(ty));
                                     if (!moveMetadata.ContainsKey(key))
                                     {
-                                        moveMetadata.Add(key, new MoveMetadata(piece, tx, ty, MoveMetadata.PathType.Slider, specialType, MoveMetadata.MakePathTag(mgie.atom, 0)));
+                                        moveMetadata.Add(key, new MoveMetadata(piece, tx, ty, MoveMetadata.PathType.Slider, specialType, MoveMetadata.MakePathTag(mgie.atom, 1)));
                                     }
                                     else
                                     {
-                                        moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 0));
+                                        moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 1));
                                     }
                                 }
                                 tx = x;
@@ -4510,17 +4515,19 @@ internal static class MoveGenerator
                                 wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                 if (moveMetadata != null && (wasGenerated))
                                 {
+                                    tx = WrapCoordinate(tx);
+                                    ty = WrapCoordinate(ty);
                                     //It is possible for wasGenerated to be false but I still need to report the middling step
                                     //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                     //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
                                     uint key = Move.PackMove((byte)x, (byte)y, (byte)(tx), (byte)(ty));
                                     if (!moveMetadata.ContainsKey(key))
                                     {
-                                        moveMetadata.Add(key, new MoveMetadata(piece, tx, ty, MoveMetadata.PathType.Slider, specialType, MoveMetadata.MakePathTag(mgie.atom, 0)));
+                                        moveMetadata.Add(key, new MoveMetadata(piece, tx, ty, MoveMetadata.PathType.Slider, specialType, MoveMetadata.MakePathTag(mgie.atom, 2)));
                                     }
                                     else
                                     {
-                                        moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 0));
+                                        moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 2));
                                     }
                                 }
                                 tx = x;
@@ -4528,17 +4535,19 @@ internal static class MoveGenerator
                                 wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                 if (moveMetadata != null && (wasGenerated))
                                 {
+                                    tx = WrapCoordinate(tx);
+                                    ty = WrapCoordinate(ty);
                                     //It is possible for wasGenerated to be false but I still need to report the middling step
                                     //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                     //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
                                     uint key = Move.PackMove((byte)x, (byte)y, (byte)(tx), (byte)(ty));
                                     if (!moveMetadata.ContainsKey(key))
                                     {
-                                        moveMetadata.Add(key, new MoveMetadata(piece, tx, ty, MoveMetadata.PathType.Slider, specialType, MoveMetadata.MakePathTag(mgie.atom, 0)));
+                                        moveMetadata.Add(key, new MoveMetadata(piece, tx, ty, MoveMetadata.PathType.Slider, specialType, MoveMetadata.MakePathTag(mgie.atom, 3)));
                                     }
                                     else
                                     {
-                                        moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 0));
+                                        moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 3));
                                     }
                                 }
                             }
@@ -4670,6 +4679,8 @@ internal static class MoveGenerator
                                     wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                     if (moveMetadata != null && (wasGenerated))
                                     {
+                                        tx = WrapCoordinate(tx);
+                                        ty = WrapCoordinate(ty);
                                         //It is possible for wasGenerated to be false but I still need to report the middling step
                                         //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                         //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -4693,6 +4704,8 @@ internal static class MoveGenerator
                                     wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                     if (moveMetadata != null && (wasGenerated))
                                     {
+                                        tx = WrapCoordinate(tx);
+                                        ty = WrapCoordinate(ty);
                                         //It is possible for wasGenerated to be false but I still need to report the middling step
                                         //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                         //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -4717,6 +4730,8 @@ internal static class MoveGenerator
                                     wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                     if (moveMetadata != null && (wasGenerated))
                                     {
+                                        tx = WrapCoordinate(tx);
+                                        ty = WrapCoordinate(ty);
                                         //It is possible for wasGenerated to be false but I still need to report the middling step
                                         //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                         //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -4735,6 +4750,8 @@ internal static class MoveGenerator
                                     wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                     if (moveMetadata != null && (wasGenerated))
                                     {
+                                        tx = WrapCoordinate(tx);
+                                        ty = WrapCoordinate(ty);
                                         //It is possible for wasGenerated to be false but I still need to report the middling step
                                         //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                         //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -4968,10 +4985,13 @@ internal static class MoveGenerator
                                 bool wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                 if (moveMetadata != null && (wasGenerated))
                                 {
+                                    tx = WrapCoordinate(tx);
+                                    ty = WrapCoordinate(ty);
                                     //It is possible for wasGenerated to be false but I still need to report the middling step
                                     //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                     //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
                                     uint key = Move.PackMove((byte)x, (byte)y, (byte)(tx), (byte)(ty));
+
                                     if (!moveMetadata.ContainsKey(key))
                                     {
                                         moveMetadata.Add(key, new MoveMetadata(piece, tx, ty, MoveMetadata.PathType.Slider, specialType, MoveMetadata.MakePathTag(mgie.atom, 0)));
@@ -4986,6 +5006,8 @@ internal static class MoveGenerator
                                 wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                 if (moveMetadata != null && (wasGenerated))
                                 {
+                                    tx = WrapCoordinate(tx);
+                                    ty = WrapCoordinate(ty);
                                     //It is possible for wasGenerated to be false but I still need to report the middling step
                                     //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                     //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -4996,7 +5018,7 @@ internal static class MoveGenerator
                                     }
                                     else
                                     {
-                                        moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 0));
+                                        moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 1));
                                     }
                                 }
                                 tx = x + 1;
@@ -5004,6 +5026,8 @@ internal static class MoveGenerator
                                 wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                 if (moveMetadata != null && (wasGenerated))
                                 {
+                                    tx = WrapCoordinate(tx);
+                                    ty = WrapCoordinate(ty);
                                     //It is possible for wasGenerated to be false but I still need to report the middling step
                                     //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                     //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -5014,7 +5038,7 @@ internal static class MoveGenerator
                                     }
                                     else
                                     {
-                                        moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 0));
+                                        moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 2));
                                     }
                                 }
                                 tx = x - 1;
@@ -5022,6 +5046,8 @@ internal static class MoveGenerator
                                 wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                 if (moveMetadata != null && (wasGenerated))
                                 {
+                                    tx = WrapCoordinate(tx);
+                                    ty = WrapCoordinate(ty);
                                     //It is possible for wasGenerated to be false but I still need to report the middling step
                                     //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                     //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -5032,7 +5058,7 @@ internal static class MoveGenerator
                                     }
                                     else
                                     {
-                                        moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 0));
+                                        moveMetadata[key].pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, 3));
                                     }
                                 }
                             }
@@ -5154,6 +5180,8 @@ internal static class MoveGenerator
                                     wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                     if (moveMetadata != null && (wasGenerated))
                                     {
+                                        tx = WrapCoordinate(tx);
+                                        ty = WrapCoordinate(ty);
                                         //It is possible for wasGenerated to be false but I still need to report the middling step
                                         //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                         //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -5172,6 +5200,8 @@ internal static class MoveGenerator
                                     wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                     if (moveMetadata != null && (wasGenerated))
                                     {
+                                        tx = WrapCoordinate(tx);
+                                        ty = WrapCoordinate(ty);
                                         //It is possible for wasGenerated to be false but I still need to report the middling step
                                         //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                         //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -5195,6 +5225,8 @@ internal static class MoveGenerator
                                     wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                     if (moveMetadata != null && (wasGenerated))
                                     {
+                                        tx = WrapCoordinate(tx);
+                                        ty = WrapCoordinate(ty);
                                         //It is possible for wasGenerated to be false but I still need to report the middling step
                                         //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                         //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -5213,6 +5245,8 @@ internal static class MoveGenerator
                                     wasGenerated = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, tx, ty, pa, specialType, pte, mgie, mbt);
                                     if (moveMetadata != null && (wasGenerated))
                                     {
+                                        tx = WrapCoordinate(tx);
+                                        ty = WrapCoordinate(ty);
                                         //It is possible for wasGenerated to be false but I still need to report the middling step
                                         //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                                         //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -5565,6 +5599,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -5608,6 +5644,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -5651,6 +5689,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table
@@ -5694,6 +5734,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table
@@ -5739,6 +5781,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -5777,6 +5821,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -5816,6 +5862,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -5859,6 +5907,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -5905,6 +5955,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -5952,6 +6004,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -6000,6 +6054,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -6046,6 +6102,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -6098,6 +6156,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -6149,6 +6209,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -6200,6 +6262,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -6251,6 +6315,8 @@ internal static class MoveGenerator
                         (bool canContinue, bool wasGenerated) = TryGenerateSquareSingle(moves, true, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, pa, specialType, pte, blockerBitboard, mgie, mbt);
                         if (moveMetadata != null && (canContinue || wasGenerated))
                         {
+                            targetX = WrapCoordinate(targetX);
+                            targetY = WrapCoordinate(targetY);
                             //It is possible for wasGenerated to be false but I still need to report the middling step
                             //(I.e. if you have a Winged piece you can fly over an obstacle but there is no move onto the obstacle)
                             //May cause problems for me later with overlapping movement ranges? (Need to order the moves properly in the table)
@@ -10569,6 +10635,21 @@ internal static class MoveGenerator
 
         return ((((1uL << (targetX + (targetY << 3))) & blockerBitboard) == 0), GenerateSquareSingle(moves, canMove, allowBitboard, ref b, pse, piece, x, y, targetX, targetY, dir, pa, specialType, pte, mgie, mbt));
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int WrapCoordinate(int x)
+    {
+        if (x > 7)
+        {
+            return x - 8;
+        }
+        if (x < 0)
+        {
+            return x + 8;
+        }
+        return x;
+    }
+
     private static bool TryGenerateSquareSingle(List<uint> moves, bool canMove, ulong allowBitboard, ref Board b, Piece.PieceStatusEffect pse, uint piece, int x, int y, int targetX, int targetY, Piece.PieceAlignment pa, Move.SpecialType specialType, PieceTableEntry pte, MoveGeneratorInfoEntry mgie, MoveBitTable mbt)
     {
         if ((pte.pieceProperty & PieceProperty.BoundaryProperties) != 0)
