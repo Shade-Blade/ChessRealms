@@ -3459,6 +3459,7 @@ internal static class MoveGenerator
         //Move.Dir dir;
 
         bool bitboardIncompatible = moveMetadata != null;
+        bool rangeChange = (pte.pieceProperty & Piece.PieceProperty.RangeChange) != 0;
         //bitboardIncompatible |= (pte.pieceProperty & Piece.PieceProperty.BoundaryProperties) != 0;      //currently can't do rays crossing edges of board (would have to cast multiple rays)
         //bitboardIncompatible |= (pte.pieceProperty & Piece.PieceProperty.RangeChange) != 0;             //currently the bitboard setups use fixed ranges
         bitboardIncompatible |= (pte.pieceProperty & Piece.PieceProperty.BitboardIncompatible) != 0;
@@ -4456,7 +4457,7 @@ internal static class MoveGenerator
 
                     if (!directionRestricted)
                     {
-                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal)
+                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal && !rangeChange)
                         {
                             if (!bitboardIncompatible)
                             {
@@ -4633,7 +4634,7 @@ internal static class MoveGenerator
                         int tx = x;
                         int ty = y;
                         bool wasGenerated;
-                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal)
+                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal && !rangeChange)
                         {
                             if (!bitboardIncompatible)
                             {
@@ -4968,7 +4969,7 @@ internal static class MoveGenerator
 
                     if (!directionRestricted)
                     {
-                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal)
+                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal && !rangeChange)
                         {
                             if (!bitboardIncompatible)
                             {
@@ -5134,7 +5135,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal) {
+                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal && !rangeChange) {
                             if (!bitboardIncompatible)
                             {
                                 //bitboard tech
@@ -5262,7 +5263,8 @@ internal static class MoveGenerator
                                     }
                                 }
                             }
-                        } else
+                        } 
+                        else
                         {
                             if (mgie.range == 0 && !bitboardIncompatible && mgie.rangeType == RangeType.Normal)
                             {

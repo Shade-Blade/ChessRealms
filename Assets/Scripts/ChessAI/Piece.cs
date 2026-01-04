@@ -1185,7 +1185,7 @@ public static class Piece
             case PieceProperty.RangeIncrease_NearRows:
                 return "Gain range the further back you are.";
             case PieceProperty.RangeDecrease_FurtherRows:
-                return "Lose range the further forward you are. (2 squares per square ahead)";
+                return "Lose range the further forward you are. (2 squares per square ahead) (Base range is 8 on the home rank)";
             case PieceProperty.PromoteCapture:
                 return "Promotes when capturing a piece.";
             case PieceProperty.PromoteCaptureNonPawn:
