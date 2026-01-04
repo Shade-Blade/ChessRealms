@@ -191,8 +191,23 @@ public class MoveMetadata
         {
             MoveMetadata childToAdd = null;
 
+            //string normal = "";
+
             for (int i = 0; i < subNode.predecessors.Count; i++)
             {
+                /*
+                normal = "";
+                for (int j = 0; j < subNode.predecessors[i].pathTags.Count; j++)
+                {
+                    if (normal.Length > 0)
+                    {
+                        normal += " ";
+                    }
+                    normal += subNode.predecessors[i].pathTags[j];
+                }
+                Debug.Log(normal);
+                */
+
                 if (subNode.predecessors[i].pathTags.Contains(pathTag))
                 {
                     //no backwards

@@ -11362,7 +11362,7 @@ public class Board
             case PlayerModifier.RelayKing:
                 return "King relays its moves to adjacent allies.";
             case PlayerModifier.Slippery:
-                return "Pieces you move slip 1 square when they move (if they land on normal squares).";
+                return "Pieces you move slip 1 square when they move (if they land on normal squares). (Terrain Immune pieces are unaffected.)";
             case PlayerModifier.Push:
                 return "Pieces you move push enemies away by 1 square.";
             case PlayerModifier.Vortex:

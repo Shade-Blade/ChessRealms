@@ -1734,7 +1734,7 @@ public class PieceMovePanelScript : MonoBehaviour
         int effectiveRange = mgie.range;
         if (effectiveRange == 0)
         {
-            effectiveRange = 7;
+            effectiveRange = 16;
         }
 
         int lastX = x;

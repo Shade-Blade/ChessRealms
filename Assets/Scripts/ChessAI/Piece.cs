@@ -1239,7 +1239,7 @@ public static class Piece
             case PieceProperty.ExplodeCapture:
                 return "When capturing, explode to destroy non fire immune pieces adjacent to where it captured.";
             case PieceProperty.NoTerrain:
-                return "Immune to square effects and terrain auras (Rough aura and Water aura.)";
+                return "Immune to square effects and terrain auras.";
             case PieceProperty.MorphCapturer:
                 return "The piece that captures this one changes type to this piece.";
             case PieceProperty.MorphCapturerPawn:
@@ -1393,9 +1393,9 @@ public static class Piece
             case PiecePropertyB.InvincibleNoEnemyAdjacent:
                 return "Invincible if no enemy is adjacent (not including the attacker).";
             case PiecePropertyB.ShiftImmune:
-                return "Can't be displaced by any effects, including ally effects.";
+                return "Can't be displaced by any effects, including ally effects. Can't receive Relay moves.";
             case PiecePropertyB.Giant:
-                return "Takes up 4 squares. Can capture up to 4 enemies at once but can be captured on any of its 4 squares.";
+                return "Takes up 4 squares. Can capture up to 4 enemies at once but can be captured on any of its 4 squares. Can't be displaced by any effects, including ally effects. Can't receive Relay moves.";
             case PiecePropertyB.InvincibleFar:
                 return "Can only be destroyed by adjacent attackers.";
             case PiecePropertyB.InvincibleFar2:

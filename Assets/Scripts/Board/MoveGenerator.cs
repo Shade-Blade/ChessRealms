@@ -8830,7 +8830,7 @@ internal static class MoveGenerator
                     else
                     {
                         md = moveMetadata[mdKey];
-                        md.pathTags.Add(pathtagA);
+                        md.pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, pathtagA));
                         if (x != tempX || y != tempY)
                         {
                             md.AddPredecessor(moveMetadata[Move.PackMove(x, y, tempX, tempY)]);
@@ -8892,7 +8892,7 @@ internal static class MoveGenerator
                     else
                     {
                         md = moveMetadata[mdKey];
-                        md.pathTags.Add(pathtagB);
+                        md.pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, pathtagB));
                         if (x != tempX || y != tempY)
                         {
                             md.AddPredecessor(moveMetadata[Move.PackMove(x, y, tempX, tempY)]);
@@ -9102,17 +9102,11 @@ internal static class MoveGenerator
                     if (!blockedA)
                     {
                         md.pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, pathtagA));
-                    }
-                    if (!blockedB)
-                    {
-                        md.pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, pathtagB));
-                    }
-                    if (!blockedA)
-                    {
                         md.AddPredecessor(moveMetadata[Move.PackMove((byte)x, (byte)y, (byte)(tempXA), (byte)(tempYA))]);
                     }
                     if (!blockedB)
                     {
+                        md.pathTags.Add(MoveMetadata.MakePathTag(mgie.atom, pathtagB));
                         md.AddPredecessor(moveMetadata[Move.PackMove((byte)x, (byte)y, (byte)(tempXB), (byte)(tempYB))]);
                     }
                 }

@@ -91,7 +91,7 @@ MatchPawn,2,mfWrfF,,FireCapture|WaterImmune,FALSE,,Fire,2
 Hypnotist,5.5,WFpRpB,,,FALSE,,Enchanter,3
 Attractor,7,R2,,,FALSE,,Enchanter,3
 Repulser,6,"Ff(0,2)",,,FALSE,,Enchanter,3
-Immobilizer,7,mWmF,,EnchantImmune|Unique,FALSE,,Enchanter,3
+Immobilizer,7,mWmF,,EnchantImmune|ShiftImmune|Unique,FALSE,,Enchanter,3
 Entrancer,4,B2,,,TRUE,,Enchanter,3
 Charmer,2,mfF,,,TRUE,,Enchanter,3
 Wrath,8,FR2,,WrathCapturer,TRUE,,DeadlySins,3
@@ -342,8 +342,8 @@ QuickHog,9,cFmR0-,,BonusMove,FALSE,,Quick,3
 Hummingbird,7,"Wm(2,2)",,BonusMove,FALSE,,Quick,3
 QuickSlug,5,F,,BonusMove,FALSE,,Quick,3
 QuickPawn,3,mifR2=mfWcfF,,BonusMove,FALSE,QuickKnight,Quick,3
-LavaGolem,7,R2,,SlowMove,TRUE,,Slow,3.5
-IceGolem,5,R2,,SlowMove,TRUE,,Slow,3.5
+LavaGolem,7,R2,,SlowMove|ShiftImmune,TRUE,,Slow,3.5
+IceGolem,5,R2,,SlowMove|ShiftImmune,TRUE,,Slow,3.5
 SlothQueen,12,RBI,,SlowMove,FALSE,,Slow,2.5
 VolcanoTower,4.5,"W(0,2)rR4",,SlowMove|FireCapture,FALSE,,Slow,2.5
 FlameObelisk,4.5,"F(2,2)rB4",,SlowMove|FireCapture,FALSE,,Slow,2.5
@@ -366,7 +366,7 @@ GhoulPawn,1,cfFcfW,fFfW,PartialForcedCapture,FALSE,GhoulAmazon,ForcedMovers,2
 PufferfishQueen,7,W,"(1,2)F(0,2)(0,3)",PartialForcedMoves,FALSE,,ForcedMovers,2
 PufferfishPawn,2.5,fF,"f(0,2)f(2,2)",PartialForcedMoves,FALSE,PufferfishQueen,ForcedMovers,2
 Robber,3,"bR2fB2fv(1,2)bh(1,2)",,ConvertCapture|EnemyOnCapture,TRUE,,Criminals,2
-Enforcer,7,R2F,,EnemyOnCapture,TRUE,,Criminals,2
+Enforcer,7,R2F,,EnemyOnCapture|ShiftImmune,TRUE,,Criminals,2
 Smuggler,4,"(1,2)",,Sneaky|EnemyOnCapture,TRUE,,Criminals,2
 Mercenary,3.5,R3cB3,,NeutralOnCapture,TRUE,,Criminals,2
 Outlaw,3,R3,,FireCapture|EnemyOnCapture,TRUE,,Criminals,2
