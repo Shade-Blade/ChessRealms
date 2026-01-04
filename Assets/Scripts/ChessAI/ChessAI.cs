@@ -1390,7 +1390,7 @@ public class ChessAI
                 //successful search ends it early
                 if (localVersion == version)
                 {
-                    Debug.LogError("Search thread stopped for some reason");
+                    Debug.LogError("Search thread stopped for some reason, force stop");
                     //force an error state to hopefully recover?
                     moveFound = true;
                     keepSearching = false;

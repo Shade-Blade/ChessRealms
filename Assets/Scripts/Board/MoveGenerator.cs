@@ -4383,11 +4383,11 @@ internal static class MoveGenerator
             switch (pa)
             {
                 case PieceAlignment.White:
-                    waterBitboard = b.globalData.bitboard_waterBlack;
+                    waterBitboard |= b.globalData.bitboard_waterBlack;
                     harpyBitboard = b.globalData.bitboard_harpyBlack;
                     break;
                 case PieceAlignment.Black:
-                    waterBitboard = b.globalData.bitboard_waterWhite;
+                    waterBitboard |= b.globalData.bitboard_waterWhite;
                     harpyBitboard = b.globalData.bitboard_harpyWhite;
                     break;
             }

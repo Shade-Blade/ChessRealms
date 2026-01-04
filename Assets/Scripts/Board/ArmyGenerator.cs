@@ -70,6 +70,34 @@ public static class ArmyGenerator
 
         List<Piece.PieceType> extraPieces = Board.EnemyModifierExtraPieces(em);
 
+        bool PieceRestricted(PieceTableEntry pteTarget)
+        {
+            return pteTarget.immobile || pteTarget.nonattacking || ((pteTarget.pieceProperty & PieceProperty.SlowMove) != 0) || ((pteTarget.pieceProperty & PieceProperty.Unique) != 0);
+        }
+
+
+        bool nonrestricedFound = false;
+        while (!nonrestricedFound)
+        {
+            iterations++;
+            if (iterations > 30000)
+            {
+                iterations = 0;
+                break;
+            }
+
+            for (int i = 0; i < hardcodeTable.Count; i++)
+            {
+                if (!PieceRestricted(hardcodeTable[i]))
+                {
+                    nonrestricedFound = true;
+                    break;
+                }
+            }
+
+            pieceTable = GetPieceTable(pieceClass, typeValue, tryValue, lowPieceBias, lowComplexityBias);
+        }
+
         /*
         float maxValue = tryValue / 2;
         for (int i = 0; i < extraPieces.Count; i++)
@@ -104,8 +132,9 @@ public static class ArmyGenerator
         while (cumulativeValueCount < tryValue)
         {
             iterations++;
-            if (iterations > 10000)
+            if (iterations > 30000)
             {
+                iterations = 0;
                 break;
             }
 
@@ -197,7 +226,7 @@ public static class ArmyGenerator
                     continue;
                 }
 
-                if ((pteTarget.immobile || pteTarget.nonattacking) && restrictedCount > Mathf.CeilToInt(cumulativeCount / 3f))
+                if (nonrestricedFound && (PieceRestricted(pteTarget)) && restrictedCount > Mathf.CeilToInt(cumulativeCount / 2.5f))
                 {
                     continue;
                 }
@@ -215,21 +244,21 @@ public static class ArmyGenerator
                 cumulativeCount++;
             }
 
-            if ((pteTarget.immobile || pteTarget.nonattacking))
+            if (nonrestricedFound && PieceRestricted(pteTarget))
             {
                 restrictedCount++;
             }
 
             subArmy.Add(pteTarget);
 
-            while ((cumulativeCount >= 23 || giantCount > 4 || restrictedCount > Mathf.CeilToInt(cumulativeCount / 3f)) && cumulativeValueCount < tryValue)
+            while ((cumulativeCount >= 23 || giantCount > 4 || (nonrestricedFound && restrictedCount > Mathf.CeilToInt(cumulativeCount / 2.5f))) && cumulativeValueCount < tryValue)
             {
                 subArmy.Sort((a, b) => (EffectiveValue(a) - EffectiveValue(b)));
                 //remove the bottom 10 valued pieces
-                while (cumulativeCount >= 10 || giantCount > 4 || restrictedCount > Mathf.CeilToInt(cumulativeCount / 3f))
+                while (cumulativeCount >= 10 || giantCount > 4 || (nonrestricedFound && restrictedCount > Mathf.CeilToInt(cumulativeCount / 2.5f)))
                 {
                     cumulativeValueCount -= subArmy[0].pieceValueX2 / 2f;
-                    if (EffectiveValue(subArmy[0]) > lowerBound)
+                    if (EffectiveValue(subArmy[0]) > lowerBound && !PieceRestricted(subArmy[0]))
                     {
                         lowerBound = EffectiveValue(subArmy[0]);
                     }
@@ -244,7 +273,7 @@ public static class ArmyGenerator
                         cumulativeCount--;
                     }
 
-                    if ((pteTarget.immobile || pteTarget.nonattacking))
+                    if (nonrestricedFound && PieceRestricted(pteTarget))
                     {
                         restrictedCount--;
                     }
@@ -252,7 +281,7 @@ public static class ArmyGenerator
                     subArmy.RemoveAt(0);
                 }
                 //add in some of the highest valued things
-                while (cumulativeCount <= 20 && giantCount < 4 && restrictedCount < Mathf.CeilToInt(cumulativeCount / 3f) && cumulativeValueCount < tryValue)
+                while (cumulativeCount <= 20 && giantCount < 4 && (!nonrestricedFound || restrictedCount < Mathf.CeilToInt(cumulativeCount / 2.5f)) && cumulativeValueCount < tryValue)
                 {
                     int index = subArmy.Count - 1 - UnityEngine.Random.Range(0, 7);
                     if (index < 0)
@@ -271,7 +300,7 @@ public static class ArmyGenerator
                         cumulativeCount++;
                     }
 
-                    if ((pteTarget.immobile || pteTarget.nonattacking))
+                    if (nonrestricedFound && PieceRestricted(pteTarget))
                     {
                         restrictedCount++;
                     }
@@ -351,7 +380,8 @@ public static class ArmyGenerator
 
         //Debug.Log(debug);
         //Debug.Log(uniqueTableB.Count);
-        //Debug.Log(cumulativeValueCount);
+        //Debug.Log(cumulativeValueCount + " " + restrictedCount + " " + cumulativeCount);
+        //Debug.Log(nonrestricedFound);
 
         subArmy.Sort((a, b) => (GiantScore(a) - GiantScore(b)));
         subArmy.Reverse();
@@ -364,8 +394,9 @@ public static class ArmyGenerator
         {
             subArmy = MainManager.ShuffleListSegments(subArmy, rowSize);
             iterations++;
-            if (iterations > 100)
+            if (iterations > 30000)
             {
+                iterations = 0;
                 break;
             }
         }
@@ -550,9 +581,11 @@ public static class ArmyGenerator
         RandomTable<PieceTableEntry> normalTable = GetPieceTable(GlobalPieceManager.GetPieceClassEntry(pc).normalPieces, types, targetTotal, lowPieceBias, lowComplexityBias);
         RandomTable<PieceTableEntry> extraTable = GetPieceTable(GlobalPieceManager.GetPieceClassEntry(pc).extraPieces, Mathf.CeilToInt(types * 0.5f), targetTotal * 0.5f, lowPieceBias, lowComplexityBias);
         normalTable.weight = 1;
-        extraTable.weight = 1 / 16f;    //about 1 per battle (but is higher because of failed hits in the normal table?)
+        extraTable.weight = 1 / 24f;    //about 1 per battle (but is higher because of failed hits in the normal table?)
+        RandomTable<PieceTableEntry> extraTableAlternate = GetPieceTable(GlobalPieceManager.GetPieceClassEntry(pc).extraPieces, 6, 40, lowPieceBias, lowComplexityBias);
+        extraTableAlternate.weight = 1 / 24f;    //rarer (mostly to failsafe add some weak stuff if it gets stuck on restricted pieces)
 
-        RandomTable<PieceTableEntry> fusedTable = new RandomTable<PieceTableEntry>(normalTable, extraTable);
+        RandomTable<PieceTableEntry> fusedTable = new RandomTable<PieceTableEntry>(normalTable, extraTable, extraTableAlternate);
         return fusedTable;
     }
     public static List<PieceTableEntry> GetFullPieceTableForClass(Piece.PieceClass pc)

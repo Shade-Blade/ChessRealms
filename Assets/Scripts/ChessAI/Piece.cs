@@ -1548,7 +1548,7 @@ public static class Piece
             case PieceType.FallPawn:
                 return "Every 5 Turns (After Enemy Turn): Transforms into Spring Pawn.";
             case PieceType.RockEgg:
-                return "After Enemy Turn: Hatches into Mountain Tortoise when it has 8 allies adjacent.";
+                return "After Enemy Turn: Hatches into Mountain Tortoise when it has 8 allies adjacent or at least 2 enemies adjacent.";
             case PieceType.WaveEgg:
                 return "After Enemy Turn: Hatches into Ocean Serpent when it has 0 allies adjacent.";
             case PieceType.FlameEgg:

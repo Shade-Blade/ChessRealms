@@ -24,11 +24,11 @@ public class RealmMapScript : MonoBehaviour
 
     public bool finalBoss;
 
-    public void Init()
+    public void Init(bool final = false)
     {
         init = true;
         realmText.text = GlobalPieceManager.GetPieceClassEntry(pieceClass).name + " Realm";
-        GenerateMap();
+        GenerateMap(final);
         mapNodes = new List<MapNodeScript>(GetComponentsInChildren<MapNodeScript>());
         InitNodes();
     }
@@ -41,7 +41,7 @@ public class RealmMapScript : MonoBehaviour
         }
     }
 
-    public void GenerateMap()
+    public void GenerateMap(bool final = false)
     {
         realmText.text = GlobalPieceManager.GetPieceClassEntry(pieceClass).name + " Realm";
 
@@ -51,10 +51,10 @@ public class RealmMapScript : MonoBehaviour
         Vector3 endPos = new Vector3(3, 7.5f, 0);
         Vector3 delta = new Vector3(1, -1, 0);
 
-        GenerateMap_LayoutA(startPos, endPos, delta);
+        GenerateMap_LayoutA(startPos, endPos, delta, final);
     }
 
-    public void GenerateMap_LayoutA(Vector3 startPos, Vector3 endPos, Vector3 delta)
+    public void GenerateMap_LayoutA(Vector3 startPos, Vector3 endPos, Vector3 delta, bool final)
     {
         MapNodeScript mns = MakeMapNodeScript(startPos, Mathf.Min(500, baseDifficulty), 2, MapNodeScript.MapNodeType.Start);
         MapNodeScript pastMNS = mns;
@@ -83,7 +83,7 @@ public class RealmMapScript : MonoBehaviour
         c.children.Add(d);
 
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(6, 51253));
-        mns = MakeMapNodeScript(endPos, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 3)), 5, MapNodeScript.MapNodeType.BossBattle);
+        mns = MakeMapNodeScript(endPos, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 3)), 5, final ? MapNodeScript.MapNodeType.FinalBossBattle : MapNodeScript.MapNodeType.BossBattle);
         d.children.Add(mns);
 
         lastNode = mns;

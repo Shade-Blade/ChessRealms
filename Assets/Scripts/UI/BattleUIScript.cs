@@ -48,6 +48,8 @@ public class BattleUIScript : MonoBehaviour
     public Board.PlayerModifier pm;
     public Board.EnemyModifier em;
 
+    public GameObject debugPanel;
+
     public void SetBoard(BoardScript bs)
     {
         difficultyText.text = "Difficulty: " + MainManager.Instance.playerData.difficulty;
@@ -185,6 +187,26 @@ public class BattleUIScript : MonoBehaviour
 
             MainManager.Instance.playerData.GenerateSeed();
             bbs.ResetBoard(army, pm, em);
+        }
+    }
+
+    public void OnGUI()
+    {
+        Event e = Event.current;
+
+        if (e.type == EventType.KeyDown)
+        {
+            if (e.character == '~')
+            {
+                if (debugPanel.activeSelf)
+                {
+                    debugPanel.SetActive(false);
+                }
+                else
+                {
+                    debugPanel.SetActive(true);
+                }
+            }
         }
     }
 

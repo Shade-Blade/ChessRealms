@@ -76,7 +76,7 @@ public class OverworldScript : MonoBehaviour
                     realmMap.baseDifficulty = ms.truePieceValueTotal;
                     realmMap.pieceClass = ms.pieceClass;
                     realmMap.os = this;
-                    realmMap.Init();
+                    realmMap.Init(ms.em == Board.EnemyModifier.Zenith);
                     setupBoard.SetTheme(realmMap.pieceClass);
                     worldMapMode = false;
 

@@ -4980,6 +4980,7 @@ MonoBehaviour:
   classField: {fileID: 1187122632}
   pm: 0
   em: 0
+  debugPanel: {fileID: 1391713286}
 --- !u!1 &895073677
 GameObject:
   m_ObjectHideFlags: 0
@@ -9920,7 +9921,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1756460785}
   m_HandleRect: {fileID: 1756460784}
   m_Direction: 1
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:

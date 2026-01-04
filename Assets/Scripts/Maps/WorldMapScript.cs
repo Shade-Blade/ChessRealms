@@ -125,6 +125,7 @@ public class WorldMapScript : MonoBehaviour
 
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(7, 71253));
         mns = MakeWorldNode(pieceClasses, endPos, 4, 8, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 7.5f)), MapNodeScript.MapNodeType.WorldNode);
+        mns.em = Board.EnemyModifier.Zenith;
         c1.children.Add(mns);
         c2.children.Add(mns);
         lastNode = mns;
