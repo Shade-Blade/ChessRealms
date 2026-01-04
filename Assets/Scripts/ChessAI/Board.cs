@@ -9013,6 +9013,7 @@ public class Board
 
             globalData.bitboard_updatedPieces |= (1uL << (x + (y << 3)));
             globalData.bitboard_updatedPieces |= (1uL << (tx + (ty << 3)));
+            globalData.bitboard_updatedEmpty &= ~(1uL << (tx + (ty << 3)));
 
             //blow wind towards ty
             pieces[tx + ty * 8] = pieces[x + y * 8];
