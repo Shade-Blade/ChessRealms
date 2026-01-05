@@ -904,10 +904,14 @@ public class PieceMovePanelScript : MonoBehaviour
             case MoveGeneratorAtom.D:
                 if (!directionRestricted)
                 {
-                    GenerateOffsetRay(mgie, specialType, spi, 0, 1, 0, 1);
-                    GenerateOffsetRay(mgie, specialType, spi, 0, -1, 0, -1);
-                    GenerateOffsetRay(mgie, specialType, spi, 1, 0, 1, 0);
-                    GenerateOffsetRay(mgie, specialType, spi, -1, 0, -1, 0);
+                    MakeTrail(0, 0, 0, 2, specialType);
+                    GenerateOffsetRay(mgie, specialType, spi, 0, 1, 0, 1, 0, false);
+                    MakeTrail(0, 0, 0, -2, specialType);
+                    GenerateOffsetRay(mgie, specialType, spi, 0, -1, 0, -1, 0, false);
+                    MakeTrail(0, 0, 2, 0, specialType);
+                    GenerateOffsetRay(mgie, specialType, spi, 1, 0, 1, 0, 0, false);
+                    MakeTrail(0, 0, -2, 0, specialType);
+                    GenerateOffsetRay(mgie, specialType, spi, -1, 0, -1, 0, 0, false);
                 }
                 else
                 {
@@ -915,20 +919,23 @@ public class PieceMovePanelScript : MonoBehaviour
                     //Up is allowed if F is set or V is set
                     if ((mgie.modifier & MoveGeneratorPreModifier.fv) != 0)
                     {
-                        GenerateOffsetRay(mgie, specialType, spi, 0, 1, 0, 1);
+                        MakeTrail(0, 0, 0, 2, specialType);
+                        GenerateOffsetRay(mgie, specialType, spi, 0, 1, 0, 1, 0, false);
                     }
                     //ray down
                     //Down is allowed if B is set or V is set
                     if ((mgie.modifier & MoveGeneratorPreModifier.bv) != 0)
                     {
-                        GenerateOffsetRay(mgie, specialType, spi, 0, -1, 0, -1);
-
+                        MakeTrail(0, 0, 0, -2, specialType);
+                        GenerateOffsetRay(mgie, specialType, spi, 0, -1, 0, -1, 0, false);
                     }
                     //Note that currently there is no left right asymmetry allowed in movesets
                     if ((mgie.modifier & MoveGeneratorPreModifier.h) != 0)
                     {
-                        GenerateOffsetRay(mgie, specialType, spi, -1, 0, -1, 0);
-                        GenerateOffsetRay(mgie, specialType, spi, 1, 0, 1, 0);
+                        MakeTrail(0, 0, -2, 0, specialType);
+                        GenerateOffsetRay(mgie, specialType, spi, -1, 0, -1, 0, 0, false);
+                        MakeTrail(0, 0, 2, 0, specialType);
+                        GenerateOffsetRay(mgie, specialType, spi, 1, 0, 1, 0, 0, false);
                     }
                 }
                 break;
@@ -958,22 +965,30 @@ public class PieceMovePanelScript : MonoBehaviour
             case MoveGeneratorAtom.A:
                 if (!directionRestricted)
                 {
-                    GenerateOffsetRay(mgie, specialType, spi, 1, 1, 1, 1);
-                    GenerateOffsetRay(mgie, specialType, spi, -1, 1, -1, 1);
-                    GenerateOffsetRay(mgie, specialType, spi, 1, -1, 1, -1);
-                    GenerateOffsetRay(mgie, specialType, spi, -1, -1, -1, -1);
+                    MakeTrail(0, 0, 2, 2, specialType);
+                    GenerateOffsetRay(mgie, specialType, spi, 1, 1, 1, 1, 0, false);
+                    MakeTrail(0, 0, -2, 2, specialType);
+                    GenerateOffsetRay(mgie, specialType, spi, -1, 1, -1, 1, 0, false);
+                    MakeTrail(0, 0, 2, -2, specialType);
+                    GenerateOffsetRay(mgie, specialType, spi, 1, -1, 1, -1, 0, false);
+                    MakeTrail(0, 0, -2, -2, specialType);
+                    GenerateOffsetRay(mgie, specialType, spi, -1, -1, -1, -1, 0, false);
                 }
                 else
                 {
                     if ((mgie.modifier & MoveGeneratorPreModifier.f) != 0)
                     {
-                        GenerateOffsetRay(mgie, specialType, spi, 1, 1, 1, 1);
-                        GenerateOffsetRay(mgie, specialType, spi, -1, 1, -1, 1);
+                        MakeTrail(0, 0, 2, 2, specialType);
+                        GenerateOffsetRay(mgie, specialType, spi, 1, 1, 1, 1, 0, false);
+                        MakeTrail(0, 0, -2, 2, specialType);
+                        GenerateOffsetRay(mgie, specialType, spi, -1, 1, -1, 1, 0, false);
                     }
                     if ((mgie.modifier & MoveGeneratorPreModifier.b) != 0)
                     {
-                        GenerateOffsetRay(mgie, specialType, spi, 1, -1, 1, -1);
-                        GenerateOffsetRay(mgie, specialType, spi, -1, -1, -1, -1);
+                        MakeTrail(0, 0, 2, -2, specialType);
+                        GenerateOffsetRay(mgie, specialType, spi, 1, -1, 1, -1, 0, false);
+                        MakeTrail(0, 0, -2, -2, specialType);
+                        GenerateOffsetRay(mgie, specialType, spi, -1, -1, -1, -1, 0, false);
                     }
                 }
                 break;
@@ -1669,7 +1684,7 @@ public class PieceMovePanelScript : MonoBehaviour
         }
     }
 
-    private void GenerateOffsetRay(MoveGeneratorInfoEntry mgie, SpecialType specialType, PieceMovePanelSquareScript.SpecialIndication spi, int x, int y, int dx, int dy, int lostRange = 0)
+    private void GenerateOffsetRay(MoveGeneratorInfoEntry mgie, SpecialType specialType, PieceMovePanelSquareScript.SpecialIndication spi, int x, int y, int dx, int dy, int lostRange = 0, bool startTrail = true)
     {
         int effectiveRange = mgie.range;
         if (effectiveRange == 0)
@@ -1699,23 +1714,16 @@ public class PieceMovePanelScript : MonoBehaviour
                         continue;
                     }
                     GetSquare(tx, ty).Set(specialType, spi);
-                    MakeTrail(lastX, lastY, tx, ty, specialType);
+                    if (startTrail || (lastX != x || lastY != y))
+                    {
+                        MakeTrail(lastX, lastY, tx, ty, specialType);
+                    }
                     lastX = tx;
                     lastY = ty;
                 }
                 break;
             case RangeType.Exact:
-                tx = x + (dx * effectiveRange);
-                ty = y + (dy * effectiveRange);
-                if (tx < -7 || tx > 7 || ty < -7 || ty > 7)
-                {
-                    break;
-                }
-                GetSquare(tx, ty).Set(specialType, spi);
-                MakeTrail(lastX, lastY, tx, ty, specialType);
-                break;
-            case RangeType.Minimum:
-                for (int i = effectiveRange - 1; i < 7; i++)
+                for (int i = 0; i < effectiveRange; i++)
                 {
                     tx = x + dx * (i + 1);
                     ty = y + (dy * (i + 1));
@@ -1723,10 +1731,38 @@ public class PieceMovePanelScript : MonoBehaviour
                     {
                         continue;
                     }
-                    GetSquare(tx, ty).Set(specialType, spi);
-                    MakeTrail(lastX, lastY, tx, ty, specialType);
+                    if (i + 1 == effectiveRange)
+                    {
+                        GetSquare(tx, ty).Set(specialType, spi);
+                    }
+                    if (startTrail || (lastX != x || lastY != y))
+                    {
+                        MakeTrail(lastX, lastY, tx, ty, specialType);
+                    }
                     lastX = tx;
                     lastY = ty;
+                }
+                break;
+            case RangeType.Minimum:
+                for (int i = 0; i < 7; i++)
+                {
+                    tx = x + dx * (i + 1);
+                    ty = y + (dy * (i + 1));
+                    if (tx < -7 || tx > 7 || ty < -7 || ty > 7)
+                    {
+                        continue;
+                    }
+                    if (startTrail || (lastX != x || lastY != y))
+                    {
+                        MakeTrail(lastX, lastY, tx, ty, specialType);
+                    }
+                    lastX = tx;
+                    lastY = ty;
+                    if (i < effectiveRange - 1)
+                    {
+                        continue;
+                    }
+                    GetSquare(tx, ty).Set(specialType, spi);
                 }
                 break;
         }
