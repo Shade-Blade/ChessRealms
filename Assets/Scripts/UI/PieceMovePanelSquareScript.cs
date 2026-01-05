@@ -107,6 +107,16 @@ public class PieceMovePanelSquareScript : MonoBehaviour
             }
         }
 
+        /*
+        if (!hybrid && types.Count == 2 && types.Contains(Move.SpecialType.MoveOnly) && types.Contains(Move.SpecialType.CaptureOnly))
+        {
+            //special hardcoded case
+            //move only + capture only = normal
+
+            types = new List<Move.SpecialType>() { Move.SpecialType.Normal };
+        }
+        */
+
         imageA.rectTransform.localScale = Vector3.one;
         imageB.rectTransform.localScale = Vector3.one;
         imageC.rectTransform.localScale = Vector3.one;

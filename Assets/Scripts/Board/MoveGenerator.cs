@@ -9536,6 +9536,7 @@ internal static class MoveGenerator
             moveBitboard |= chX >> (cl << 3);
             moveBitboard |= clX << (ch << 3);
             moveBitboard |= clX >> (ch << 3);
+            moveBitboard &= allowBitboard;
             GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, moveBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
 
             //aX and aY are unused because this side is radially symmetric
@@ -9600,7 +9601,7 @@ internal static class MoveGenerator
                     moveBitboard |= chX << (cl << 3);
                 }
             }
-
+            moveBitboard &= allowBitboard;
             GenerateSquaresBitboard(moves, ref b, pse, piece, x, y, moveBitboard, Dir.Null, pa, specialType, pte, mgie, mbt);
         }
     }
