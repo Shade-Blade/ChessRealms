@@ -349,11 +349,13 @@ public class PieceMovePanelScript : MonoBehaviour
                         switch (pte.enhancedMoveType)
                         {
                             case EnhancedMoveType.PartialForcedMoves:
-                                moveText += "Enhanced moves are only possible if no normal moves are possible.\n";
+                                //implementation quirk means you guaranteed get this when stuff is non capturing
+                                moveText += "Enhanced moves are only possible if no normal moves are possible or the piece can't capture.\n";
                                 //moveText += "▪ Enhanced: Moves only possible under certain conditions.\n";
                                 break;
                             case EnhancedMoveType.InverseForcedMoves:
-                                moveText += "Enhanced moves are only possible if normal moves are possible.\n";
+                                //implementation quirk means you guaranteed get this when stuff is non capturing
+                                moveText += "Enhanced moves are only possible if normal moves are possible and the piece is not prevented from capturing by terrain or status effects.\n";
                                 //moveText += "▪ Enhanced: Moves only possible under certain conditions.\n";
                                 break;
                             case EnhancedMoveType.PartialForcedCapture:

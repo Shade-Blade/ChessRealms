@@ -183,7 +183,7 @@ internal static class MoveGenerator
                     }
                     break;
                 case Piece.PieceType.Repulser:
-                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_QUEEN3, index, -3, -3);
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_QUEEN2, index, -3, -3);
                     if (ipa == Piece.PieceAlignment.White)
                     {
                         b.globalData.bitboard_repulserWhite |= pattern;
@@ -2615,7 +2615,7 @@ internal static class MoveGenerator
                             {
                                 //generate stuff
                                 //no MBT as that might lead to incorrect relaying
-                                GenerateMovesForPiece(moves, ref b, pa, piece, index & 7, (index & 56) >> 3, null, moveMetadata);
+                                GenerateMovesForPiece(moves, ref b, pa, Piece.SetPieceType(pt, b.pieces[index]), index & 7, (index & 56) >> 3, null, moveMetadata);
                             }
                         }
                     }
@@ -2650,7 +2650,7 @@ internal static class MoveGenerator
                             {
                                 //generate stuff
                                 //no MBT as that might lead to incorrect relaying
-                                GenerateMovesForPiece(moves, ref b, pa, Piece.SetPieceType(Piece.PieceType.Bishop, piece), index & 7, (index & 56) >> 3, null, moveMetadata);
+                                GenerateMovesForPiece(moves, ref b, pa, Piece.SetPieceType(Piece.PieceType.Bishop, b.pieces[index]), index & 7, (index & 56) >> 3, null, moveMetadata);
                             }
                         }
                     }
@@ -2788,11 +2788,16 @@ internal static class MoveGenerator
                                 int index = MainManager.PopBitboardLSB1(smearBitboard, out smearBitboard);
 
                                 Piece.PieceType ptR = Piece.GetPieceType(b.pieces[index]);
-                                if (ptR != Piece.PieceType.King)
+                                PieceTableEntry pteR = b.globalData.GetPieceTableEntryFromCache(index, b.pieces[index]);
+                                if (ptR != Piece.PieceType.King && (pteR.piecePropertyB & PiecePropertyB.TrueShiftImmune) == 0)
                                 {
                                     //generate stuff
                                     //no MBT as that might lead to incorrect relaying
-                                    GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, b.globalData.GetPieceTableEntryFromCache(index, b.pieces[index]), Piece.GetPieceStatusEffect(b.pieces[index]), Piece.GetPieceModifier(b.pieces[index]), piece, index & 7, (index & 56) >> 3, pte.moveInfo[0], blockerBitboard, null, moveMetadata);
+                                    //note: Frozen check is in GenerateMovesForPiece so need to check again
+                                    if (Piece.GetPieceStatusEffect(b.pieces[index]) != PieceStatusEffect.Frozen)
+                                    {
+                                        GenerateMovesForMoveGeneratorEntry(moves, ref b, pa, b.globalData.GetPieceTableEntryFromCache(index, b.pieces[index]), Piece.GetPieceStatusEffect(b.pieces[index]), Piece.GetPieceModifier(b.pieces[index]), piece, index & 7, (index & 56) >> 3, pte.moveInfo[0], blockerBitboard, null, moveMetadata);
+                                    }
                                 }
                             }
                             break;

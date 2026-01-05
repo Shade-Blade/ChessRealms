@@ -119,7 +119,7 @@ public class WorldMapScript : MonoBehaviour
         MapNodeScript b2;
         if (MainManager.Instance.playerData.realmsComplete > 2)
         {
-            b2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.6f) + delta * Random.Range(-0.2f, 0.2f), 4, 6, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 3.5f)), MapNodeScript.MapNodeType.WorldNode);
+            b2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.6f) + delta * Random.Range(-0.2f, 0.2f), 3, 5, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 3.5f)), MapNodeScript.MapNodeType.WorldNode);
         }
         else
         {
@@ -130,7 +130,7 @@ public class WorldMapScript : MonoBehaviour
         MapNodeScript b3;
         if (MainManager.Instance.playerData.realmsComplete > 2)
         {
-            b3 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(1f, 1.2f), 2, 5, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 2.5f)), MapNodeScript.MapNodeType.WorldNode);
+            b3 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(1f, 1.2f), 1, 4, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 2.5f)), MapNodeScript.MapNodeType.WorldNode);
         }
         else
         {
@@ -141,7 +141,7 @@ public class WorldMapScript : MonoBehaviour
         MapNodeScript c1;
         if (MainManager.Instance.playerData.realmsComplete > 2)
         {
-            c1 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(-0.8f, -0.7f), 4, 7, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 4.5f)), MapNodeScript.MapNodeType.WorldNode);
+            c1 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(-0.8f, -0.7f), 4, 6, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 4.5f)), MapNodeScript.MapNodeType.WorldNode);
         }
         else
         {
@@ -152,7 +152,7 @@ public class WorldMapScript : MonoBehaviour
         MapNodeScript c2;
         if (MainManager.Instance.playerData.realmsComplete > 2)
         {
-            c2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(0.7f, 0.8f), 4, 7, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 5.5f)), MapNodeScript.MapNodeType.WorldNode);
+            c2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(0.7f, 0.8f), 5, 7, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 5.5f)), MapNodeScript.MapNodeType.WorldNode);
         }
         else
         {
@@ -173,7 +173,7 @@ public class WorldMapScript : MonoBehaviour
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(7, 71253));
         if (MainManager.Instance.playerData.realmsComplete > 2)
         {
-            mns = MakeWorldNode(pieceClasses, endPos, 6, 8, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 7.5f)), MapNodeScript.MapNodeType.WorldNode);
+            mns = MakeWorldNode(pieceClasses, endPos, 7, 8, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 7.5f)), MapNodeScript.MapNodeType.WorldNode);
         }
         else
         {

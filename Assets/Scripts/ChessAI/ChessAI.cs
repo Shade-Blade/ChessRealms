@@ -909,7 +909,7 @@ public class ChessAI
             }
             */
 
-            if (pt == Piece.PieceType.King)
+            if (pt == Piece.PieceType.King || pt == Piece.PieceType.Prince || pt == Piece.PieceType.RoyalDouble)
             {
                 //Make this more aggressive
                 psqt += 2 * (endgameValue * GlobalPieceManager.ReadPSTTopCenter(pa, i) + (1 - endgameValue) * GlobalPieceManager.ReadPSTEdge(pa, i));

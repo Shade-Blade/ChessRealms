@@ -1225,9 +1225,9 @@ public static class Piece
             case PieceProperty.InvincibleJustice:
                 return "Can't be attacked if the enemy captured last turn.";
             case PieceProperty.Relay:
-                return "Nonpawn allies defended by this piece gain its movement power.";
+                return "Nonpawn allies except Kings defended by this piece gain its movement power.";
             case PieceProperty.RelayBishop:
-                return "Nonpawn allies in Bishop range gain Bishop movement.";
+                return "Nonpawn allies except Kings in Bishop range gain Bishop movement.";
             case PieceProperty.RelayImmune:
                 return "Allies adjacent to this piece are immune to negative effects.";
             case PieceProperty.OnlyCapturePawns:
