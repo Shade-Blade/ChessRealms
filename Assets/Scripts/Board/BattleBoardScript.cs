@@ -2968,12 +2968,12 @@ public class BattleBoardScript : BoardScript
                 }
                 else
                 {
-                    thinkingText.SetText("<boss," + board.globalData.enemyModifier.ToString() + "> " + board.globalData.enemyModifier.ToString() + "<line><size,50%>" + Board.GetEnemyModifierDescription(board.globalData.enemyModifier) + "</size>", true, true);
+                    thinkingText.SetText("<boss," + board.globalData.enemyModifier.ToString() + "> " + board.globalData.enemyModifier.ToString() + "<line><size,50%>" + Board.GetEnemyModifierDescription(board, board.globalData.enemyModifier) + "</size>", true, true);
                 }
             }
         }
 
-        turnText.text = "Turn " + (board.turn + (board.blackToMove ? 0.5f : 0)) + "\n<size=50%>" + (board.blackToMove ? "Black" : "White") + " to move</size>";
+        turnText.text = "Turn " + (board.GetTurn() + (board.blackToMove ? 0.5f : 0)) + "\n<size=50%>" + (board.blackToMove ? "Black" : "White") + " to move</size>";
         if (board.bonusPly > 0)
         {
             turnText.text += "\n<size=50%>Bonus Move</size>";

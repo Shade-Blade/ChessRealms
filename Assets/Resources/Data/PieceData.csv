@@ -282,9 +282,9 @@ ClockworkLeaper,5.5,"(2,0)(2,1)(2,2)",,ClockworkSwapper,FALSE,,Clockwork,1
 ClockworkWalker,5.5,WF,,ClockworkSwapperB,FALSE,,Clockwork,1
 BladeBeast,7.5,R,,,TRUE,,Clockwork,2.5
 ClockworkSnapper,1.5,mfW,,,TRUE,BladeBeast,Clockwork,2.5
-Leafling,3,oR2oB2,,PlantMove,FALSE,,Plants,2
+Leafling,3,WFoR2oB2,,PlantMove,FALSE,,Plants,2
 Gardener,3.5,mvWcfWcfF,,AllyBehindTeleport,TRUE,,Plants,3
-Rootwalker,4.5,oyR,,PlantMove,FALSE,,Plants,2
+Rootwalker,4.5,WoyR,,PlantMove,FALSE,,Plants,2
 Burrower,8,WFoR2+oB2+,,PlantMove,FALSE,,Plants,2
 Blossom,7,,,BlossomTeleport,TRUE,,Plants,3
 FlowerPawn,2,mfWcfFomfR2=,,PlantMove,FALSE,Burrower,Plants,2
@@ -436,7 +436,7 @@ RollerQueen,12,RB,,Momentum,FALSE,,Rollers,3
 ReboundRook,4,R,,ReverseMomentum,FALSE,,Rollers,3
 BounceBishop,5,B,,BounceMomentum,FALSE,,Rollers,3
 Roller,5,WF,,Momentum,FALSE,,Rollers,3
-Balloon,1,fW,,Momentum,FALSE,,Rollers,3
+Balloon,1.5,fW,,Momentum,FALSE,RollerQueen,Rollers,3
 GliderQueen,12,"(0,2)(1,2)(2,2)oRoB",,GliderMove,FALSE,,Gliders,2
 Capybara,8,"FR2o(0,4)o(1,4)o(2,4)o(3,4)o(4,4)",,SlipMove,FALSE,,Gliders,2
 Beaver,7,"R3o(0,3)o(1,3)o(2,3)o(3,3)",,PlantMove,FALSE,,Gliders,2

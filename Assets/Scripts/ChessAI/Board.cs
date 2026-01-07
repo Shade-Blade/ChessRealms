@@ -372,6 +372,11 @@ public class Board
     //GlobalData is a very heavy struct so I probably want to split it out of the data
     public ulong bitboard_auto;
 
+    public int GetTurn()
+    {
+        return turn + 1;
+    }
+
     public enum BoardPreset
     {
         Normal,
@@ -7371,7 +7376,13 @@ public class Board
     {
         MoveGenerator.GeneratePieceBitboardsPostTurn(this);
 
-        ApplyAutoMovers(!black, boardUpdateMetadata);
+        //quick pieces can ignore these
+        //(Without this stuff becomes weird and nonsense)
+        //(i.e. enemy clockwork snappers moving twice when you are using a quick piece)
+        if (!bonusMove)
+        {
+            ApplyAutoMovers(!black, boardUpdateMetadata);
+        }
         ApplyPromotion(black, boardUpdateMetadata);
 
         if (!bonusMove)
@@ -9180,7 +9191,9 @@ public class Board
     }
     public bool TryPiecePushStrong(int x, int y, int dx, int dy, PieceTableEntry pte, List<BoardUpdateMetadata> boardUpdateMetadata)
     {
-        if (pte != null && ((pte.pieceProperty & (PieceProperty.NoTerrain)) != 0 || (pte.piecePropertyB & Piece.PiecePropertyB.TrueShiftImmune) != 0))
+        //note: used in PiecePushAllyOnly so no NoTerrain check
+
+        if (pte != null && ((pte.piecePropertyB & Piece.PiecePropertyB.TrueShiftImmune) != 0))
         {
             return false;
         }
@@ -9276,8 +9289,15 @@ public class Board
                 continue;
             }
 
+            PieceTableEntry pte = globalData.GetPieceTableEntryFromCache(x + dx + ((y + dy) << 3), pieces[x + dx + ((y + dy) << 3)]);
+
+            if ((pte.pieceProperty & PieceProperty.NoTerrain) != 0)
+            {
+                continue;
+            }
+
             //Debug.Log("Passive strong");
-            TryPiecePushStrong(x + dx, y + dy, dx, dy, globalData.GetPieceTableEntryFromCache(x + dx + ((y + dy) << 3), pieces[x + dx + ((y + dy) << 3)]), boardUpdateMetadata);
+            TryPiecePushStrong(x + dx, y + dy, dx, dy, pte, boardUpdateMetadata);
         }
     }
     public void DoPassivePull(int x, int y, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)
@@ -11484,24 +11504,55 @@ public class Board
         }
         return 8;
     }
-    public static string GetEnemyModifierDescription(EnemyModifier em)
+    public static string GetEnemyModifierDescription(Board b, EnemyModifier em)
     {
         switch (em)
         {
             case EnemyModifier.Blinking:
-                return "Blinking: You must alternate moving to light and dark squares for every turn.";
+                int tX = Move.GetToX(b.whitePerPlayerInfo.lastMove);
+                int tY = Move.GetToY(b.whitePerPlayerInfo.lastMove);
+                bool blackSquare = ((tX + tY) & 1) == 0;
+                if (b == null)
+                {
+                    return "Blinking: You must alternate moving to light and dark squares for every turn.";
+                }
+                else
+                {
+                    return "Blinking: You must alternate moving to light and dark squares for every turn. (Must land on " + (blackSquare ? "light" : "dark") + " squares currently.)";
+                }
             case EnemyModifier.Complacent:
-                return "Complacent: You can't capture twice in to turns.";
+                if (b == null)
+                {
+                    return "Complacent: You can't capture twice in two turns.";
+                }
+                else
+                {
+                    return "Complacent: You can't capture twice in two turns." + (b.whitePerPlayerInfo.capturedLastTurn ? " (Captured last turn: can't capture now.)" : "");
+                }
             case EnemyModifier.Defensive:
                 return "Defensive: Enemy pieces can move backwards infinitely.";
             case EnemyModifier.Envious:
-                return "Envious: Enemy King copies the movement of your highest valued piece at the start.";
+                if (b == null)
+                {
+                    return "Envious: Enemy King copies the movement of your highest valued piece at the start.";
+                }
+                else
+                {
+                    return "Envious: Enemy King copies the movement of your highest valued piece at the start. (Enemy King can move like " + Piece.GetPieceName(b.globalData.whitePerPlayerInfo.highestPieceType) + ")";
+                }
             case EnemyModifier.Fusion:
                 return "Fusion: Enemy King copies the movement of allies adjacent to it.";
             case EnemyModifier.Greedy:
-                return "Greedy: Until you lose 2 pieces, your enemy can convert pieces to their side instead of capturing or burning your pieces.";
+                if (b == null)
+                {
+                    return "Greedy: Until you lose 2 pieces, your enemy can convert pieces to their side instead of capturing or burning your pieces.";
+                }
+                else
+                {
+                    return "Greedy: Until you lose 2 pieces, your enemy can convert pieces to their side instead of capturing or burning your pieces. (Pieces lost: " + b.whitePerPlayerInfo.piecesLost + ")";
+                }
             case EnemyModifier.Hidden:
-                return "Hidden: No enemy Kings, Immune to Checkmate.";
+                return "Hidden: No enemy Kings at start, Immune to Checkmate.";
             case EnemyModifier.Isolated:
                 return "Isolated: You can't move pieces that are adjacent to enemies and no allies.";
             case EnemyModifier.Jester:
@@ -11509,33 +11560,82 @@ public class Board
             case EnemyModifier.Knave:
                 return "Knave: Enemy pieces can move between the top and bottom of the board (without capturing).";
             case EnemyModifier.Lustful:
-                return "Lustful: Pieces on the same rank, file or diagonals as the enemy King can be moved by the enemy";
+                return "Lustful: Pieces on the same rank, file or diagonals as the enemy King can be moved by the enemy.";
             case EnemyModifier.Mesmerizing:
-                return "Mesmerizing: Every 2 turns, the piece you move is pulled forwards after you move.";
+                if (b == null)
+                {
+                    return "Mesmerizing: Every 2 turns, the piece you move is pulled forwards after you move.";
+                }
+                else
+                {
+                    return "Mesmerizing: Every 2 turns, the piece you move is pulled forwards after you move. (" + ((b.turn & 1) == 1 ? "Active" : "Inactive") + ")";
+                }
             case EnemyModifier.Numerous:
                 return "Numerous: Spawn 2 extra Kings.";
             case EnemyModifier.Obelisk:
                 return "Obelisk: The enemy King pulls allies alongside it as it moves.";
             case EnemyModifier.Prideful:
-                return "Prideful: You can't capture if you have more pieces than your opponent.";
+                if (b == null)
+                {
+                    return "Prideful: You can't capture if you have more pieces than your opponent.";
+                }
+                else
+                {
+                    return "Prideful: You can't capture if you have more pieces than your opponent." + "(" + (b.whitePerPlayerInfo.pieceCount > b.blackPerPlayerInfo.pieceCount ? "Can't capture" : "Can capture") + ": " + b.whitePerPlayerInfo.pieceCount + " vs " + b.blackPerPlayerInfo.pieceCount + ")";
+                }
             case EnemyModifier.Queenly:
                 return "Queenly: Spawn a Queen and a Princess.";
             case EnemyModifier.Rifter:
-                return "Rifter: Every 2 turns, the piece you move is pulled towards the sides of the board after you move.";
+                if (b == null)
+                {
+                    return "Rifter: Every 2 turns, the piece you move is pulled towards the sides of the board after you move.";
+                }
+                else
+                {
+                    return "Rifter: Every 2 turns, the piece you move is pulled towards the sides of the board after you move. (" + ((b.turn & 1) == 1 ? "Active" : "Inactive") + ")";
+                }
             case EnemyModifier.Slothful:
                 return "Slothful: Pieces on the enemy King's file are immobilized.";
             case EnemyModifier.Terror:
                 return "Terror: You can't move pieces within 2 squares of the enemy King unless you are capturing.";
             case EnemyModifier.Unpredictable:
-                return "Unpredictable: You can't move the same piece twice in two turns.";
+                if (b == null)
+                {
+                    return "Unpredictable: You can't move the same piece twice in two turns.";
+                }
+                else
+                {
+                    return "Unpredictable: You can't move the same piece twice in two turns. (Last Moved Location: " + (b.whitePerPlayerInfo.lastPieceMovedLocation < 0 ? ("n/a") : (Move.FileToLetter(b.whitePerPlayerInfo.lastPieceMovedLocation & 7) + "" + ((b.whitePerPlayerInfo.lastPieceMovedLocation >> 3) + 1) + ")"));
+                }
             case EnemyModifier.Voracious:
-                return "Voracious: For every 4 pieces lost, the enemy King gains 1 square of movement range.";
+                if (b == null)
+                {
+                    return "Voracious: For every 4 pieces you lose, the enemy King gains 1 square of movement range.";
+                }
+                else
+                {
+                    return "Voracious: For every 4 pieces you lose, the enemy King gains 1 square of movement range. (Pieces lost: " + b.whitePerPlayerInfo.piecesLost + ")";
+                }
             case EnemyModifier.Wrathful:
-                return "wrathful: Until you lose 2 pieces, when you capture, your piece gets destroyed.";
+                if (b == null)
+                {
+                    return "Wrathful: Until you lose 2 pieces, when you capture, your piece gets destroyed.";
+                }
+                else
+                {
+                    return "Wrathful: Until you lose 2 pieces, when you capture, your piece gets destroyed. (Pieces lost: " + b.whitePerPlayerInfo.piecesLost + ")";
+                }
             case EnemyModifier.Xyloid:
                 return "Xyloid: The enemy King can move orthogonally infinitely ignoring obstacles to squares adjacent to its allies.";
             case EnemyModifier.Youthful:
-                return "Youthful: For the first 5 turns, the enemy gets 2 moves per turn.";
+                if (b == null)
+                {
+                    return "Youthful: For the first 5 turns, the enemy gets 2 moves per turn.";
+                }
+                else
+                {
+                    return "Youthful: For the first 5 turns, the enemy gets 2 moves per turn." + (b.turn >= 5 ? " (Inactive)" : "");
+                }
             case EnemyModifier.Zenith:
                 return "Zenith: Overtaken Victory is not possible. Capturing the enemy King causes an enemy piece to transform into a new enemy King.";
         }

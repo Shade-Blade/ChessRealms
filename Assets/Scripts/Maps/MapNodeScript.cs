@@ -271,7 +271,7 @@ public class MapNodeScript : MonoBehaviour
                     break;
                 case MapNodeType.BossBattle:
                 case MapNodeType.FinalBossBattle:
-                    HoverTextMasterScript.Instance.MakeHoverPopup(army, "Army Value: " + pieceValueTotal + "<line><boss," + em.ToString() + "> Boss: " + em.ToString() + "\n" + Board.GetEnemyModifierDescription(em));
+                    HoverTextMasterScript.Instance.MakeHoverPopup(army, "Army Value: " + pieceValueTotal + "<line><boss," + em.ToString() + "> Boss: " + em.ToString() + "\n" + Board.GetEnemyModifierDescription(null, em));
                     break;
                 case MapNodeType.WorldNode:
                     HoverTextMasterScript.Instance.SetHoverText("<outlinecolor," + MainManager.ColorToString(GlobalPieceManager.GetPieceClassEntry(pieceClass).squareColorLight) + ">" + GlobalPieceManager.GetPieceClassEntry(pieceClass).name + " Realm</color></font><line>" + GlobalPieceManager.GetPieceClassEntry(pieceClass).description + "<line>Base Power: " + truePieceValueTotal);

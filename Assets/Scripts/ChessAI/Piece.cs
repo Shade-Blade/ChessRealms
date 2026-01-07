@@ -1165,7 +1165,7 @@ public static class Piece
             case PieceProperty.ClockworkSwapper:
                 break;
             case PieceProperty.BonusMove:
-                return "Moving this piece gives you a bonus move (Limit of 1 bonus move per turn. Can only give check on your last move.).";
+                return "Moving this piece gives you a bonus move (Limit of 1 bonus move per turn. Can only give check on your last move. Auto moving pieces after your last bonus turn.).";
             case PieceProperty.SlowMove:
                 return "Can't move a Slow piece if you moved a Slow piece last turn.";
             case PieceProperty.ChargeEnhance:

@@ -312,7 +312,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                     if (specialData != 0)
                     {
                         ushort squareData = (ushort)(specialData & 63);
-                        specialText.SetText(Move.FileToLetter(squareData & 7) + "" + ((squareData >> 3) + 1) + "," + (8 - (specialData >> 6)), true, true);
+                        specialText.SetText(Move.FileToLetter(squareData & 7) + "" + (((squareData) >> 3) + 1) + "," + (8 - (specialData >> 6)), true, true);
                     }
                     break;
                 case PieceType.WarpWeaver:
@@ -322,7 +322,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                 case Piece.PieceType.MetalFox:
                     if (specialData != 0)
                     {
-                        specialText.SetText(Move.FileToLetter(specialData & 7) + "" + ((specialData >> 3) + 1), true, true);
+                        specialText.SetText(Move.FileToLetter(specialData & 7) + "" + (((specialData & 63) >> 3) + 1), true, true);
                     }
                     break;
                 case Piece.PieceType.Tunnel:

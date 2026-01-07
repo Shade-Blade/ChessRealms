@@ -1890,22 +1890,21 @@ public class PieceMovePanelScript : MonoBehaviour
             case Move.SpecialType.AllyAbility:
             case Move.SpecialType.ChargeMove:
             case Move.SpecialType.ChargeMoveReset:
-            case Move.SpecialType.MorphIntoTarget:
-            case Move.SpecialType.RangedPullAllyOnly:
             case Move.SpecialType.RangedPushAllyOnly:
-            case Move.SpecialType.RangedPull:
             case Move.SpecialType.RangedPush:
             case Move.SpecialType.ImbueModifier:
             case Move.SpecialType.ImbuePromote:
             case Move.SpecialType.InflictFreeze:
             case Move.SpecialType.Inflict:
             case Move.SpecialType.InflictShift:
-            case Move.SpecialType.AimAny:
-            case Move.SpecialType.AimOccupied:
-            case Move.SpecialType.MorphRabbit:
             case Move.SpecialType.CarryAlly:
             case Move.SpecialType.ChargeApplyModifier:
                 return new Color(0.4f, 0.9f, 0.9f, 1);
+            case Move.SpecialType.MorphIntoTarget:
+            case Move.SpecialType.MorphRabbit:
+            case Move.SpecialType.RangedPull:
+            case Move.SpecialType.RangedPullAllyOnly:
+                return new Color(0.25f, 0.7f, 0.7f, 1);
             case Move.SpecialType.AllySwap:
             case Move.SpecialType.AnyoneSwap:
             case Move.SpecialType.TeleportOpposite:
@@ -1917,6 +1916,8 @@ public class PieceMovePanelScript : MonoBehaviour
             case Move.SpecialType.InflictCaptureOnly:
                 return new Color(0.7f, 0.9f, 0.9f, 1);
             case Move.SpecialType.AimEnemy:
+            case Move.SpecialType.AimAny:
+            case Move.SpecialType.AimOccupied:
             case Move.SpecialType.KingAttack:
                 return new Color(1f, 0.6f, 0.6f, 1);
             case Move.SpecialType.PassiveAbility:

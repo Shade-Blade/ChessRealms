@@ -1487,7 +1487,7 @@ public class ChessAI
     {
         int ply = board.ply;
 
-        string output = "Turn " + board.turn + ": ";
+        string output = "Turn " + board.GetTurn() + ": ";
 
         while (true)
         {

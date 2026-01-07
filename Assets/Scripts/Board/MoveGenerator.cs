@@ -4560,7 +4560,7 @@ internal static class MoveGenerator
                         }
                         else
                         {
-                            if (mgie.range == 0 && !bitboardIncompatible)
+                            if (mgie.range == 0 && mgie.rangeType == RangeType.Normal && !bitboardIncompatible)
                             {
                                 //ray right
                                 ulong moveBitboard = 0;
@@ -6853,7 +6853,7 @@ internal static class MoveGenerator
                         //Bitboard stuff is incompatible with the metadata system
                         //But that only exists in the high level executions so it isn't something the AI deals with
                         //Currently there is no Dir so it doesn't end up in the other versions of the leaper atom
-                        if (!bitboardIncompatible && mgie.range == 1)
+                        if (!bitboardIncompatible && mgie.range == 1 && mgie.rangeType == RangeType.Normal)
                         {
                             //bitboard tech
                             GenerateBBLeaperMoves(moves, ref b, allowBitboard, pa, pse, pm, piece, x, y, aX, aY, specialType, pte, blockerBitboard, mgie, mbt);
