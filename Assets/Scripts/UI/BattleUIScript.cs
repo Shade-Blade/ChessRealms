@@ -24,7 +24,9 @@ public class BattleUIScript : MonoBehaviour
 
     public TMPro.TMP_Text moneyText;
     public TMPro.TMP_Text whiteValueText;
+    public TMPro.TMP_Text whitePieceText;
     public TMPro.TMP_Text blackValueText;
+    public TMPro.TMP_Text blackPieceText;
     public TMPro.TMP_Text deltaValueText;
 
     public TMPro.TMP_Text undoButtonText;
@@ -74,6 +76,7 @@ public class BattleUIScript : MonoBehaviour
             battleOnlyUI.SetActive(false);
         }
         whiteValueText.text = "" + (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - 5);
+        whitePieceText.text = bs.board.whitePerPlayerInfo.pieceCount + " pcs " + (bs.board.whitePerPlayerInfo.piecesLost <= 0 ? "" : "(-" + bs.board.whitePerPlayerInfo.piecesLost + ")");
     }
 
     public void Undo()
@@ -238,7 +241,9 @@ public class BattleUIScript : MonoBehaviour
 
         moneyText.text = "$" + MainManager.Instance.playerData.coins;
         whiteValueText.text = "" + (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - 5);
+        whitePieceText.text = bs.board.whitePerPlayerInfo.pieceCount + " pcs" + (bs.board.whitePerPlayerInfo.piecesLost <= 0 ? "" : " (-" + bs.board.whitePerPlayerInfo.piecesLost + ")");
         blackValueText.text = "" + (((bs.board.blackPerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - 5);
+        blackPieceText.text = bs.board.blackPerPlayerInfo.pieceCount + " pcs" + (bs.board.blackPerPlayerInfo.piecesLost <= 0 ? "" : " (-" + bs.board.blackPerPlayerInfo.piecesLost + ")");
         float delta = (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - ((bs.board.blackPerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f));
         if (delta > 0)
         {
