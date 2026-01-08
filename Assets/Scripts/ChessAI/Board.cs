@@ -8409,12 +8409,13 @@ public class Board
 
         ulong piecesToCheck = black ? globalData.bitboard_piecesWhite : globalData.bitboard_piecesBlack;
 
-        //Neutrals only really get checked here for special cases (Sludge Trail and whatever other kinds of space filling pieces I make up)
-        piecesToCheck |= globalData.bitboard_piecesNeutral;
-
         bool immuneZone = (globalData.playerModifier & PlayerModifier.ImmunityZone) != 0;
 
         piecesToCheck &= (~globalData.bitboard_noStatus | globalData.bitboard_EOTPieces);
+
+        //Neutrals only really get checked here for special cases (Sludge Trail and whatever other kinds of space filling pieces I make up)
+        //note: might show up on NoStatus so it is lower here
+        piecesToCheck |= globalData.bitboard_sludgeTrail;
 
         //MainManager.PrintBitboard(~globalData.bitboard_noStatus);
 

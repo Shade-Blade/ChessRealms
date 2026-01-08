@@ -288,6 +288,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                         //specialText.text = Piece.GetPieceName(elast);
                     }
                     break;
+                case PieceType.SludgeTrail:
                 case Piece.PieceType.Revenant:
                     if (specialData != 0)
                     {
@@ -330,6 +331,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                 case Piece.PieceType.Carrier:
                 case Piece.PieceType.Airship:
                 case Piece.PieceType.Train:
+                case Piece.PieceType.Rabbit:
                     if (specialData != 0)
                     {
                         specialText.SetText(Piece.GetPieceName((Piece.PieceType)specialData), true, true);
