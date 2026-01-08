@@ -1423,7 +1423,7 @@ public static class Piece
             case PiecePropertyB.NaturalWinged:
                 return "Ignores the first obstacle it meets but can't capture past that obstacle.";
             case PiecePropertyB.MorphImmune:
-                return "Can't change type.";
+                return "Can't change type by effects of other pieces.";
         }
         return "";
     }

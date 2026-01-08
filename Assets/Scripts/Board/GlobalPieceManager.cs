@@ -1399,7 +1399,7 @@ public sealed class MoveGeneratorInfoEntry
             case MoveGeneratorAtom.AllyKingTeleport:
                 return "[Special] Teleport Move to a square adjacent to an ally King.";
             case MoveGeneratorAtom.EnemyKingTeleport:
-                return "[Special] Teleport Move to a square adjacent to an ally King.";
+                return "[Special] Teleport Move to a square adjacent to an enemy King.";
             case MoveGeneratorAtom.PawnSwapTeleport:
                 return "[Special] Teleport Swap with an ally pawn.";
             case MoveGeneratorAtom.AllySwapTeleport:

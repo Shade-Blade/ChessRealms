@@ -239,14 +239,14 @@ Spy,5,WF,,Sneaky,FALSE,,Dark,2
 Infiltrator,7,R2,,EnemyKingTeleport,FALSE,,Dark,3
 Disguiser,5.5,mRmB,,MorphImmune,TRUE,,Dark,4
 Assassin,6,vWF,,Deadly|EnemyBehindTeleport,FALSE,,Dark,3
-SlipPawn,1.5,mifR2=mfWcfFomfR2=,,SlipMove,FALSE,,Dark,2
+SlipPawn,1.5,mfWcfFomfR2=,,SlipMove,FALSE,,Dark,2
 Diplomat,5,,,Invincible|Unique|DiplomatTeleport,TRUE,,Royalist,4
 RoyalDouble,3,mWmF,,EnchantImmune|KingSwapTeleport,FALSE,,Royalist,4
 RoyalGuard,4,WF,,EnchantImmune|AllyKingTeleport,FALSE,,Royalist,3
 RoyalMaid,7.5,WB,,EnchantImmune|AllyKingTeleport|HomeRangeTeleport,FALSE,,Royalist,4
 RoyalCastle,7.5,FR,,EnchantImmune|AllyKingTeleport,FALSE,,Royalist,3
 RoyalRecruit,2.5,fWfF,,EnchantImmune|AllyKingTeleport|PromoteCapture,FALSE,RoyalGuard,Royalist,3
-ShadowQueen,7,oRoB,,ShadowMove,FALSE,,Mirror,3
+ShadowQueen,6,oRoB,,ShadowMove,FALSE,,Mirror,3
 EchoSoldier,6,WF,,EchoTeleport,FALSE,,Mirror,3
 MirrorQueen,13,RB,,EnchantImmune|Reflecter|LensRook,TRUE,,Mirror,4
 LensRook,7,R,,LensRook,TRUE,,Mirror,2.5
@@ -358,7 +358,7 @@ ChargeBeast,9,"WF(1,2)oW2oF2",,ChargeEnhanceStack|ChargeByMoving,FALSE,,ChargeMo
 ChargeCannon,4.5,WoW2,,ChargeEnhanceStackReset|ChargeByMoving,FALSE,,ChargeMovers,2.5
 ChargeWarper,4.5,"Wm(2,2)o(0,2)o(2,3)o(3,3)",,ChargeEnhance|ChargeByMoving,FALSE,,ChargeMovers,2.5
 ChargeKnight,4,"WFo(1,2)",,ChargeEnhanceStack|ChargeByMoving,FALSE,,ChargeMovers,2.5
-ChargePawn,1.5,mifR2=mfWcfFofW2,,ChargeEnhance|ChargeByMoving,FALSE,ChargeBeast,ChargeMovers,2.5
+ChargePawn,1.5,mfWcfFofW2=,,ChargeEnhance|ChargeByMoving,FALSE,ChargeBeast,ChargeMovers,2.5
 Ghoul,3,"cWcFc(0,2)","WF(0,2)",PartialForcedCapture,FALSE,,ForcedMovers,2
 GhoulMarshall,6,"cRc(1,2)","R(1,2)",PartialForcedCapture,FALSE,,ForcedMovers,2
 GhoulAmazon,8,"cRcBc(1,2)","RB(1,2)",PartialForcedCapture,FALSE,,ForcedMovers,2

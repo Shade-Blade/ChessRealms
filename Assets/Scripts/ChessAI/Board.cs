@@ -13025,7 +13025,7 @@ public static class Move
             case SpecialType.AdvancerWithdrawer:
                 return "(Indirect Capture) Move only. Enemies 1 square behind the starting square or 1 square beyond the square moved to are destroyed.";
             case SpecialType.WrathCapturer:
-                return "(Indirect Capture) Move or Capture. Enemies 1 square beyond the square moved to are also destroyed.";
+                return "(Indirect Capture) Move or Capture. Enemies 1 square beyond the square captured at are also destroyed.";
             case SpecialType.FlankingCapturer:
                 return "(Indirect Capture) Move only. Enemies adjacent to both the starting and ending squares are destroyed.";
             case SpecialType.PoisonFlankingAdvancer:
