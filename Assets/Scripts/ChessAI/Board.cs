@@ -6597,6 +6597,11 @@ public class Board
                 }
                 break;
         }
+
+        whitePerPlayerInfo.lastMove = move;
+        whitePerPlayerInfo.lastPieceMovedLocation = -1;
+        whitePerPlayerInfo.lastPieceMoved = 0;
+        whitePerPlayerInfo.lastPieceMovedType = 0;
     }
 
     public void DeletePieceAtCoordinate(int x, int y, PieceTableEntry pte, Piece.PieceAlignment pa, List<BoardUpdateMetadata> boardUpdateMetadata)

@@ -672,7 +672,7 @@ public class BattleBoardScript : BoardScript
         }
         */
 
-        if (board.GetLastMove() != 0)
+        if (board.GetLastMove() != 0 && !Move.IsConsumableMove(board.GetLastMove()))
         {
             bool isGiant = (GlobalPieceManager.GetPieceTableEntry(board.GetLastMovedPiece()).piecePropertyB & PiecePropertyB.Giant) != 0;
 
@@ -1674,6 +1674,24 @@ public class BattleBoardScript : BoardScript
         if (historyIndex == 0)
         {
             return;
+        }
+
+        //refund consumables used
+        if (Move.IsConsumableMove(board.GetLastMove()))
+        {
+            (Move.ConsumableMoveType cmt, _, _) = Move.DecodeConsumableMove(board.GetLastMove());
+
+            //If you have 2 of the same this won't work properly (use copy 2, refunds copy 1 instead of copy 2)
+            //but it will functionally act the same
+            for (int i = 0; i < MainManager.Instance.playerData.consumables.Length; i++)
+            {
+                if (MainManager.Instance.playerData.consumables[i] == cmt && MainManager.Instance.playerData.consumablesDisabled[i])
+                {
+                    MainManager.Instance.playerData.consumablesDisabled[i] = false;
+                    break;
+                }
+            }
+            FindObjectOfType<ConsumableBadgePanelScript>().FixInventory();
         }
 
         whiteIsAI = false;
