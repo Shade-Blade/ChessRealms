@@ -22,7 +22,11 @@ public class BattleWinPanelScript : MonoBehaviour
 
     public void Update()
     {
-        lifetime += Time.deltaTime;
+        //wait for the board
+        if (!bs.animating)
+        {
+            lifetime += Time.deltaTime;
+        }
 
         if (lifetime > 0.2f)
         {

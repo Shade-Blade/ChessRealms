@@ -51,7 +51,10 @@ public class BattleLosePanelScript : MonoBehaviour
 
     public void Update()
     {
-        lifetime += Time.deltaTime;
+        if (!bs.animating)
+        {
+            lifetime += Time.deltaTime;
+        }
 
         if (lifetime > 0.2f)
         {

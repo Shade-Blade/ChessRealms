@@ -40,7 +40,7 @@ public class HoverTextMasterScript : MonoBehaviour
             }
         } else
         {
-            if (!hoverText.Equals(pastHoverText) && (hoverText != null && hoverText.Length != 0 && hoverText[0] != '*'))
+            if (!hoverText.Equals(pastHoverText) && (hoverText.Length == 0 || hoverText[0] != '*'))
             {
                 //Hover popup must be updated
                 if (hoverPopup == null)
