@@ -343,7 +343,7 @@ public class PieceMovePanelScript : MonoBehaviour
                         moveText += "Initial: Only usable from the first 2 rows.\n";
                         break;
                     case PieceMovePanelSquareScript.SpecialIndication.AntiRange:
-                        moveText += "Anti Range: Must go as far as possible.\n";
+                        moveText += "Rush: Must go as far as possible.\n";
                         break;
                     case PieceMovePanelSquareScript.SpecialIndication.Enhanced:
                         switch (pte.enhancedMoveType)
@@ -1953,7 +1953,7 @@ public class PieceMovePanelScript : MonoBehaviour
             case Move.SpecialType.AdvancerWithdrawer:
             case Move.SpecialType.FlankingCapturer:
             case Move.SpecialType.PoisonFlankingAdvancer:
-                return new Color(0.6f, 0.5f, 0.4f, 1);
+                //return new Color(0.1f, 0.1f, 0.8f, 1);
             case Move.SpecialType.WrathCapturer:
                 return new Color(0.6f, 0.4f, 0.4f, 1);
             case Move.SpecialType.DepositAllyPlantMove:

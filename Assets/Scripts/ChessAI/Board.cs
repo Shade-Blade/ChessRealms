@@ -13035,7 +13035,7 @@ public static class Move
             case SpecialType.AnyoneSwap:
                 return "Move or Swap with any (non Shift Immune) piece.";
             case SpecialType.MorphIntoTarget:
-                return "Move or Transform into the target piece.";
+                return "Move or Morph into the target piece.";
             case SpecialType.SlipMove:
                 return "Move to a square adjacent to enemy pieces.";
             case SpecialType.PlantMove:

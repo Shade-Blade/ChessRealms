@@ -1170,6 +1170,8 @@ public static class Piece
                 return "Can't move a Slow piece if you moved a Slow piece last turn.";
             case PieceProperty.ChargeEnhance:
                 switch (pt) {
+                    case PieceType.QueenLeech:
+                        return "Certain moves are only possible when charged (Spawn).";
                     case PieceType.ChargeWarper:
                         return "Certain moves are only possible when charged (Teleport Opposite).";
                     case PieceType.SoulCannon:
@@ -1181,7 +1183,7 @@ public static class Piece
             case PieceProperty.RangeIncrease_MissingPieces:
                 return "Gain range for each piece lost.";
             case PieceProperty.RangeIncrease_FurtherRows:
-                return " Gain range the further ahead you are.";
+                return "Gain range the further ahead you are.";
             case PieceProperty.RangeIncrease_NearRows:
                 return "Gain range the further back you are.";
             case PieceProperty.RangeDecrease_FurtherRows:
@@ -1251,7 +1253,7 @@ public static class Piece
             case PieceProperty.PassivePushDiag:
                 return "Pull enemies diagonally away from range 2 to be range 1.";
             case PieceProperty.PassivePullStrong:
-                return "Pull enemies from any distance 1 square towards this one.";
+                return "Pull enemies from any distance away 1 square towards this one.";
             case PieceProperty.PassivePushStrongDiag:
                 return "Push enemies diagonally adjacent to the target square as far as possible.";
             case PieceProperty.PassivePush:
@@ -1423,7 +1425,7 @@ public static class Piece
             case PiecePropertyB.NaturalWinged:
                 return "Ignores the first obstacle it meets but can't capture past that obstacle.";
             case PiecePropertyB.MorphImmune:
-                return "Can't change type by effects of other pieces.";
+                return "Can't change type by effects of other pieces, including allies.";
         }
         return "";
     }
@@ -1452,12 +1454,14 @@ public static class Piece
                 return "When it captures, spawns a Skeleton on the starting square.";
             case PieceType.Sludge:
                 return "Creates a Sludge Trail as it moves.";
+            case PieceType.Rabbit:
+                return "Pieces transformed into Rabbits will convert back into their original type on the first or last rank.";
             case PieceType.RabbitCourier:
-                return "Gains range for each ally piece adjacent to it.";
+                return "Gains range for each ally piece adjacent to it. (1 base, then +1 for each adjacent ally).";
             case PieceType.RabbitDiplomat:
                 return "When it moves, adjacent normal Rabbits are converted to your side.";
             case PieceType.RabbitKnight:
-                return "If a rabbit piece is adjacent, this is Invincible unless an enemy is also adjacent.";
+                return "If a rabbit piece of any alignment is adjacent, this is Invincible unless an enemy is also adjacent (not including the attacker).";
             case PieceType.Pincer:
                 return "After Move: Enemies sandwiched between the Pincer and an ally piece or the edge of the board are destroyed.";
             case PieceType.ClockworkTurtle:
@@ -1508,11 +1512,14 @@ public static class Piece
             case PieceType.ClockworkWalker:
                 return "After Move: Transforms into Clockwork Leaper.";
             case PieceType.Cannon:
-                return "Aim move is Fire Capture (Burn an enemy piece without moving.)";
+                return "Aim move is Fire Capture (Burn an enemy piece without moving.). Aim is lost after moving this piece but will stay if not moved.";
+            case PieceType.SteelGolem:
+            case PieceType.SteelPuppet:
+                return "Aim is lost after moving this piece but will stay if not moved.";
             case PieceType.MegaCannon:
                 return "Aim at a target to charge an attack to destroy the target and the 4 orthogonal squares surrounding the target. Charging takes 7 turns and ticks down after your turn. While charging, Mega Cannon is Invincible but can't move.";
             case PieceType.MetalFox:
-                return "After Enemy Move: When an enemy appears in the targetted square, capture that enemy.";
+                return "After Enemy Move: When an enemy appears in the targetted square, capture that enemy. Aim is lost after moving this piece but will stay if not moved.";
             case PieceType.ChargeCannon:
                 return "Fire Capture gains range for each charge.";
             case PieceType.DayPawn:

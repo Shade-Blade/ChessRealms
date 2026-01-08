@@ -29,6 +29,8 @@ public class BattleUIScript : MonoBehaviour
     public TMPro.TMP_Text blackPieceText;
     public TMPro.TMP_Text deltaValueText;
 
+    public TMPro.TMP_Text firstTurnText;
+
     public TMPro.TMP_Text undoButtonText;
     public TMPro.TMP_Text retryText;
 
@@ -95,6 +97,21 @@ public class BattleUIScript : MonoBehaviour
         }
     }
 
+    public void WhiteAIToggle()
+    {
+        if (bs is BattleBoardScript bbs)
+        {
+            bbs.whiteIsAI = true;
+        }
+    }
+    public void BlackAIToggle()
+    {
+        if (bs is BattleBoardScript bbs)
+        {
+            bbs.blackIsAI = true;
+        }
+    }
+
     public void DoubleUndo()
     {
         if (MainManager.Instance.playerData.undosLeft == 0)
@@ -150,6 +167,7 @@ public class BattleUIScript : MonoBehaviour
         if (bs is BattleBoardScript bbs)
         {
             bbs.ResetBoard(Board.BoardPreset.Normal);
+            bs.SetTheme(PieceClass.Normal);
         }
     }
 
@@ -170,6 +188,7 @@ public class BattleUIScript : MonoBehaviour
 
             MainManager.Instance.playerData.GenerateSeed();
             bbs.ResetBoard(MainManager.Instance.playerData.army, ArmyGenerator.ConvertPieceTypeArray(army), pm, em, classValue);
+            bs.SetTheme(classValue);
         }
     }
 
@@ -190,6 +209,7 @@ public class BattleUIScript : MonoBehaviour
 
             MainManager.Instance.playerData.GenerateSeed();
             bbs.ResetBoard(army, pm, em);
+            bs.SetTheme(classValue);
         }
     }
 
@@ -238,6 +258,8 @@ public class BattleUIScript : MonoBehaviour
 
         float timeValue = Time.time * 0.2f;
         backgroundB.transform.localPosition = Vector3.up * 0.25f * (timeValue - Mathf.Ceil(timeValue));
+
+        firstTurnText.text = bs.board.turn == 0 ? "Can't capture or use Items on Turn 1." : "";
 
         moneyText.text = "$" + MainManager.Instance.playerData.coins;
         whiteValueText.text = "" + (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - 5);
