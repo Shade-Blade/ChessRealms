@@ -9296,7 +9296,7 @@ public class Board
 
             PieceTableEntry pte = globalData.GetPieceTableEntryFromCache(x + dx + ((y + dy) << 3), pieces[x + dx + ((y + dy) << 3)]);
 
-            if ((pte.pieceProperty & PieceProperty.NoTerrain) != 0)
+            if (pte == null || (pte.pieceProperty & PieceProperty.NoTerrain) != 0)
             {
                 continue;
             }

@@ -336,6 +336,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                         //specialText.SetText("<piece," + Piece.GetPieceName((Piece.PieceType)specialData) + ",2>", true, true);
                     }
                     break;
+                case Piece.PieceType.Balloon:
                 case Piece.PieceType.Roller:
                 case Piece.PieceType.RollerQueen:
                 case Piece.PieceType.BounceBishop:
