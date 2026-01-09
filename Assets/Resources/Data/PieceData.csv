@@ -402,7 +402,7 @@ SkipQueen,8,DA,,,FALSE,,Skip,1
 SkipRook,4.5,D,,,FALSE,,Skip,1
 SkipBishop,3.5,A,,,FALSE,,Skip,1
 SkipGuard,6,D2A2,,,FALSE,,Skip,1
-SkipPawn,1.5,"mf(0,2)cf(1,2)mbW",,,FALSE,SkipQueen,Skip,1
+SkipPawn,1.5,"mf(0,2)cvf(1,2)mbW",,,FALSE,SkipQueen,Skip,1
 SummerQueen,9,"R2B2r(1,2)",,WaterImmune,TRUE,,Seasonal,2.5
 WinterQueen,9,oWvR2hI2cvR4chI4,,InflictFreeze,TRUE,,Seasonal,2.5
 SummerRook,7,RrF,,WaterImmune,TRUE,,Seasonal,2.5

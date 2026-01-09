@@ -9050,7 +9050,7 @@ public class Board
         {
             return false;
         }
-        if ((pieces[x + y * 8] != 0 && Piece.GetPieceAlignment(pieces[x + y * 8]) != pa) || (pieces[x2 + y2 * 8] != 0 && Piece.GetPieceAlignment(pieces[x2 + y2 * 8]) != pa))
+        if ((pieces[x + y * 8] != 0 && Piece.GetPieceAlignment(pieces[x + y * 8]) == pa) || (pieces[x2 + y2 * 8] != 0 && Piece.GetPieceAlignment(pieces[x2 + y2 * 8]) == pa))
         {
             return false;
         }
