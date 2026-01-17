@@ -73,19 +73,19 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         switch (Piece.GetPieceAlignment(piece))
         {
             case PieceAlignment.White:
-                hoverText += "<outlinecolor,#f2f2f2>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
+                hoverText += "<outlinecolordark,#f2f2f2>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
                 break;
             case PieceAlignment.Black:
-                hoverText += "<outlinecolor,#808080>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
+                hoverText += "<outlinecolordark,#808080>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
                 break;
             case PieceAlignment.Neutral:
-                hoverText += "<outlinecolor,#f2f266>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
-                hoverText += "<outlinecolor,#f2f266>Neutral</color></font> pieces can be moved or captured by either side.<line>";
+                hoverText += "<outlinecolordark,#f2f266>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
+                hoverText += "<outlinecolordark,#f2f266>Neutral</color></font> pieces can be moved or captured by either side.<line>";
                 hoverText += "Note that you can't move the exact same piece your enemy did last turn.<line>";
                 break;
             case PieceAlignment.Crystal:
-                hoverText += "<outlinecolor,#f266f2>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
-                hoverText += "<outlinecolor,#f266f2>Crystal</color></font> pieces can be moved by a side that is directly attacking this piece.<line>";
+                hoverText += "<outlinecolordark,#f266f2>" + Piece.GetPieceName(Piece.GetPieceType(piece)) + "</color></font>\n";
+                hoverText += "<outlinecolordark,#f266f2>Crystal</color></font> pieces can be moved by a side that is directly attacking this piece.<line>";
                 hoverText += "(i.e. an attack shown by Control Zones.)<line>";
                 hoverText += "Note that you can't move the exact same piece your enemy did last turn.<line>";
                 break;
@@ -102,20 +102,20 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         if (Piece.GetPieceModifier(piece) != 0)
         {
             Piece.PieceModifier pm = Piece.GetPieceModifier(piece);
-            hoverText += "\n" + "<outlinecolor," + MainManager.ColorToString(Piece.GetModifierColor(pm)) + ">" + Piece.GetModifierName(pm) + "</color></font>: " + Piece.GetModifierDescription(pm);
+            hoverText += "\n" + "<outlinecolordark," + MainManager.ColorToString(Piece.GetModifierColor(pm)) + ">" + Piece.GetModifierName(pm) + "</color></font>: " + Piece.GetModifierDescription(pm);
         }
 
         //statuses
         if (Piece.GetPieceStatusEffect(piece) != 0)
         {
             Piece.PieceStatusEffect pse = Piece.GetPieceStatusEffect(piece);
-            hoverText += "\n" + "<outlinecolor," + MainManager.ColorToString(Piece.GetStatusEffectColor(pse)) + ">" + Piece.GetStatusEffectName(pse) + "</color></font>: " + Piece.GetStatusEffectDescription(pse);
+            hoverText += "\n" + "<outlinecolordark," + MainManager.ColorToString(Piece.GetStatusEffectColor(pse)) + ">" + Piece.GetStatusEffectName(pse) + "</color></font>: " + Piece.GetStatusEffectDescription(pse);
         }
 
         //Relay attackers
         if (relayAttacked != 0)
         {
-            hoverText += "\n<outlinecolor,#ffff00>Relay</color></font> to: ";
+            hoverText += "\n<outlinecolordark,#ffff00>Relay</color></font> to: ";
             int relay = 0;
             ulong ra = relayAttacked;
             while (ra != 0)
@@ -138,7 +138,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         //Relay defenders
         if (relayDefenders != 0)
         {
-            hoverText += "\n<outlinecolor,#ffff00>Relay</color></font> from: ";
+            hoverText += "\n<outlinecolordark,#ffff00>Relay</color></font> from: ";
             int relay = 0;
             ulong rd = relayDefenders;
             while (rd != 0)
@@ -338,6 +338,27 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                         //specialText.SetText("<piece," + Piece.GetPieceName((Piece.PieceType)specialData) + ",2>", true, true);
                     }
                     break;
+                case PieceType.RabbitCourier:
+                    //count adjacent allies
+                    int count = 0;
+                    ulong bitIndex = 1uL << (x + (y << 3));
+                    switch (Piece.GetPieceAlignment(piece))
+                    {
+                        case PieceAlignment.White:
+                            count += (bs.board.globalData.bitboard_piecesWhiteAdjacent1 & bitIndex) != 0 ? 1 : 0;
+                            count += (bs.board.globalData.bitboard_piecesWhiteAdjacent2 & bitIndex) != 0 ? 2 : 0;
+                            count += (bs.board.globalData.bitboard_piecesWhiteAdjacent4 & bitIndex) != 0 ? 4 : 0;
+                            count += (bs.board.globalData.bitboard_piecesWhiteAdjacent8 & bitIndex) != 0 ? 8 : 0;
+                            break;
+                        case PieceAlignment.Black:
+                            count += (bs.board.globalData.bitboard_piecesBlackAdjacent1 & bitIndex) != 0 ? 1 : 0;
+                            count += (bs.board.globalData.bitboard_piecesBlackAdjacent2 & bitIndex) != 0 ? 2 : 0;
+                            count += (bs.board.globalData.bitboard_piecesBlackAdjacent4 & bitIndex) != 0 ? 4 : 0;
+                            count += (bs.board.globalData.bitboard_piecesBlackAdjacent8 & bitIndex) != 0 ? 8 : 0;
+                            break;
+                    }
+                    specialText.SetText((count + 1) + "", true, true);
+                    break;
                 case Piece.PieceType.Balloon:
                 case Piece.PieceType.Roller:
                 case Piece.PieceType.RollerQueen:
@@ -374,6 +395,57 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                         }
                         //specialText.text = (Dir)specialData + "";
                     }
+                    break;
+            }
+        }
+
+        PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(piece);
+
+        if ((pte.pieceProperty & PieceProperty.RangeIncrease_FurtherRows) != 0)
+        {
+            switch (Piece.GetPieceAlignment(piece))
+            {
+                case PieceAlignment.White:
+                    specialText.SetText((y + 1) + "", true, true);
+                    break;
+                case PieceAlignment.Black:
+                    specialText.SetText((8 - y) + "", true, true);
+                    break;
+            }
+        }
+        if ((pte.pieceProperty & PieceProperty.RangeIncrease_NearRows) != 0)
+        {
+            switch (Piece.GetPieceAlignment(piece))
+            {
+                case PieceAlignment.White:
+                    specialText.SetText((8 - y) + "", true, true);
+                    break;
+                case PieceAlignment.Black:
+                    specialText.SetText((y + 1) + "", true, true);
+                    break;
+            }
+        }
+        if ((pte.pieceProperty & PieceProperty.RangeIncrease_MissingPieces) != 0)
+        {
+            switch (Piece.GetPieceAlignment(piece))
+            {
+                case PieceAlignment.White:
+                    specialText.SetText((bs.board.whitePerPlayerInfo.piecesLost + 1) + "", true, true);
+                    break;
+                case PieceAlignment.Black:
+                    specialText.SetText((bs.board.blackPerPlayerInfo.piecesLost + 1) + "", true, true);
+                    break;
+            }
+        }
+        if ((pte.pieceProperty & PieceProperty.RangeDecrease_FurtherRows) != 0)
+        {
+            switch (Piece.GetPieceAlignment(piece))
+            {
+                case PieceAlignment.White:
+                    specialText.SetText(Mathf.Max(7 - 2 * y, 1) + "", true, true);
+                    break;
+                case PieceAlignment.Black:
+                    specialText.SetText(Mathf.Max(2 * y - 7, 1) + "", true, true);
                     break;
             }
         }

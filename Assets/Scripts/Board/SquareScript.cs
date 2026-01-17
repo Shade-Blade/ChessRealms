@@ -395,7 +395,7 @@ public class SquareScript : MonoBehaviour
         string hoverText = "";
         if (Board.GetSquareTypeDescription(sq.type).Length > 0)
         {
-            hoverText += "<outlinecolor,#c0c0c0>[S]</color></font> " + Board.GetSquareTypeDescription(sq.type);
+            hoverText += "<outlinecolordark,#c0c0c0>[S]</color></font> " + Board.GetSquareTypeDescription(sq.type);
         }
 
         //auras
@@ -411,7 +411,7 @@ public class SquareScript : MonoBehaviour
             {
                 Piece.Aura a = (Piece.Aura)bitIndex;
                 Color c = Piece.GetAuraColor(a);
-                hoverText += "\n" + "<outlinecolor,#ffffff>[W]</color> <color," + MainManager.ColorToString(c) + ">" + Piece.GetAuraName(a) + "</color></font>: " + Piece.GetAuraDescription(a);
+                hoverText += "\n" + "<outlinecolordark,#ffffff>[W]</color> <color," + MainManager.ColorToString(c) + ">" + Piece.GetAuraName(a) + "</color></font>: " + Piece.GetAuraDescription(a);
             }
         }
         if (bAura != 0 && hoverText.Length > 0)
@@ -425,7 +425,7 @@ public class SquareScript : MonoBehaviour
             {
                 Piece.Aura a = (Piece.Aura)bitIndex;
                 Color c = Piece.GetAuraColor(a);
-                hoverText += "\n" + "<outlinecolor,#808080>[B]</color> <color," + MainManager.ColorToString(c) + ">" + Piece.GetAuraName(a) + "</color></font>: " + Piece.GetAuraDescription(a);
+                hoverText += "\n" + "<outlinecolordark,#808080>[B]</color> <color," + MainManager.ColorToString(c) + ">" + Piece.GetAuraName(a) + "</color></font>: " + Piece.GetAuraDescription(a);
             }
         }
 

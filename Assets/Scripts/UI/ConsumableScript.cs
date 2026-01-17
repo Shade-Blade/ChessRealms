@@ -240,7 +240,7 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
 
     public string GetHoverText()
     {
-        return "<outlinecolor,#80ff80>" + Board.GetConsumableName(cmt) + "</outlinecolor><line>" + ((bs is BattleBoardScript && bs.board.turn < 1) ? "<color,#800000>(Can't use items on turn 1.)</color><line>" : "") + "" + (disabled ? "<color,#800000>(Already used: Will return after battle)</color><line>" : "") + Board.GetConsumableDescription(cmt);
+        return "<outlinecolordark,#80ff80>" + Board.GetConsumableName(cmt) + "</outlinecolor><line>" + ((bs is BattleBoardScript && bs.board.turn < 1) ? "<color,#800000>(Can't use items on turn 1.)</color><line>" : "") + "" + (disabled ? "<color,#800000>(Already used: Will return after battle)</color><line>" : "") + Board.GetConsumableDescription(cmt);
     }
 
     public void OnMouseOver()

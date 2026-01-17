@@ -414,23 +414,23 @@ public class PieceMovePanelScript : MonoBehaviour
         Piece.Aura aura = SetAura(pte);
         if (aura != 0)
         {
-            moveText += "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatch\"><color=#80c0ff>□</color></font> Aura: " + GetAuraDescription(aura) + "\n";
+            moveText += "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatchDark\"><color=#80c0ff>□</color></font> Aura: " + GetAuraDescription(aura) + "\n";
         }
 
         for (int i = 0; i < moveTypes.Count; i++)
         {
             //populate some square legend
-            moveText += "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatch\"><color=" + MainManager.ColorToString(PieceMovePanelScript.GetColorFromSpecialType(moveTypes[i])) + "><size=120%>■</size></color></font> " + Move.GetSpecialTypeDescription(moveTypes[i], pte) + "\n";
+            moveText += "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatchDark\"><color=" + MainManager.ColorToString(PieceMovePanelScript.GetColorFromSpecialType(moveTypes[i])) + "><size=120%>■</size></color></font> " + Move.GetSpecialTypeDescription(moveTypes[i], pte) + "\n";
         }
         pieceInfoText.text = moveText;
 
         if (pse != PieceStatusEffect.None)
         {
-            pieceInfoText.text += "\n" + "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatch\"><color=" + MainManager.ColorToString(Piece.GetStatusEffectColor(pse)) + ">" + Piece.GetStatusEffectName(pse) + "</color></font>: " + Piece.GetStatusEffectDescription(pse) + "\n";
+            pieceInfoText.text += "\n" + "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatchDark\"><color=" + MainManager.ColorToString(Piece.GetStatusEffectColor(pse)) + ">" + Piece.GetStatusEffectName(pse) + "</color></font>: " + Piece.GetStatusEffectDescription(pse) + "\n";
         }
         if (pm != PieceModifier.None)
         {
-            pieceInfoText.text += "\n" + "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatch\"><color=" + MainManager.ColorToString(Piece.GetModifierColor(pm)) + ">" + Piece.GetModifierName(pm) + "</color></font>: " + Piece.GetModifierDescription(pm) + "\n";
+            pieceInfoText.text += "\n" + "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatchDark\"><color=" + MainManager.ColorToString(Piece.GetModifierColor(pm)) + ">" + Piece.GetModifierName(pm) + "</color></font>: " + Piece.GetModifierDescription(pm) + "\n";
         }
 
         if (Piece.GetPieceSpecialDescription(pte.type).Length > 0)
@@ -467,8 +467,8 @@ public class PieceMovePanelScript : MonoBehaviour
                 //pieceInfoText.text += (Piece.PieceProperty)(1uL << index) + "\n";
                 if (Piece.GetPropertyDescription((Piece.PieceProperty)(1uL << index), pte.type).Length > 0)
                 {
-                    //<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatch\"><color=#404040>
-                    pieceInfoText.text += "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatch\"><color=#ffffff>" + Piece.GetPropertyName((Piece.PieceProperty)(1uL << index)) + "</color></font>: " + Piece.GetPropertyDescription((Piece.PieceProperty)(1uL << index), pte.type) + "\n\n";
+                    //<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatchDark\"><color=#404040>
+                    pieceInfoText.text += "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatchDark\"><color=#ffffff>" + Piece.GetPropertyName((Piece.PieceProperty)(1uL << index)) + "</color></font>: " + Piece.GetPropertyDescription((Piece.PieceProperty)(1uL << index), pte.type) + "\n\n";
                 }
             }
             while (propertiesB != 0)
@@ -478,7 +478,7 @@ public class PieceMovePanelScript : MonoBehaviour
 
                 if (Piece.GetPropertyDescription((Piece.PiecePropertyB)(1uL << index), pte.type).Length > 0)
                 {
-                    pieceInfoText.text += "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatch\"><color=#ffffff>" + Piece.GetPropertyName((Piece.PiecePropertyB)(1uL << index)) + "</color></font>: " + Piece.GetPropertyDescription((Piece.PiecePropertyB)(1uL << index), pte.type) + "\n\n";
+                    pieceInfoText.text += "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatchDark\"><color=#ffffff>" + Piece.GetPropertyName((Piece.PiecePropertyB)(1uL << index)) + "</color></font>: " + Piece.GetPropertyDescription((Piece.PiecePropertyB)(1uL << index), pte.type) + "\n\n";
                 }
             }
         }

@@ -181,7 +181,7 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
     public string GetHoverText()
     {
-        return "<outlinecolor,#c0c0ff>" + Board.GetPlayerModifierName(pm) + "</outlinecolor><line>" + Board.GetPlayerModifierDescription(pm);
+        return "<outlinecolordark,#c0c0ff>" + Board.GetPlayerModifierName(pm) + "</outlinecolor><line>" + Board.GetPlayerModifierDescription(pm);
     }
 
     public void OnMouseOver()

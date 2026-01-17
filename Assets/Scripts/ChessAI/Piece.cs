@@ -1492,7 +1492,7 @@ public static class Piece
             case PieceType.ElectroPawn:
                 return "Pull enemies that are 2 forwards to be 1 forwards.";
             case PieceType.Uranus:
-                return "After Move: Swap poisitions of the pieces adjacent.";
+                return "After Move: Swap poisitions of the pieces orthogonally adjacent.";
             case PieceType.Abomination:
                 return "After Enemy Move: When an ally piece is captured, move towards the enemy king.";
             case PieceType.Zombie:

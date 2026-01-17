@@ -178,6 +178,27 @@ public class TMPString
                     output = "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatch\"><color=" + tag.args[0] + ">";
                 }
                 break;
+            case TagEntry.TextTag.OutlineColorDark:
+                if (!tag.open)
+                {
+                    output = "</color></font>";
+                }
+                else
+                {
+                    if (tag.args == null || tag.args.Length == 0)
+                    {
+                        output = "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatchDark\"><color=#ffffff>";
+                        break;
+                    }
+                    ColorNames color;
+                    if (Enum.TryParse(tag.args[0], out color))
+                    {
+                        tag.args[0] = ColorUtility.ToHtmlStringRGB(baseColors[(int)color]);
+                    }
+
+                    output = "<font=\"Rubik-SemiBold SDF\" material=\"Rubik-SemiBold Atlas Material OutlineColorMatchDark\"><color=" + tag.args[0] + ">";
+                }
+                break;
             case TagEntry.TextTag.OutlineInvert:
                 if (!tag.open)
                 {
@@ -1042,6 +1063,7 @@ public class TagEntry
         //things that use materials
 
         OutlineColor,   //color match outline
+        OutlineColorDark,   //color match outline
         OutlineInvert,  //invert outline
         /*
         Outline,    //outline text

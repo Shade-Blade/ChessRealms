@@ -3469,8 +3469,10 @@ internal static class MoveGenerator
         //bitboardIncompatible |= (pte.pieceProperty & Piece.PieceProperty.RangeChange) != 0;             //currently the bitboard setups use fixed ranges
         bitboardIncompatible |= (pte.pieceProperty & Piece.PieceProperty.BitboardIncompatible) != 0;
         //bool reflecter = (pte.pieceProperty & Piece.PieceProperty.Reflecter) != 0;
-        if (pa == Piece.PieceAlignment.Black && (b.globalData.enemyModifier & Board.EnemyModifier.Knave) != 0)
+        bool knave = false;
+        if (pa == Piece.PieceAlignment.Black && (b.globalData.enemyModifier & Board.EnemyModifier.Knave) != 0)  // && pte.type != PieceType.King)   //earlygame Knave might be hard to deal with (but the AI might push the king forward so they can't use knave with king anymore)
         {
+            knave = true;
             bitboardIncompatible = true;
         }
         switch (pte.type)
@@ -4462,7 +4464,7 @@ internal static class MoveGenerator
 
                     if (!directionRestricted)
                     {
-                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal && !rangeChange)
+                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal && !knave && !rangeChange)
                         {
                             if (!bitboardIncompatible)
                             {
@@ -4639,7 +4641,7 @@ internal static class MoveGenerator
                         int tx = x;
                         int ty = y;
                         bool wasGenerated;
-                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal && !rangeChange)
+                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal && !knave && !rangeChange)
                         {
                             if (!bitboardIncompatible)
                             {
@@ -4974,7 +4976,7 @@ internal static class MoveGenerator
 
                     if (!directionRestricted)
                     {
-                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal && !rangeChange)
+                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal && !knave && !rangeChange)
                         {
                             if (!bitboardIncompatible)
                             {
@@ -5140,7 +5142,7 @@ internal static class MoveGenerator
                     }
                     else
                     {
-                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal && !rangeChange) {
+                        if (mgie.range == 1 && mgie.rangeType == RangeType.Normal && !knave && !rangeChange) {
                             if (!bitboardIncompatible)
                             {
                                 //bitboard tech

@@ -53,7 +53,7 @@ public class BattleWinPanelScript : MonoBehaviour
         {
             value = Mathf.Max(4, Mathf.CeilToInt((bs.board.globalData.blackPerPlayerInfo.startPieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) / 8f));
         }
-        text.SetText("Won by " + vt.ToString() + " Victory on Turn " + (bs.board.GetTurn()) + ".\nYou won <outlinecolor,#ffff00>$" + value + "</color>", true, true);
+        text.SetText("Won by " + vt.ToString() + " Victory on Turn " + (bs.board.GetTurn()) + ".\nYou won <outlinecolordark,#ffff00>$" + value + "</color>", true, true);
     }
 
     public void ContinueButton()
