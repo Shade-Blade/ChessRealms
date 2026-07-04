@@ -46,6 +46,30 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sr: {fileID: 3493960274869282239}
+  particleSprites:
+  - {fileID: 21300000, guid: 5da2ef4d42153b148b7b1e42437b063c, type: 3}
+  - {fileID: 21300000, guid: da832019cea997e47b30501d55d725e1, type: 3}
+  - {fileID: 21300000, guid: 1eee85956b0ea9c49882b485953bf926, type: 3}
+  - {fileID: 21300000, guid: 1de86e470329b3d449d9a8674f66358f, type: 3}
+  - {fileID: 21300000, guid: d78a1e4d0931f1441b1d113c65e0fd7e, type: 3}
+  - {fileID: 21300000, guid: 62abd06090c854c4890747b183aa0a61, type: 3}
+  - {fileID: 21300000, guid: 800712c9b5820f641906901ddcf35a74, type: 3}
+  - {fileID: 21300000, guid: 997b2922c1d7e014798998b627ef6491, type: 3}
+  - {fileID: 21300000, guid: e486b5a9ff8d1a842b84200eb7376a6f, type: 3}
+  - {fileID: 21300000, guid: 752182f74868af84eb4dbbd735c13820, type: 3}
+  - {fileID: 21300000, guid: b18cc9e0207f68d42aba563f97043c1c, type: 3}
+  - {fileID: 21300000, guid: 93ca63828497dc1498630b096c8b7afa, type: 3}
+  - {fileID: 21300000, guid: 1157bcee2d4841041a0edec834137308, type: 3}
+  - {fileID: 21300000, guid: 1bff542b645ac1c48b9cb422d00141a9, type: 3}
+  - {fileID: 21300000, guid: 1014e09cce514b8418de29ae33e7b853, type: 3}
+  - {fileID: 21300000, guid: 4bca72c775d37424486e9a15c0477d96, type: 3}
+  - {fileID: 21300000, guid: ec4166df7cbe9e54f8b3a33aaa846df1, type: 3}
+  - {fileID: 21300000, guid: 8dbb347bc6413ed4b8aa2007aae73bef, type: 3}
+  - {fileID: 21300000, guid: 9dec0fb157dd3dc4f8233b5e26c92f57, type: 3}
+  - {fileID: 21300000, guid: ac69a434321ea84498a15326affb346a, type: 3}
+  - {fileID: 21300000, guid: fd04ed4d12c7a904ab012daadea5c41b, type: 3}
+  - {fileID: 21300000, guid: 9314dcf8278dd1244a1f3b885b7b924d, type: 3}
+  particle: 0
 --- !u!1 &3689795602564204165
 GameObject:
   m_ObjectHideFlags: 0

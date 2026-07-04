@@ -177,7 +177,11 @@ Shader "UI/PieceModifier" {
 
 			    //White pieces have pastel ish colors while Black pieces can have fully saturated colors
 			    //(This is probably the best way to have a bit of color on pieces?)
-			    c.rgb = lerp(c.rgb, float3(1,1,1), factor * _LightDesaturation * (1 - saturation * 0.75)); //lerp(c.rgb, float3(1,1,1), factor * _LightDesaturation);
+                if (saturation > 0.05) {
+                    c.rgb = lerp(c.rgb, float3(1,1,1), factor * _LightDesaturation * (0.25)); //lerp(c.rgb, float3(1,1,1), factor * _LightDesaturation);
+                } else {
+			        c.rgb = lerp(c.rgb, float3(1,1,1), factor * _LightDesaturation * (1)); //lerp(c.rgb, float3(1,1,1), factor * _LightDesaturation);
+                }
                 c.rgb *= lerp(IN.color, float4(1,1,1,1), saturation * 0.75);
 
                 fixed lerpCoeff = RGBToHSV(c.rgb).z;

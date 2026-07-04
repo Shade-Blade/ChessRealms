@@ -183,7 +183,7 @@ internal static class MoveGenerator
                     }
                     break;
                 case Piece.PieceType.Repulser:
-                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_QUEEN2, index, -3, -3);
+                    pattern = MainManager.ShiftBitboardPattern(BITBOARD_PATTERN_QUEEN2, index, -2, -2);
                     if (ipa == Piece.PieceAlignment.White)
                     {
                         b.globalData.bitboard_repulserWhite |= pattern;

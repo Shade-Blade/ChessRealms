@@ -200,7 +200,7 @@ public class OverworldScript : MonoBehaviour
         GameObject newMap = Instantiate(worldMapTemplate, transform);
         worldMap = newMap.GetComponent<WorldMapScript>();
 
-        worldMap.baseDifficulty = oldDifficulty * Mathf.Pow(1.2f, 11f);
+        worldMap.baseDifficulty = oldDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 11f);
 
         worldMap.lastRealm = oldClass;
 

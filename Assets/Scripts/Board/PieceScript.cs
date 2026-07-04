@@ -442,10 +442,10 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             switch (Piece.GetPieceAlignment(piece))
             {
                 case PieceAlignment.White:
-                    specialText.SetText(Mathf.Max(7 - 2 * y, 1) + "", true, true);
+                    specialText.SetText(Mathf.Max(8 - 2 * y, 1) + "", true, true);
                     break;
                 case PieceAlignment.Black:
-                    specialText.SetText(Mathf.Max(2 * y - 7, 1) + "", true, true);
+                    specialText.SetText(Mathf.Max(2 * y - 6, 1) + "", true, true);
                     break;
             }
         }

@@ -11,6 +11,7 @@ public class BattleBoardScript : BoardScript
 
     public GameObject moveTrailTemplate;
     public GameObject moveParticleTemplate;
+    public GameObject blastParticleTemplate;
     public GameObject battleWinPanelTemplate;
     public GameObject battleLosePanelTemplate;
     public GameObject arrowTemplate;
@@ -820,7 +821,7 @@ public class BattleBoardScript : BoardScript
             extraMoveTrails = new List<MoveTrailScript>();
             for (int i = 0; i < boardUpdateMetadata.Count; i++)
             {
-                if (boardUpdateMetadata[i].tx != -1)
+                if (boardUpdateMetadata[i].tx != -1 && !boardUpdateMetadata[i].type.ToString().Contains("Particle"))
                 {
                     MoveTrailScript mtsE = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
                     extraMoveTrails.Add(mtsE);
@@ -1227,7 +1228,7 @@ public class BattleBoardScript : BoardScript
             extraMoveTrails = new List<MoveTrailScript>();
             for (int i = 0; i < boardUpdateMetadata.Count; i++)
             {
-                if (boardUpdateMetadata[i].tx != -1)
+                if (boardUpdateMetadata[i].tx != -1 && !boardUpdateMetadata[i].type.ToString().Contains("Particle"))
                 {
                     MoveTrailScript mtsE = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
                     extraMoveTrails.Add(mtsE);
@@ -1512,7 +1513,7 @@ public class BattleBoardScript : BoardScript
         extraMoveTrails = new List<MoveTrailScript>();
         for (int i = 0; i < boardUpdateMetadata.Count; i++)
         {
-            if (boardUpdateMetadata[i].tx != -1)
+            if (boardUpdateMetadata[i].tx != -1 && !boardUpdateMetadata[i].type.ToString().Contains("Particle"))
             {
                 MoveTrailScript mtsE = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
                 extraMoveTrails.Add(mtsE);
@@ -2629,7 +2630,7 @@ public class BattleBoardScript : BoardScript
                 default:
                     //for now it's just a generic dot for most stuff
                     MoveParticleScript mps = Instantiate(moveParticleTemplate, pieces[ofx + (ofy << 3)].transform).GetComponent<MoveParticleScript>();
-                    mps.Setup(Piece.GetPieceAlignment(pieces[ofx + (ofy << 3)].piece));
+                    mps.Setup(Piece.GetPieceAlignment(pieces[ofx + (ofy << 3)].piece), MoveParticleScript.GetParticleSpriteFromMove(Move.GetSpecialType(move)));
                     if (moveTrail == null)
                     {
                         yield return StartCoroutine(AnimatePieceMove(mps, ofx, ofy, otx, oty));
@@ -2690,6 +2691,32 @@ public class BattleBoardScript : BoardScript
                         lastMovedPiece.Setup(boardUpdateMetadata[i].piece, lastMovedPiece.x, lastMovedPiece.y);
                         lastMovedPiece.squareBelow = squares[(lastMovedPiece.x + (lastMovedPiece.y << 3))];
                         break;
+                    case BoardUpdateMetadata.BoardUpdateType.Particle_Fire:
+                    case BoardUpdateMetadata.BoardUpdateType.Particle_Snowflake:
+                    case BoardUpdateMetadata.BoardUpdateType.Particle_Spiral:
+                    case BoardUpdateMetadata.BoardUpdateType.Particle_Circle:
+                    case BoardUpdateMetadata.BoardUpdateType.Particle_Fan:
+                        BlastParticleScript bps = Instantiate(blastParticleTemplate, transform).GetComponent<BlastParticleScript>();
+                        switch (boardUpdateMetadata[i].type)
+                        {
+                            case BoardUpdateMetadata.BoardUpdateType.Particle_Fire:
+                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Fire, 18f / animationSpeed);
+                                break;
+                            case BoardUpdateMetadata.BoardUpdateType.Particle_Snowflake:
+                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Snowflake, 18f / animationSpeed);
+                                break;
+                            case BoardUpdateMetadata.BoardUpdateType.Particle_Spiral:
+                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Spiral, 18f / animationSpeed);
+                                break;
+                            case BoardUpdateMetadata.BoardUpdateType.Particle_Circle:
+                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Circle, 18f / animationSpeed);
+                                break;
+                            case BoardUpdateMetadata.BoardUpdateType.Particle_Fan:
+                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Fan, 18f / animationSpeed);
+                                break;
+                        }
+                        bps.transform.position = GetSpritePositionFromCoordinates(tx, ty, -2f);
+                        break;
                 }
             }
             else
@@ -2739,6 +2766,32 @@ public class BattleBoardScript : BoardScript
                             pieceActive.Setup(boardUpdateMetadata[i].piece, pieceActive.x, pieceActive.y);
                             pieceActive.squareBelow = squares[(pieceActive.x + (pieceActive.y << 3))];
                         }
+                        break;
+                    case BoardUpdateMetadata.BoardUpdateType.Particle_Fire:
+                    case BoardUpdateMetadata.BoardUpdateType.Particle_Snowflake:
+                    case BoardUpdateMetadata.BoardUpdateType.Particle_Spiral:
+                    case BoardUpdateMetadata.BoardUpdateType.Particle_Circle:
+                    case BoardUpdateMetadata.BoardUpdateType.Particle_Fan:
+                        BlastParticleScript bps = Instantiate(blastParticleTemplate, transform).GetComponent<BlastParticleScript>();
+                        switch (boardUpdateMetadata[i].type)
+                        {
+                            case BoardUpdateMetadata.BoardUpdateType.Particle_Fire:
+                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Fire, 18f / animationSpeed);
+                                break;
+                            case BoardUpdateMetadata.BoardUpdateType.Particle_Snowflake:
+                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Snowflake, 18f / animationSpeed);
+                                break;
+                            case BoardUpdateMetadata.BoardUpdateType.Particle_Spiral:
+                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Spiral, 18f / animationSpeed);
+                                break;
+                            case BoardUpdateMetadata.BoardUpdateType.Particle_Circle:
+                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Circle, 18f / animationSpeed);
+                                break;
+                            case BoardUpdateMetadata.BoardUpdateType.Particle_Fan:
+                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Fan, 18f / animationSpeed);
+                                break;
+                        }
+                        bps.transform.position = GetSpritePositionFromCoordinates(tx, ty, -2f);
                         break;
                 }
             }
@@ -2888,8 +2941,9 @@ public class BattleBoardScript : BoardScript
     public override void Update()
     {
         (realHoverX, realHoverY) = GetCoordinatesFromPosition(MainManager.XYProjectPreserve(Camera.main.ScreenToWorldPoint(Input.mousePosition)));
-        backgroundA.color = backgroundColorWhite;
-        backgroundB.color = backgroundColorBlack;
+        backgroundLight.color = backgroundColorWhite;
+        backgroundLightB.color = Color.Lerp(backgroundColorWhite, backgroundColorBlack, 0.3f);
+        backgroundDark.color = backgroundColorBlack;
 
         chessAI.searchDuration = moveThinkTime;
 

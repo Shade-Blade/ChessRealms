@@ -35,6 +35,27 @@ public class WorldMapScript : MonoBehaviour
 
     public void GenerateMap()
     {
+        if (baseDifficulty == 8)
+        {
+            switch (MainManager.Instance.playerData.difficulty)
+            {
+                case 1:
+                case 2:
+                case 3:
+                    baseDifficulty = 6;
+                    MainManager.Instance.scalingFactor = 1.125f;
+                    break;
+                case 4:
+                    baseDifficulty = 8;
+                    MainManager.Instance.scalingFactor = 1.175f;
+                    break;
+                case 5:
+                    baseDifficulty = 9;
+                    MainManager.Instance.scalingFactor = 1.2f;
+                    break;
+            }
+        }
+
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(1253));
         //realmText.text = GlobalPieceManager.GetPieceClassEntry(pieceClass).name + " Realm";
 

@@ -17,15 +17,24 @@ public class MainMenuScript : MonoBehaviour
 
     public GameObject mainMenuSpriteTemplate;
 
+    public Color backgroundAColor;
+    public Color backgroundBColor;
+
     //if you go back to main menu then generate another seed
     private void Start()
     {
         MainManager.Instance.playerData.GenerateSeed();
+
+        backgroundAColor = GlobalPieceManager.GetPieceClassEntry(Piece.PieceClass.Normal).backgroundColorLight;
+        backgroundBColor = GlobalPieceManager.GetPieceClassEntry(Piece.PieceClass.Normal).backgroundColorDark;
     }
 
     // Update is called once per frame
     void Update()
     {
+        backgroundA.color = Color.Lerp(Color.black, Color.Lerp(backgroundAColor, backgroundBColor, 0.35f), 0.9f);
+        backgroundB.color = Color.Lerp(Color.black, Color.Lerp(backgroundAColor, backgroundBColor, 0.65f), 0.9f);
+
         MainManager.Instance.playerData.difficulty = (int)((difficultySlider.value) * 2 + 0.5f) + 3;
         switch (MainManager.Instance.playerData.difficulty)
         {

@@ -54,6 +54,12 @@ public class BattleUIScript : MonoBehaviour
 
     public GameObject debugPanel;
 
+    public List<UnityEngine.UI.Image> colorListA;
+    public List<UnityEngine.UI.Image> colorListB;
+
+    public List<UnityEngine.UI.Image> colorListC;
+    public List<UnityEngine.UI.Image> colorListD;
+
     public void SetBoard(BoardScript bs)
     {
         difficultyText.text = "Difficulty: " + MainManager.Instance.playerData.difficulty;
@@ -235,10 +241,26 @@ public class BattleUIScript : MonoBehaviour
 
     public void Update()
     {
-        backgroundA.color = Color.Lerp(Color.black, Color.Lerp(bs.backgroundA.color, bs.backgroundB.color, 0.2f), 0.9f);
-        backgroundB.color = Color.Lerp(Color.black, Color.Lerp(bs.backgroundA.color, bs.backgroundB.color, 0.8f), 0.9f);
+        for (int i = 0; i < colorListA.Count; i++)
+        {
+            colorListA[i].color = bs.backgroundLight.color;
+        }
+        for (int i = 0; i < colorListB.Count; i++)
+        {
+            colorListB[i].color = bs.backgroundDark.color;
+        }
+        for (int i = 0; i < colorListC.Count; i++)
+        {
+            colorListC[i].color = bs.squareColorWhite;
+        }
+        for (int i = 0; i < colorListD.Count; i++)
+        {
+            colorListD[i].color = bs.squareColorBlack;
+        }
+        backgroundA.color = Color.Lerp(Color.black, Color.Lerp(bs.backgroundLight.color, bs.backgroundDark.color, 0.35f), 0.9f);
+        backgroundB.color = Color.Lerp(Color.black, Color.Lerp(bs.backgroundLight.color, bs.backgroundDark.color, 0.65f), 0.9f);
 
-        undoButtonText.text = "Undo\n<size=75%><color=#ff8080>(" + MainManager.Instance.playerData.undosLeft + ")</color></size>";
+        undoButtonText.text = "Undo\n<size=75%><color=#ffffff>(" + MainManager.Instance.playerData.undosLeft + ")</color></size>";
 
         if (MainManager.Instance.playerData.retriesLeft == 1)
         {
@@ -248,7 +270,7 @@ public class BattleUIScript : MonoBehaviour
         {
             if (MainManager.Instance.playerData.retriesLeft == 0)
             {
-                retryText.text = "<color=#ff8080>" + MainManager.Instance.playerData.retriesLeft + " retries left.</color>";
+                retryText.text = "<color=#ffc0c0>" + MainManager.Instance.playerData.retriesLeft + " retries left.</color>";
             }
             else
             {
@@ -277,11 +299,11 @@ public class BattleUIScript : MonoBehaviour
             deltaValueText.text = "(" + delta + ")";
             if (delta == 0)
             {
-                deltaValueText.color = new Color(0.7f, 0.7f, 0.7f, 1);
+                deltaValueText.color = new Color(0.75f, 0.75f, 0.75f, 1);
             }
             else
             {
-                deltaValueText.color = new Color(0.4f, 0.4f, 0.4f, 1);
+                deltaValueText.color = new Color(0.45f, 0.45f, 0.45f, 1);
             }
         }
         realmCountText.text = "Realm " + (MainManager.Instance.playerData.realmsComplete + 1);

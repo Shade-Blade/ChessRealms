@@ -3156,6 +3156,11 @@ public class Board
                                     DeletePieceAtCoordinate(tx + i, ty + j, pteE, epa, boardUpdateMetadata);
                                     //SetPieceAtCoordinate(tx + i, ty + j, 0);
                                 }
+
+                                if (boardUpdateMetadata != null)
+                                {
+                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx + i, ty + j, pieces[tx + i + ((ty + j) << 3)], BoardUpdateMetadata.BoardUpdateType.Particle_Fire));
+                                }
                             }
                         }
                         pieceChange = true;
@@ -3224,6 +3229,11 @@ public class Board
                                     DeletePieceAtCoordinate(tx + i, ty + j, pteE, epa, boardUpdateMetadata);
                                     //SetPieceAtCoordinate(tx + i, ty + j, 0);
                                 }
+
+                                if (boardUpdateMetadata != null)
+                                {
+                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx + i, ty + j, pieces[tx + i + ((ty + j) << 3)], BoardUpdateMetadata.BoardUpdateType.Particle_Fire));
+                                }
                             }
                         }
                         pieceChange = true;
@@ -3285,6 +3295,11 @@ public class Board
                                         boardUpdateMetadata.Add(new BoardUpdateMetadata(tx + i, ty + j, pieces[txyij], BoardUpdateMetadata.BoardUpdateType.StatusApply));
                                     }
                                 }
+
+                                if (boardUpdateMetadata != null)
+                                {
+                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx + i, ty + j, pieces[txyij], BoardUpdateMetadata.BoardUpdateType.Particle_Snowflake));
+                                }
                             }
                         }
                         pieceChange = true;
@@ -3345,6 +3360,11 @@ public class Board
                                         boardUpdateMetadata.Add(new BoardUpdateMetadata(tx + i, ty + j, pieces[txyij], BoardUpdateMetadata.BoardUpdateType.StatusApply));
                                     }
                                 }
+
+                                if (boardUpdateMetadata != null)
+                                {
+                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx + i, ty + j, pieces[txyij], BoardUpdateMetadata.BoardUpdateType.Particle_Spiral));
+                                }
                             }
                         }
                         pieceChange = true;
@@ -3399,6 +3419,16 @@ public class Board
                                     {
                                         boardUpdateMetadata.Add(new BoardUpdateMetadata(tx + i, ty + j, pieces[txyij], BoardUpdateMetadata.BoardUpdateType.Spawn));
                                     }
+                                }
+
+                                if (txyij == fxy)
+                                {
+                                    residuePiece = Piece.SetPieceType(PieceType.HoneyPuddle, Piece.SetPieceAlignment(PieceAlignment.Neutral, 0));
+                                }
+
+                                if ((i == 0 || j == 0) && boardUpdateMetadata != null)
+                                {
+                                    boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx + i, ty + j, pieces[txyij], BoardUpdateMetadata.BoardUpdateType.Particle_Circle));
                                 }
                             }
                         }
@@ -6454,6 +6484,11 @@ public class Board
                                 boardUpdateMetadata.Add(new BoardUpdateMetadata(x + i, y + j, pieces[(x + i) + ((y + j) << 3)], BoardUpdateMetadata.BoardUpdateType.StatusApply));
                             }
                         }
+
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(x + i, y + j, pieces[x + i + ((y + j) << 3)], BoardUpdateMetadata.BoardUpdateType.Particle_Snowflake));
+                        }
                     }
                 }
                 break;
@@ -6480,6 +6515,11 @@ public class Board
                             {
                                 boardUpdateMetadata.Add(new BoardUpdateMetadata(x + i, y + j, pieces[(x + i) + ((y + j) << 3)], BoardUpdateMetadata.BoardUpdateType.StatusApply));
                             }
+                        }
+
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(x + i, y + j, pieces[x + i + ((y + j) << 3)], BoardUpdateMetadata.BoardUpdateType.Particle_Snowflake));
                         }
                     }
                 }
@@ -6508,6 +6548,11 @@ public class Board
                         continue;
                     }
 
+                    if (boardUpdateMetadata != null)
+                    {
+                        boardUpdateMetadata.Add(new BoardUpdateMetadata(x + vdx, y + vdy, pieces[x + vdx + ((y + vdy) << 3)], BoardUpdateMetadata.BoardUpdateType.Particle_Fan));
+                    }
+
                     if (Piece.GetPieceAlignment(pieces[x + vdx * 2 + (y + vdy * 2) * 8]) == Piece.PieceAlignment.White)
                     {
                         continue;
@@ -6525,6 +6570,10 @@ public class Board
                         {
                             continue;
                         }
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(x + fdx, y + fdy, pieces[x + fdx + ((y + fdy) << 3)], BoardUpdateMetadata.BoardUpdateType.Particle_Fan));
+                        }
                         if (Piece.GetPieceAlignment(pieces[x + fdx + (y + fdy) * 8]) == Piece.PieceAlignment.White)
                         {
                             continue;
@@ -6538,6 +6587,10 @@ public class Board
                 {
                     for (int j = 0; j < 8; j++)
                     {
+                        if (boardUpdateMetadata != null)
+                        {
+                            boardUpdateMetadata.Add(new BoardUpdateMetadata(x + i, y + j, pieces[x + i + ((y + j) << 3)], BoardUpdateMetadata.BoardUpdateType.Particle_Fan));
+                        }
                         if (Piece.GetPieceAlignment(pieces[j + (i) * 8]) == Piece.PieceAlignment.White)
                         {
                             continue;
@@ -7801,7 +7854,8 @@ public class Board
                 int newindex = index + dxy;
 
                 //newindex is guaranteed to be in bounds?
-                if (pieces[newindex] == 0)
+                //no?
+                if (newindex >= 0 && newindex <= 63 && pieces[newindex] == 0)
                 {
                     ulong bitindexOld = 1uL << newindex;
                     ulong bitindex = 1uL << index;
@@ -8162,6 +8216,11 @@ public class Board
 
                                 DeletePieceAtCoordinate(tx + dx, ty + dy, pteE, epa, boardUpdateMetadata);
                                 //SetPieceAtCoordinate(tx + i, ty + j, 0);
+                            }
+
+                            if (boardUpdateMetadata != null)
+                            {
+                                boardUpdateMetadata.Add(new BoardUpdateMetadata(fx, fy, tx + dx, ty + dy, pieces[tx + dx + ((ty + dy) << 3)], BoardUpdateMetadata.BoardUpdateType.Particle_Fire));
                             }
                         }
                     }
@@ -12434,6 +12493,7 @@ public static class Move
             case SpecialType.AimAny:
             case SpecialType.FireCapturePush:
             case SpecialType.PushMove:
+            case SpecialType.AdvancerPush:
             case SpecialType.RangedPush:
             case SpecialType.RangedPushAllyOnly:
             case SpecialType.RangedPull:
@@ -12540,6 +12600,7 @@ public static class Move
             {
                 case SpecialType.FireCapturePush:
                 case SpecialType.PushMove:
+                case SpecialType.AdvancerPush:
                 case SpecialType.RangedPush:
                 case SpecialType.RangedPushAllyOnly:
                 case SpecialType.RangedPull:
@@ -12558,6 +12619,7 @@ public static class Move
         {
             case SpecialType.FireCapturePush:
             case SpecialType.PushMove:
+            case SpecialType.AdvancerPush:
             case SpecialType.RangedPush:
             case SpecialType.RangedPushAllyOnly:
                 return PushLegal(ref b, tx, ty, dir);
@@ -12646,6 +12708,7 @@ public static class Move
             case SpecialType.FireCapturePush:
             case SpecialType.PullMove:
             case SpecialType.PushMove:
+            case SpecialType.AdvancerPush:
             //case SpecialType.TandemMovementPawns:
             //case SpecialType.TandemMovementNonPawns:
             case SpecialType.Convert:
@@ -12717,6 +12780,7 @@ public static class Move
             case SpecialType.FireCapturePush:
             case SpecialType.PullMove:
             case SpecialType.PushMove:
+            case SpecialType.AdvancerPush:
             //case SpecialType.TandemMovementPawns:
             //case SpecialType.TandemMovementNonPawns:
             case SpecialType.Convert:
@@ -12805,6 +12869,7 @@ public static class Move
             case SpecialType.FireCapturePush:
             case SpecialType.PullMove:
             case SpecialType.PushMove:
+            case SpecialType.AdvancerPush:
             //case SpecialType.TandemMovementPawns:
             //case SpecialType.TandemMovementNonPawns:
             case SpecialType.Convert:

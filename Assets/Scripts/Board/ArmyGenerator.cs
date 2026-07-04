@@ -582,7 +582,7 @@ public static class ArmyGenerator
         RandomTable<PieceTableEntry> extraTable = GetPieceTable(GlobalPieceManager.GetPieceClassEntry(pc).extraPieces, Mathf.CeilToInt(types * 0.5f), targetTotal * 0.5f, lowPieceBias, lowComplexityBias);
         normalTable.weight = 1;
         extraTable.weight = 1 / 24f;    //about 1 per battle (but is higher because of failed hits in the normal table?)
-        RandomTable<PieceTableEntry> extraTableAlternate = GetPieceTable(GlobalPieceManager.GetPieceClassEntry(pc).extraPieces, 6, 40, lowPieceBias, lowComplexityBias);
+        RandomTable<PieceTableEntry> extraTableAlternate = GetPieceTable(GlobalPieceManager.GetPieceClassEntry(pc).extraPieces, 6, Mathf.Clamp(targetTotal, 20, 40), lowPieceBias, lowComplexityBias);
         extraTableAlternate.weight = 1 / 24f;    //rarer (mostly to failsafe add some weak stuff if it gets stuck on restricted pieces)
 
         RandomTable<PieceTableEntry> fusedTable = new RandomTable<PieceTableEntry>(normalTable, extraTable, extraTableAlternate);

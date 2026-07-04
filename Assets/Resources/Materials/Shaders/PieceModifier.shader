@@ -141,7 +141,12 @@ Shader "Custom/PieceModifier" {
 
 			//White pieces have pastel ish colors while Black pieces can have fully saturated colors
 			//(This is probably the best way to have a bit of color on pieces?)
-			newcol.rgb = lerp(newcol.rgb, float3(1,1,1), factor * _LightDesaturation * (1 - saturation * 0.75));
+			if (saturation > 0.05) {
+				newcol.rgb = lerp(newcol.rgb, float3(1,1,1), factor * _LightDesaturation * (0.25));
+			} else {
+				newcol.rgb = lerp(newcol.rgb, float3(1,1,1), factor * _LightDesaturation * (1));
+			}
+			//newcol.rgb = lerp(newcol.rgb, float3(1,1,1), factor * _LightDesaturation * (1 - saturation * 0.75));
 			newcol.a = col.a;
 
 			newcol *= lerp(IN.color, float4(1,1,1,1), saturation * 0.75);

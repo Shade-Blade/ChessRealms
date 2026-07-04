@@ -596,6 +596,12 @@ public class BoardUpdateMetadata
         ImbueModifier,
         StatusCure,
         StatusApply,
+
+        Particle_Fire,
+        Particle_Snowflake,
+        Particle_Spiral,
+        Particle_Circle,
+        Particle_Fan,
     }
 
     public BoardUpdateMetadata(int fx, int fy, int tx, int ty, uint piece, BoardUpdateType type, bool wasLastMoved)

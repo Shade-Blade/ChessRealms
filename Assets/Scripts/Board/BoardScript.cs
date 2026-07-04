@@ -40,8 +40,9 @@ public class BoardScript : MonoBehaviour
 
     //debug: later I will make the real background use these colors
     //(Idea: give the board a border that is mid colored?)
-    public SpriteRenderer backgroundA;
-    public SpriteRenderer backgroundB;
+    public SpriteRenderer backgroundLight;
+    public SpriteRenderer backgroundLightB;
+    public SpriteRenderer backgroundDark;
 
     public void SetTheme(Piece.PieceClass pc)
     {
@@ -408,8 +409,9 @@ public class BoardScript : MonoBehaviour
 
     public virtual void Update()
     {
-        backgroundA.color = backgroundColorWhite;
-        backgroundB.color = backgroundColorBlack;
+        backgroundLight.color = backgroundColorWhite;
+        backgroundLightB.color = Color.Lerp(backgroundColorWhite, backgroundColorBlack, 0.3f);
+        backgroundDark.color = backgroundColorBlack;
     }
 
     public virtual bool CanSelectPieces()

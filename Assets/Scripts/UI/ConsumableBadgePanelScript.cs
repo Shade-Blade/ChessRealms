@@ -15,6 +15,9 @@ public class ConsumableBadgePanelScript : MonoBehaviour
 
     public BoardScript bs;
 
+    public List<SpriteRenderer> colorListA;
+    public List<SpriteRenderer> colorListB;
+
     public void SetBoardScript(BoardScript bs)
     {
         this.bs = bs;
@@ -195,6 +198,21 @@ public class ConsumableBadgePanelScript : MonoBehaviour
                 badges[i].Setup(MainManager.Instance.playerData.badges[i]);
                 badges[i].badgeIndex = i;
                 badges[i].bs = bs;
+            }
+        }
+    }
+
+    private void Update()
+    {
+        if (bs != null)
+        {
+            for (int i = 0; i < colorListA.Count; i++)
+            {
+                colorListA[i].color = bs.backgroundColorBlack;
+            }
+            for (int i = 0; i < colorListB.Count; i++)
+            {
+                colorListB[i].color = bs.backgroundColorWhite;
             }
         }
     }

@@ -232,7 +232,8 @@ public class SetupBoardScript : BoardScript
 
     public override void Update()
     {
-        backgroundA.color = backgroundColorWhite;
-        backgroundB.color = backgroundColorBlack;
+        backgroundLight.color = backgroundColorWhite;
+        backgroundLightB.color = Color.Lerp(backgroundColorWhite, backgroundColorBlack, 0.3f);
+        backgroundDark.color = backgroundColorBlack;
     }
 }
