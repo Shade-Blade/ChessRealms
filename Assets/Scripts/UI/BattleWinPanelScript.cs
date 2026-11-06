@@ -28,9 +28,16 @@ public class BattleWinPanelScript : MonoBehaviour
             lifetime += Time.deltaTime;
         }
 
-        if (lifetime > 0.2f)
+        if (lifetime > (0.8f / ((1/36f) * bs.animationSpeed)))
         {
-            transform.localPosition = MainManager.EasingQuadraticTime(transform.localPosition, Vector3.zero, MainManager.EasingQuadraticForce(500, 0.25f));
+            if (bs.animationSpeed >= 10000)
+            {
+                transform.localPosition = Vector3.zero;
+            }
+            else
+            {
+                transform.localPosition = MainManager.EasingQuadraticTime(transform.localPosition, Vector3.zero, MainManager.EasingQuadraticForce(500, (0.25f / ((1 / 36f) * bs.animationSpeed))));
+            }
         }
 
         if (awaitAction != null && !bs.animating)

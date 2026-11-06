@@ -14,6 +14,10 @@ public class MainMenuScript : MonoBehaviour
 
     public Scrollbar difficultySlider;
     public TMPro.TMP_Text difficultyText;
+    public TMPro.TMP_Text difficultyExplainText;
+
+    public Scrollbar animationSpeedSlider;
+    public TMPro.TMP_Text animationSpeedText;
 
     public GameObject mainMenuSpriteTemplate;
 
@@ -40,18 +44,41 @@ public class MainMenuScript : MonoBehaviour
         {
             case 1:
                 difficultyText.text = "Difficulty\n<size=75%><color=#00ffff>Very Very Easy</color></size>";
+                difficultyExplainText.text = "Start with infinite undos and infinite retries.";
                 break;
             case 2:
                 difficultyText.text = "Difficulty\n<size=75%><color=#40ffff>Very Easy</color></size>";
+                difficultyExplainText.text = "Start with infinite undos and infinite retries.";
                 break;
             case 3:
                 difficultyText.text = "Difficulty\n<size=75%><color=#80ffff>Easy</color></size>";
+                difficultyExplainText.text = "Start with 5 undos and 2 retries.\nRetries and Undos reset each Realm.\n(Using a Retry resets Undos used)";
                 break;
             case 4:
                 difficultyText.text = "Difficulty\n<size=75%><color=#ffffff>Normal</color></size>";
+                difficultyExplainText.text = "Start with 3 undos and 1 retry.\n(Using a Retry resets Undos used)";
                 break;
             case 5:
                 difficultyText.text = "Difficulty\n<size=75%><color=#ff8080>Hard</color></size>";
+                difficultyExplainText.text = "Start with 2 undos and 1 retry.\n(Using a Retry resets Undos used)";
+                break;
+        }
+
+        int setting = (int)((animationSpeedSlider.value) * 3 + 0.5f);
+        MainManager.Instance.playerData.SetAnimationSpeedBasedOnSetting(setting);
+        switch (setting)
+        {
+            case 0:
+                animationSpeedText.text = "Animation Speed\n<size=75%><color=#00c000>Slow</color></size>";
+                break;
+            case 1:
+                animationSpeedText.text = "Animation Speed\n<size=75%><color=#00ff00>Normal</color></size>";
+                break;
+            case 2:
+                animationSpeedText.text = "Animation Speed\n<size=75%><color=#a0ffa0>Fast</color></size>";
+                break;
+            case 3:
+                animationSpeedText.text = "Animation Speed\n<size=75%><color=#d0ffd0>Animations Off</color></size>";
                 break;
         }
 
@@ -75,7 +102,7 @@ public class MainMenuScript : MonoBehaviour
             s.SetPropertyBlock(new MaterialPropertyBlock());
             s.sprite = Text_PieceSprite.GetPieceSprite(pieceType);
 
-            if ((GlobalPieceManager.GetPieceTableEntry(pieceType).piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
+            if ((GlobalPieceManager.GetPieceTableEntry(pieceType).piecePropertyB & Piece.PiecePropertyB.NonStandardSize) != 0)
             {
                 go.transform.localScale = Vector3.one * 2;
             }

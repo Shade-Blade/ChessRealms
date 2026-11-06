@@ -35,7 +35,7 @@ public static class Piece
         Dragoon,
         Lancer,
         Cataphract,
-        Marshall,
+        Marshal,
         Priest,
         Missionary,
         Inquisitor,
@@ -385,7 +385,7 @@ public static class Piece
         ChargeKnight,
         ChargePawn,
         Ghoul,
-        GhoulMarshall,
+        GhoulMarshal,
         GhoulAmazon,
         GhoulPawn,
         PufferfishQueen,
@@ -597,24 +597,23 @@ public static class Piece
     public enum PieceModifier : uint
     {
         None,
-        Vengeful = 1 << 18,      //DestroyCapturer   (Red)
-        Phoenix = 2 << 18,       //Revenant power    (Orange)
+        Vengeful = 1 << 20,      //DestroyCapturer   (Red)
+        Phoenix = 2 << 20,       //Revenant power    (Orange)
 
-        Radiant = 3 << 18,         //Spawn pawns like Revenant on capture (Yellow)
+        Radiant = 3 << 20,         //Spawn pawns like Revenant on capture (Yellow)
                             //Problem: needs limits so you can't clog the board with infinite pawns
 
-        Winged = 4 << 18,         //Gets move only hop over anything in its ranged moves  (Green)
-        Spectral = 5 << 18,       //Does not block ally pieces from moving through them   (Cyan)
-        Immune = 6 << 18,         //Immune to enemy negative effects (= NoTerrain, StatusImmune, EnchantImmune)   (Blue)
+        Winged = 4 << 20,         //Gets move only hop over anything in its ranged moves  (Green)
+        Spectral = 5 << 20,       //Does not block ally pieces from moving through them   (Cyan)
+        Immune = 6 << 20,         //Immune to enemy negative effects (= NoTerrain, StatusImmune, EnchantImmune)   (Blue)
             //The balance problem and why I didn't implement this before is that there are a lot of cases where none of those three exist and then the modifier becomes useless)
             //It needs extra stuff to do?
             //  Now it is rook range 1 water (i.e. enemy can't capture)
-        Warped = 7 << 18,         //You can swap move onto them (unlike spectral you can't pass through) (Purple)
+        Warped = 7 << 20,         //You can swap move onto them (unlike spectral you can't pass through) (Purple)
 
-        Shielded = 8 << 18,       //If user ends turn when it is attacked: Shielded becomes Half Shielded (Gray)
-        HalfShielded = 9 << 18,   //Half shielded is removed on enemy turn end (So a shielded king works properly, if it was removed on own turn end it would lead to stalemates where the shielded king is not capturable by the enemy but any move would remove the shield)
+        Shielded = 8 << 20,       //If user ends turn when it is attacked: Shielded becomes Half Shielded (Gray)
+        HalfShielded = 9 << 20,   //Half shielded is removed on enemy turn end (So a shielded king works properly, if it was removed on own turn end it would lead to stalemates where the shielded king is not capturable by the enemy but any move would remove the shield)
 
-        NoSpecial = 10 << 18,      //Special thing for move copying pieces (Blocks all special moves)
 
         //?: on capture: spawn pawn like Revenant (Problem: why normal pawns? Pawn spawn may clog up your formation? If it is just the attacker's class pawnlike it would be somewhat unpredictable and unbalanced, if it was the victim's pawnlike that balance problem is removed but it causes weird stuff)
             //One point in favor is that this gives space for more piece spawners
@@ -629,13 +628,20 @@ public static class Piece
             //Has some different possibility space than Spectral
 
 
-        //Reserved 9
-        //Reserved 10
         //Reserved 11
         //Reserved 12
         //Reserved 13
         //Reserved 14
         //Reserved 15
+        Possessed = 11 << 20,
+        Illusory = 12 << 20,
+        HalfIllusory = 13 << 20,
+        Corrupted = 14 << 20,
+
+
+        //TODO: Create 2 more modifier slots by restructuring GenerateMovesForPiece so that these can be made into "fake" values
+        NoSpecial = 10 << 20,      //Special thing for move copying pieces (Blocks all special moves)
+        NoSpecialRange2 = 15 << 20, //for Crown Spirit and other weak moveset copiers
     }
 
     //4 bits = 15 possible
@@ -644,17 +650,17 @@ public static class Piece
     {
         None,
 
-        Bloodlust = 1 << 22,  //Die in X turns, removed on capture, can only capture
-        Sparked = 2 << 22, //Die in X turns, removed on move
-        Poisoned = 3 << 22,   //die after X turns
+        Bloodlust = 1 << 24,  //Die in X turns, removed on capture, can only capture
+        Sparked = 2 << 24, //Die in X turns, removed on move
+        Poisoned = 3 << 24,   //die after X turns
         //Logic to speed up status effect checks is that every status effect at or before Poisoned destroys pieces on effect end
 
-        Frozen = 4 << 22,    //can't move for X turns
-        Soaked = 5 << 22,   //No capturing and no enemy targetting abilities (and generates no auras)
-        Ghostly = 6 << 22, //Enemy version of Spectral (enemy pieces can pass through)
-        Fragile = 7 << 22,    //Acts as "destroy on capture"
-        Heavy = 8 << 22,  //Falls down by 1 every turn
-        Light = 9 << 22,  //Floats forward by 1 every turn
+        Frozen = 4 << 24,    //can't move for X turns
+        Soaked = 5 << 24,   //No capturing and no enemy targetting abilities (and generates no auras)
+        Ghostly = 6 << 24, //Enemy version of Spectral (enemy pieces can pass through)
+        Fragile = 7 << 24,    //Acts as "destroy on capture"
+        Heavy = 8 << 24,  //Falls down by 1 every turn
+        Light = 9 << 24,  //Floats forward by 1 every turn
 
         //Reserved 10
         //Reserved 11
@@ -738,8 +744,13 @@ public static class Piece
         InvincibleNonPawns = 1uL << 28,
         InvincibleClose = 1uL << 29,
         InvincibleClose2 = 1uL << 30,
-        InvinciblePride = 1uL << 31,      //Only most costly piece or piece of more cost
+        //InvinciblePride = 1uL << 31,      //Only most costly piece or piece of more cost
+        TrueInvincible = 1uL << 31,
         InvincibleJustice = 1uL << 32,      //Invincible if ally captured last turn
+
+        //note that the properties in PiecePropertiesB are not covered here
+        //May be good to migrate them here
+        InvinciblePropertiesA = TrueInvincible | Invincible | InvincibleWrongColor | InvincibleFront | InvinciblePawns | InvincibleNonPawns | InvincibleClose | InvincibleClose2 | InvincibleJustice,
 
         Relay = 1uL << 33,
         RelayBishop = 1uL << 34,      //this is only on a special piece that doesn't match its movement
@@ -851,7 +862,7 @@ public static class Piece
         //If you can't win in 10 turns they lose all value (So if I underprice them you can basically go from having little value to having too much as you can instantly use the real material differential to win)
         //Fading = 1uL << 25,
 
-        ShiftImmune = 1uL << 26,
+        Anchored = 1uL << 26,
 
         //NoCount = 1uL << 27,        //not counted in piece count    (Note that for implementation reasons ArcanaMoon and MoonIllusion do not do this)
         Giant = 1uL << 27,
@@ -894,7 +905,19 @@ public static class Piece
         AnyTandemMover = 1uL << 47,
         MorphImmune = 1uL << 48,
 
-        TrueShiftImmune = ShiftImmune | Giant,
+        WeakStart = 1uL << 49,
+        LateStart = 1uL << 50,
+
+        //moved to propertiesA
+        //TrueInvincible = 1uL << 52, //invincible but also ignores Deadly
+
+        Wide = 1uL << 53,
+        Tall = 1uL << 54,
+
+        TwoSquare = Wide | Tall,
+
+        NonStandardSize = Giant | TwoSquare,
+        TrueShiftImmune = Anchored | NonStandardSize,
 
     }
 
@@ -1074,7 +1097,7 @@ public static class Piece
             case PieceProperty.PromoteCapture:
                 return "Promote Capture";
             case PieceProperty.PromoteCaptureNonPawn:
-                return "Promote Capture";
+                return "Promote Capture Champion";
             case PieceProperty.EnchantImmune:
                 return "Enchant Immune";
             case PieceProperty.Deadly:
@@ -1093,20 +1116,20 @@ public static class Piece
                 return "Unique";
             case PieceProperty.Invincible:
                 return "Invincible";
+            case PieceProperty.TrueInvincible:
+                return "True Invincible";
             case PieceProperty.InvincibleWrongColor:
                 return "Invincible - Wrong Color";
             case PieceProperty.InvincibleFront:
                 return "Invincible - Front";
             case PieceProperty.InvinciblePawns:
-                return "Invincible - Pawns";
+                return "Invincible - Minions";
             case PieceProperty.InvincibleNonPawns:
-                return "Invincible - Non Pawns";
+                return "Invincible - Champions";
             case PieceProperty.InvincibleClose:
                 return "Invincible - Close";
             case PieceProperty.InvincibleClose2:
                 return "Invincible - Close 2";
-            case PieceProperty.InvinciblePride:
-                return "Invincible - Pride";
             case PieceProperty.InvincibleJustice:
                 return "Invincible - Justice";
             case PieceProperty.Relay:
@@ -1116,7 +1139,7 @@ public static class Piece
             case PieceProperty.RelayImmune:
                 return "Shared Immunity";
             case PieceProperty.OnlyCapturePawns:
-                return "Only Capture Pawns";
+                return "Only Capture Minions";
             case PieceProperty.DestroyCapturer:
                 return "Destroy Capturer";
             case PieceProperty.DestroyOnCapture:
@@ -1128,9 +1151,9 @@ public static class Piece
             case PieceProperty.MorphCapturer:
                 return "Morph Capturer";
             case PieceProperty.MorphCapturerPawn:
-                return "Morph Capturer Pawn";
+                return "Morph Capturer Minion";
             case PieceProperty.MorphCapturerNonPawn:
-                return "Morph Capturer Non Pawn";
+                return "Morph Capturer Champion";
             case PieceProperty.PassivePull:
                 return "Passive Pull";
             case PieceProperty.PassivePushDiag:
@@ -1191,7 +1214,7 @@ public static class Piece
             case PieceProperty.PromoteCapture:
                 return "Promotes when capturing a piece.";
             case PieceProperty.PromoteCaptureNonPawn:
-                return "Promotes when capturing a non pawn piece.";
+                return "Promotes when capturing a champion piece.";
             case PieceProperty.EnchantImmune:
                 return "Immune to enchantment effects.";
             case PieceProperty.Deadly:
@@ -1209,31 +1232,31 @@ public static class Piece
             case PieceProperty.Unique:
                 return "Normally impossible to obtain multiple copies of this piece.";
             case PieceProperty.Invincible:
-                return "Can't be destroyed.";
+                return "Can't be destroyed or targetted by enemies.";
+            case PieceProperty.TrueInvincible:
+                return "Can't be captured or targetted by enemies, including by Deadly pieces.";
             case PieceProperty.InvincibleWrongColor:
                 return "Wrong Color: Can't be destroyed by attackers on the opposite color squares.";
             case PieceProperty.InvincibleFront:
                 return "Can't be destroyed by attackers ahead of it.";
             case PieceProperty.InvinciblePawns:
-                return "Can't be destroyed by pawns.";
+                return "Can't be destroyed by minions.";
             case PieceProperty.InvincibleNonPawns:
-                return "Can't be destroyed by non pawns.";
+                return "Can't be destroyed by champions.";
             case PieceProperty.InvincibleClose:
                 return "Can't be destroyed by adjacent attackers.";
             case PieceProperty.InvincibleClose2:
                 return "Can't be destroyed by attackers in range 2.";
-            case PieceProperty.InvinciblePride:
-                return "Can't attack or be attacked by pieces of lesser value except for the piece the enemy last moved.";
             case PieceProperty.InvincibleJustice:
                 return "Can't be attacked if the enemy captured last turn.";
             case PieceProperty.Relay:
-                return "Nonpawn allies except Kings defended by this piece gain its movement power.";
+                return "Champion allies except Kings defended by this piece gain its movement power.";
             case PieceProperty.RelayBishop:
-                return "Nonpawn allies except Kings in Bishop range gain Bishop movement.";
+                return "Champion allies except Kings in Bishop range gain Bishop movement.";
             case PieceProperty.RelayImmune:
                 return "Allies adjacent to this piece are immune to negative effects.";
             case PieceProperty.OnlyCapturePawns:
-                return "Can only capture pawns.";
+                return "Can only capture minions.";
             case PieceProperty.DestroyCapturer:
                 return "When captured, the capturer is destroyed. (Kings are immune.)";
             case PieceProperty.DestroyOnCapture:
@@ -1245,9 +1268,9 @@ public static class Piece
             case PieceProperty.MorphCapturer:
                 return "The piece that captures this one changes type to this piece.";
             case PieceProperty.MorphCapturerPawn:
-                return "The pawn that captures this one changes type to this piece.";
+                return "The minion that captures this one changes type to this piece.";
             case PieceProperty.MorphCapturerNonPawn:
-                return "The non pawn piece that captures this one changes type to this piece.";
+                return "The champion piece that captures this one changes type to this piece.";
             case PieceProperty.PassivePull:
                 return "Pull enemies from range 2 to be range 1.";
             case PieceProperty.PassivePushDiag:
@@ -1304,8 +1327,8 @@ public static class Piece
                 return "Not Carriable";
             case PiecePropertyB.InvincibleNoEnemyAdjacent:
                 return "Invincible - No Enemy Adjacent";
-            case PiecePropertyB.ShiftImmune:
-                return "Shift Immune";
+            case PiecePropertyB.Anchored:
+                return "Anchored";
             case PiecePropertyB.Giant:
                 return "Giant";
             case PiecePropertyB.InvincibleFar:
@@ -1336,6 +1359,14 @@ public static class Piece
                 return "Natural Winged";
             case PiecePropertyB.MorphImmune:
                 return "Morph Immune";
+            case PiecePropertyB.WeakStart:
+                return "Weak Start";
+            case PiecePropertyB.LateStart:
+                return "Late Start";
+            case PiecePropertyB.Wide:
+                return "Wide";
+            case PiecePropertyB.Tall:
+                return "Tall";
         }
         return "";
     }
@@ -1394,10 +1425,10 @@ public static class Piece
                 return "Can't be carried by other pieces.";
             case PiecePropertyB.InvincibleNoEnemyAdjacent:
                 return "Invincible if no enemy is adjacent (not including the attacker).";
-            case PiecePropertyB.ShiftImmune:
-                return "Can't be displaced by any effects, including ally effects. Can't receive Relay moves.";
+            case PiecePropertyB.Anchored:
+                return "Can't be moved by any means except its own normal movement. Can't receive Relay moves.";
             case PiecePropertyB.Giant:
-                return "Takes up 4 squares. Can capture up to 4 enemies at once but can be captured on any of its 4 squares. Can't be displaced by any effects, including ally effects. Can't receive Relay moves.";
+                return "Takes up 4 squares in a 2x2 area. Can capture up to 4 enemies at once but can be captured on any of its 4 squares. Can't be displaced by any effects, including ally effects. Can't receive Relay moves.";
             case PiecePropertyB.InvincibleFar:
                 return "Can only be destroyed by adjacent attackers.";
             case PiecePropertyB.InvincibleFar2:
@@ -1426,6 +1457,14 @@ public static class Piece
                 return "Ignores the first obstacle it meets but can't capture past that obstacle.";
             case PiecePropertyB.MorphImmune:
                 return "Can't change type by effects of other pieces, including allies.";
+            case PiecePropertyB.WeakStart:
+                return "Can't capture before turn 3";
+            case PiecePropertyB.LateStart:
+                return "Can't move before turn 3";
+            case PiecePropertyB.Wide:
+                return "Takes up 2 squares horizontally next to each other. Can capture up to 2 enemies at once but can be captured on any of its 2 squares. Can't be displaced by any effects, including ally effects. Can't receive Relay moves.";
+            case PiecePropertyB.Tall:
+                return "Takes up 2 squares vertically next to each other. Can capture up to 2 enemies at once but can be captured on any of its 2 squares. Can't be displaced by any effects, including ally effects. Can't receive Relay moves.";
         }
         return "";
     }
@@ -1438,6 +1477,8 @@ public static class Piece
                 return "Burn enemy pieces to gain Charge.";
             case PieceType.Gluttony:
                 return "Gain range by capturing enemy pieces.";
+            case PieceType.Pride:
+                return "Can't attack or be attacked by pieces of lesser value except for the piece the enemy last moved.";
             case PieceType.Kindness:
                 return "Copies the non special moves of ally pieces defending this.";
             case PieceType.ArcanaFool:
@@ -1447,7 +1488,7 @@ public static class Piece
             case PieceType.ArcanaMoon:
                 return "After Move: Spawn a Moon Illusion at its previous location.\nMoon Illusions can be moved like Arcana Moon. When an ally Arcana Moon or an ally Moon Illusion is destroyed, all of them are destroyed.";
             case PieceType.MoonIllusion:
-                return "After Move: Become Arcana Moon and spawn a Moon Illusion at its previous location.\nMoon Illusions can be moved like Arcana Moon. When an ally Arcana Moon or an ally Moon Illusion is destroyed, all of them are destroyed.";
+                return "After Move: Become Arcana Moon.\nMoon Illusions can be moved like Arcana Moon. When an ally Arcana Moon or an ally Moon Illusion is destroyed, all of them are destroyed.";
             case PieceType.Revenant:
                 return "When destroyed, respawns as far back as possible (Single Use).";
             case PieceType.Necromancer:
@@ -1465,7 +1506,7 @@ public static class Piece
             case PieceType.Pincer:
                 return "After Move: Enemies sandwiched between the Pincer and an ally piece or the edge of the board are destroyed.";
             case PieceType.ClockworkTurtle:
-                return "If no allies are adjacent, become Invincible.";
+                return "If no allies are adjacent, become Invincible but can't move.";
             case PieceType.EliteMilitia:
             case PieceType.Militia:
                 return "Can't move to the enemy half of the board.";
@@ -1652,95 +1693,137 @@ public static class Piece
             output += " (" + pse + " " + GetPieceStatusDuration(pieceInfo) + ")";
         }
 
+        switch (GetPieceAlignment(pieceInfo))
+        {
+            case PieceAlignment.White:
+                output = "" + output + "";  //no outline
+                break;
+            case PieceAlignment.Black:
+                output = "{" + output + "}";
+                break;
+            case PieceAlignment.Neutral:
+                output = "[" + output + "]";
+                break;
+            case PieceAlignment.Crystal:
+                output = "|" + output + "|";
+                break;
+        }
+
         return output;
     }
 
     //Bit layout
-    //0-8 = piece Type (9 bits)
-    //9-17 = special data (9 bits)
-    //18-21 = modifier (4 bits)
-    //22-25 = status effect (4 bits)
-    //26-29 = status duration (4 bits)
+    //0-9 = piece Type (10 bits)
+    //10-19 = special data (10 bits)
+    //20-23 = modifier (4 bits)
+    //24-27 = status effect (4 bits)
+    //28-29 = status duration (2 bits)
     //30-31 = alignment (2 bits)
+    public const uint MASK_PIECE_TYPE = 0x3ff;
+    public const uint MASK_SPECIAL_DATA = 0xffc00;
+    public const uint MASK_MODIFIER = 0xf00000;
+    public const uint MASK_STATUS_EFFECT = 0xf000000;
+    public const uint MASK_STATUS_DURATION = 0x30000000;
+    public const uint MASK_ALIGNMENT = 0xc0000000;
+    public const uint MASK_NOT_PIECE_TYPE = 0xfffffc00;
+    public const uint MASK_NOT_SPECIAL_DATA = 0xfff003ff;
+    public const uint MASK_NOT_MODIFIER = 0xff0fffff;
+    public const uint MASK_NOT_STATUS_EFFECT = 0xf0ffffff;
+    public const uint MASK_NOT_STATUS_DURATION = 0xcfffffff;
+    public const uint MASK_NOT_ALIGNMENT = 0x3fffffff;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static PieceType GetPieceType(uint pieceInfo)
     {
-        return (PieceType)(pieceInfo & 0x1ff);
+        return (PieceType)(pieceInfo & MASK_PIECE_TYPE);
         //return (PieceType)(MainManager.BitFilter(pieceInfo, 0, 8));
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint SetPieceType(PieceType pt, uint pieceInfo)
     {
-        return MainManager.BitFilterSetB(pieceInfo, (uint)pt, 0, 8);
+        return (pieceInfo & MASK_NOT_PIECE_TYPE) + (uint)pt;
+        //return MainManager.BitFilterSetB(pieceInfo, (uint)pt, 0, 9);
     }
 
-    //9 bits of special data
+    //10 bits of special data
     //This is quite a lot
-    //I enlarged it from 8 to 9 so I can fit a whole entire piece type into it :)
+    //future thing to try: 6 bits to index each square uniquely so each piece can index into a table that can hold more data
+    //(and then the larger storage could be variable sized)
+    //Problem: is it worth doing that though (Time loss from needing to use the pointer value to look at the new table)
     //Currently uses 2 bits for giants
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ushort GetPieceSpecialData(uint pieceInfo)
     {
-        return (ushort)((pieceInfo & 0x3fe00) >> 9);
+        return (ushort)((pieceInfo & MASK_SPECIAL_DATA) >> 10);
         //return (ushort)(MainManager.BitFilter(pieceInfo, 9, 17));
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint SetPieceSpecialData(ushort psd, uint pieceInfo)
     {
-        return MainManager.BitFilterSet(pieceInfo, psd, 9, 17);
+        return (pieceInfo & MASK_NOT_SPECIAL_DATA) + (((uint)psd) << 10);
+        //return MainManager.BitFilterSet(pieceInfo, psd, 10, 19);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static PieceModifier GetPieceModifier(uint pieceInfo)
     {
-        return (PieceModifier)((pieceInfo & 0x3C0000));
+        return (PieceModifier)((pieceInfo & MASK_MODIFIER));
         //return (PieceModifier)((pieceInfo & 0x3C0000) >> 18);
         //return (PieceModifier)(MainManager.BitFilter(pieceInfo, 18, 21));
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint SetPieceModifier(PieceModifier pm, uint pieceInfo)
     {
-        return MainManager.BitFilterSetB(pieceInfo, (uint)pm, 18, 21);
+        return (pieceInfo & MASK_NOT_MODIFIER) + ((uint)pm);
+        //return MainManager.BitFilterSetB(pieceInfo, (uint)pm, 18, 21);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static PieceStatusEffect GetPieceStatusEffect(uint pieceInfo)
     {
-        return (PieceStatusEffect)((pieceInfo & 0x3C00000));
+        return (PieceStatusEffect)((pieceInfo & MASK_STATUS_EFFECT));
         //return (PieceStatusEffect)((pieceInfo & 0x3C00000) >> 22);
         //return (PieceStatusEffect)(MainManager.BitFilter(pieceInfo, 22, 25));
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint SetPieceStatusEffect(PieceStatusEffect pm, uint pieceInfo)
     {
-        return MainManager.BitFilterSetB(pieceInfo, (uint)pm, 22, 25);
+        return (pieceInfo & MASK_NOT_STATUS_EFFECT) + ((uint)pm);
+        //return MainManager.BitFilterSetB(pieceInfo, (uint)pm, 22, 25);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static byte GetPieceStatusDuration(uint pieceInfo)
     {
-        return (byte)((pieceInfo & 0x3C000000) >> 26);
+        return (byte)((pieceInfo & MASK_STATUS_DURATION) >> 28);
         //return (byte)(MainManager.BitFilter(pieceInfo, 26, 29));
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint SetPieceStatusDuration(byte psd, uint pieceInfo)
     {
-        return MainManager.BitFilterSet(pieceInfo, psd, 26, 29);
+        return (pieceInfo & MASK_NOT_STATUS_DURATION) + (((uint)psd) << 28);
+        //return MainManager.BitFilterSet(pieceInfo, psd, 26, 29);
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint SetPieceStatusDuration(uint psd, uint pieceInfo)
+    {
+        return (pieceInfo & MASK_NOT_STATUS_DURATION) + psd;
+        //return MainManager.BitFilterSet(pieceInfo, psd, 26, 29);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static PieceAlignment GetPieceAlignment(uint pieceInfo)
     {
-        return (PieceAlignment)((pieceInfo & 0xc0000000));
+        return (PieceAlignment)((pieceInfo & MASK_ALIGNMENT));
         //return (PieceAlignment)((pieceInfo & 0xc0000000) >> 30);
         //return (PieceAlignment)(MainManager.BitFilter(pieceInfo, 30, 31));
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint SetPieceAlignment(PieceAlignment pa, uint pieceInfo)
     {
+        return ((pieceInfo & MASK_NOT_ALIGNMENT) + ((uint)pa));
         //return ((pieceInfo & 0x3fffffff) + ((uint)pa << 30));
-        return MainManager.BitFilterSetB(pieceInfo, (uint)pa, 30, 31);
+        //return MainManager.BitFilterSetB(pieceInfo, (uint)pa, 30, 31);
     }
 
     public static Color GetPieceColor(PieceAlignment pa)
@@ -1801,21 +1884,21 @@ public static class Piece
         switch (pm)
         {
             case PieceModifier.Vengeful:
-                return "Vengeful: When captured, the capturer is destroyed if it is not a King.";
+                return "When captured, the capturer is destroyed if it is not a King.";
             case PieceModifier.Phoenix:
-                return "Phoenix: When destroyed, respawn as far back as possible and lose this Modifier.";
+                return "When destroyed, respawn as far back as possible and lose this Modifier.";
             case PieceModifier.Radiant:
-                return "Radiant: When this piece captures, spawn a Pawn as far back as possible.";
+                return "When this piece captures, spawn a Pawn as far back as possible.";
             case PieceModifier.Winged:
-                return "Winged: Ignore the first obstacle but can't capture after leaping over the obstacle.";
+                return "Ignore the first obstacle but can't capture after leaping over the obstacle.";
             case PieceModifier.Spectral:
-                return "Spectral: Ally pieces are not blocked by this piece.";
+                return "Ally pieces are not blocked by this piece.";
             case PieceModifier.Immune:
-                return "Immune: Unaffected by status effects and enchantments. Enemy pieces that are orthogonally adjacent can't capture.";
+                return "Unaffected by status effects and enchantments. Enemy pieces that are orthogonally adjacent can't capture.";
             case PieceModifier.Warped:
-                return "Warped: Ally pieces can swap places with this piece if they can move onto it.";
+                return "Ally pieces can swap places with this piece if they can move onto it.";
             case PieceModifier.Shielded:
-                return "Shielded: Invincible, but degrades to Half Shielded if an enemy piece threatens it at the start of their turn. Half Shielded degrades to nothing after 1 turn.";
+                return "Invincible, but degrades to Half Shielded if an enemy piece threatens it at the start of their turn. Half Shielded degrades to nothing after 1 turn.";
             case PieceModifier.HalfShielded:
                 return "Invincible, but Half Shielded degrades to nothing after 1 turn.";
             case PieceModifier.NoSpecial:
@@ -1881,14 +1964,22 @@ public static class Piece
 
     public static bool IsPieceInvincible(Board b, uint piece, int x, int y, uint attackerPiece, int attackerX, int attackerY, Move.SpecialType specialType, PieceTableEntry pteA, PieceTableEntry pteV)
     {
-        Piece.PieceType ptA = Piece.GetPieceType(attackerPiece);
-        Piece.PieceType ptV = Piece.GetPieceType(piece);
+        Piece.PieceType ptA = pteA.type; //Piece.GetPieceType(attackerPiece);
+        Piece.PieceType ptV = pteV.type; //Piece.GetPieceType(piece);
 
         Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
         Piece.PieceAlignment paA = Piece.GetPieceAlignment(attackerPiece);
 
         //PieceTableEntry pteA = GlobalPieceManager.GetPieceTableEntry(ptA);
         //PieceTableEntry pteV = GlobalPieceManager.GetPieceTableEntry(ptV);        
+
+        //True invincibility
+        //It's all the way up here at the top so nothing stops it
+        if ((pteV.pieceProperty & PieceProperty.TrueInvincible) != 0)
+        {
+            return true;
+        }
+
 
         //Voided can't capture
         if (Piece.GetPieceStatusEffect(attackerPiece) == PieceStatusEffect.Soaked)
@@ -1897,7 +1988,7 @@ public static class Piece
         }
 
         //Shielded, Protected can't attack kings
-        if (Piece.GetPieceType(piece) == PieceType.King)
+        if (pteV.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS)
         {
             PieceModifier pmA = GetPieceModifier(attackerPiece);
 
@@ -1915,38 +2006,51 @@ public static class Piece
         }
 
         //Morph immune
-        if ((specialType == Move.SpecialType.MorphRabbit) && ((pteV.piecePropertyB & PiecePropertyB.MorphImmune) != 0))
-        {
-            return true;
-        }
+        PieceModifier pm = GetPieceModifier(piece);
 
-        //Fire immune
-        if ((specialType == Move.SpecialType.FireCapture || specialType == Move.SpecialType.FireCaptureOnly || specialType == Move.SpecialType.FireCapturePush) && ((pteV.pieceProperty & PieceProperty.FireImmune) != 0))
+        switch (specialType)
         {
-            return true;
-        }
-
-        //Water/Ice immune
-        if ((specialType == Move.SpecialType.InflictFreeze || specialType == Move.SpecialType.InflictFreezeCaptureOnly) && (((pteV.pieceProperty & PieceProperty.WaterImmune) != 0) || ((pteV.piecePropertyB & PiecePropertyB.StatusImmune) != 0) || Piece.GetPieceModifier(piece) == PieceModifier.Immune))
-        {
-            return true;
-        }
-
-        //Shift immune status
-        if ((specialType == Move.SpecialType.InflictShift || specialType == Move.SpecialType.InflictShiftCaptureOnly) && ((((pteV.piecePropertyB & (PiecePropertyB.StatusImmune | PiecePropertyB.ShiftImmune)) != 0) || Piece.GetPieceModifier(piece) == PieceModifier.Immune)))
-        {
-            return true;
-        }
-        //Other status immune
-        if (((pteV.piecePropertyB & PiecePropertyB.StatusImmune) != 0) || Piece.GetPieceModifier(piece) == PieceModifier.Immune)
-        {
-            switch (specialType)
-            {
-                case Move.SpecialType.Inflict:
-                case Move.SpecialType.InflictCaptureOnly:
+            case Move.SpecialType.MorphRabbit:
+                if (((pteV.piecePropertyB & PiecePropertyB.MorphImmune) != 0))
+                {
                     return true;
-            }
+                }
+                break;
+            case Move.SpecialType.FireCapture:
+            case Move.SpecialType.FireCaptureOnly:
+            case Move.SpecialType.FireCapturePush:
+                //Fire immune
+                if (((pteV.pieceProperty & PieceProperty.FireImmune) != 0))
+                {
+                    return true;
+                }
+                break;
+            case Move.SpecialType.InflictFreeze:
+            case Move.SpecialType.InflictFreezeCaptureOnly:
+                //Water/Ice immune
+                if ((((pteV.pieceProperty & PieceProperty.WaterImmune) != 0) || ((pteV.piecePropertyB & PiecePropertyB.StatusImmune) != 0) || pm == PieceModifier.Immune))
+                {
+                    return true;
+                }
+                break;
+            case Move.SpecialType.InflictShift:
+            case Move.SpecialType.InflictShiftCaptureOnly:
+                //Anchored status
+                if (((((pteV.piecePropertyB & (PiecePropertyB.StatusImmune | PiecePropertyB.Anchored)) != 0) || pm == PieceModifier.Immune)))
+                {
+                    return true;
+                }
+                break;
+            case Move.SpecialType.Inflict:
+            case Move.SpecialType.InflictCaptureOnly:
+                //Other status immune
+                if (((pteV.piecePropertyB & PiecePropertyB.StatusImmune) != 0) || pm == PieceModifier.Immune)
+                {
+                    return true;
+                }
+                break;
         }
+
 
         //blanket ban stuff with immune
         ulong immunityBitboard = 0;
@@ -1959,7 +2063,7 @@ public static class Piece
             immunityBitboard = b.globalData.bitboard_immuneBlack;
         }
 
-        if ((pteV.pieceProperty & PieceProperty.EnchantImmune) != 0 || (1uL << x + y * 8 & immunityBitboard) != 0 || Piece.GetPieceModifier(piece) == PieceModifier.Immune)
+        if ((pteV.pieceProperty & PieceProperty.EnchantImmune) != 0 || (1uL << x + y * 8 & immunityBitboard) != 0 || pm == PieceModifier.Immune)
         {
             switch (specialType)
             {
@@ -1989,8 +2093,8 @@ public static class Piece
                 break;
         }
 
-        bool victimGiant = ((pteV.piecePropertyB & PiecePropertyB.Giant) != 0);
-        bool attackerGiant = ((pteA.piecePropertyB & PiecePropertyB.Giant) != 0);
+        bool victimGiant = ((pteV.piecePropertyB & PiecePropertyB.NonStandardSize) != 0);
+        bool attackerGiant = ((pteA.piecePropertyB & PiecePropertyB.NonStandardSize) != 0);
 
         //Giants are not compatible with most stuff
         if (victimGiant)
@@ -2039,8 +2143,8 @@ public static class Piece
             }
         }
 
-        //Shift immune
-        if (((pteV.piecePropertyB & PiecePropertyB.ShiftImmune) != 0))
+        //Anchored
+        if (((pteV.piecePropertyB & PiecePropertyB.Anchored) != 0))
         {
             switch (specialType)
             {
@@ -2080,9 +2184,6 @@ public static class Piece
                     return true;
             }
         }
-
-        PieceModifier pm = GetPieceModifier(piece);        
-
         //Deadly overrides all of this (Except for stuff above, so it doesn't let you break the game or ignore other immunities)
         if ((pteA.pieceProperty & PieceProperty.Deadly) != 0)
         {
@@ -2141,7 +2242,7 @@ public static class Piece
         {
             ulong enemy = 0;
             ulong rabbit = b.globalData.bitboard_rabbit;
-            ulong adjacentBitboard = MainManager.SmearBitboard(1uL << (x + (y << 3)));
+            ulong adjacentBitboard = b.globalData.bitboard_rabbitAdjacent;
 
             switch (paA)
             {
@@ -2162,57 +2263,146 @@ public static class Piece
         }
 
 
-        //invincible from range 1
-        if ((pteV.pieceProperty & PieceProperty.InvincibleClose) != 0)
+        if ((pteV.pieceProperty & PieceProperty.InvinciblePropertiesA) != 0)
         {
-            int dx = attackerX - x;
-            int dy = attackerY - y;
+            //invincible from range 1
+            if ((pteV.pieceProperty & PieceProperty.InvincibleClose) != 0)
+            {
+                int dx = attackerX - x;
+                int dy = attackerY - y;
 
-            if (attackerGiant)
-            {
-                //dx can be -2
-                if (dx >= -2 && dx <= 1 && dy >= -2 && dy <= 1)
+                if (attackerGiant)
                 {
-                    return true;
+                    //dx can be -2
+                    if (dx >= -2 && dx <= 1 && dy >= -2 && dy <= 1)
+                    {
+                        return true;
+                    }
                 }
-            } else
+                else
+                {
+                    //-1 -> 1
+                    //faster than Math.Abs?
+                    dx *= dx;
+                    dy *= dy;
+                    if (dx <= 1 && dy <= 1)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            //range 2 invincible
+            if ((pteV.pieceProperty & PieceProperty.InvincibleClose2) != 0)
             {
-                //-1 -> 1
-                //faster than Math.Abs?
-                dx *= dx;
-                dy *= dy;
-                if (dx <= 1 && dy <= 1)
+                int dx = attackerX - x;
+                int dy = attackerY - y;
+
+                if (attackerGiant)
+                {
+                    //dx can be -3
+                    if (dx >= -3 && dx <= 2 && dy >= -3 && dy <= 2)
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    //-1 -> 1
+                    //faster than Math.Abs?
+                    dx *= dx;
+                    dy *= dy;
+                    if (dx <= 4 && dy <= 4)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            //invincible from front
+            if ((pteV.pieceProperty & PieceProperty.InvincibleFront) != 0)
+            {
+                if (Piece.GetPieceAlignment(piece) == PieceAlignment.Black)
+                {
+                    if (attackerY - y < 0)
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    if (attackerY - y > 0)
+                    {
+                        return true;
+                    }
+                }
+
+            }
+
+            //invincible from non pawns
+            if ((pteV.pieceProperty & PieceProperty.InvincibleNonPawns) != 0 && pteA.promotionType == PieceType.Null)
+            {
+                return true;
+            }
+
+            //invincible from pawns
+            if ((pteV.pieceProperty & PieceProperty.InvinciblePawns) != 0 && pteA.promotionType != PieceType.Null)
+            {
+                return true;
+            }
+
+            //can only attack Pride if attacker is >= value (or deadly condition above)
+            if (ptV == PieceType.Pride)
+            {
+                if ((pteA.pieceValueX2 < pteV.pieceValueX2))
+                {
+                    //new: last moved piece can attack Pride
+                    //So Pride has more possible targets but can get hit by a few more things
+                    int lastMovedLocation = 0;
+                    if (paA == PieceAlignment.White)
+                    {
+                        lastMovedLocation = b.whitePerPlayerInfo.lastPieceMovedLocation;
+                    }
+                    if (paA == PieceAlignment.Black)
+                    {
+                        lastMovedLocation = b.blackPerPlayerInfo.lastPieceMovedLocation;
+                    }
+                    if ((attackerX + (attackerY << 3) != lastMovedLocation))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            if ((pteV.pieceProperty & PieceProperty.InvincibleWrongColor) != 0 && (((x + y + attackerX + attackerY) & 1) != 0))
+            {
+                return true;
+            }
+        }
+
+        //pride can capture deadly pieces (includes Kings)
+        if (ptA == PieceType.Pride)
+        {
+            if ((pteV.pieceValueX2 < pteA.pieceValueX2) && (pteV.pieceProperty & PieceProperty.Deadly) == 0)
+            {
+                //new: last moved piece can attack Pride
+                //So Pride has more possible targets but can get hit by a few more things
+                int lastMovedLocation = 0;
+                if (pa == PieceAlignment.White)
+                {
+                    lastMovedLocation = b.whitePerPlayerInfo.lastPieceMovedLocation;
+                }
+                if (pa == PieceAlignment.Black)
+                {
+                    lastMovedLocation = b.blackPerPlayerInfo.lastPieceMovedLocation;
+                }
+                if ((x + (y << 3) != lastMovedLocation))
                 {
                     return true;
                 }
             }
         }
 
-        //range 2 invincible
-        if ((pteV.pieceProperty & PieceProperty.InvincibleClose2) != 0)
-        {
-            int dx = attackerX - x;
-            int dy = attackerY - y;
-
-            if (attackerGiant)
-            {
-                //dx can be -3
-                if (dx >= -3 && dx <= 2 && dy >= -3 && dy <= 2)
-                {
-                    return true;
-                }
-            } else
-            {
-                //-1 -> 1
-                //faster than Math.Abs?
-                dx *= dx;
-                dy *= dy;
-                if (dx <= 4 && dy <= 4)
-                {
-                    return true;
-                }
-            }
-        }
 
         //invincible from range 2+
         //Inverse of InvincibleClose
@@ -2270,65 +2460,6 @@ public static class Piece
             }
         }
 
-        //invincible from front
-        if ((pteV.pieceProperty & PieceProperty.InvincibleFront) != 0)
-        {
-            if (Piece.GetPieceAlignment(piece) == PieceAlignment.Black)
-            {
-                if (attackerY - y < 0)
-                {
-                    return true;
-                }
-            }
-            else
-            {
-                if (attackerY - y > 0)
-                {
-                    return true;
-                }
-            }
-
-        }
-
-        //invincible from non pawns
-        if ((pteV.pieceProperty & PieceProperty.InvincibleNonPawns) != 0 && pteA.promotionType == PieceType.Null)
-        {
-            return true;
-        }
-
-        //invincible from pawns
-        if ((pteV.pieceProperty & PieceProperty.InvinciblePawns) != 0 && pteA.promotionType != PieceType.Null)
-        {
-            return true;
-        }
-
-        //can only attack Pride if attacker is >= value (or deadly condition above)
-        if ((pteV.pieceProperty & PieceProperty.InvinciblePride) != 0)
-        {
-            if ((pteA.pieceValueX2 < pteV.pieceValueX2))
-            {
-                //new: last moved piece can attack Pride
-                //So Pride has more possible targets but can get hit by a few more things
-                int lastMovedLocation = 0;
-                if (paA == PieceAlignment.White)
-                {
-                    lastMovedLocation = b.whitePerPlayerInfo.lastPieceMovedLocation;
-                }
-                if (paA == PieceAlignment.Black)
-                {
-                    lastMovedLocation = b.blackPerPlayerInfo.lastPieceMovedLocation;
-                }
-                if ((attackerX + (attackerY << 3) != lastMovedLocation))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if ((pteV.pieceProperty & PieceProperty.InvincibleWrongColor) != 0 && (((x + y + attackerX + attackerY) & 1) != 0))
-        {
-            return true;
-        }
 
         //capture restrictions
         //Debug.Log(ptA + " vs " + ptV + " and pteV promotion is " + pteV.promotionType);
@@ -2337,28 +2468,6 @@ public static class Piece
             return true;
         }
 
-        //pride can capture deadly pieces (includes Kings)
-        if ((pteA.pieceProperty & PieceProperty.InvinciblePride) != 0)
-        {
-            if ((pteV.pieceValueX2 < pteA.pieceValueX2) && (pteV.pieceProperty & PieceProperty.Deadly) == 0)
-            {
-                //new: last moved piece can attack Pride
-                //So Pride has more possible targets but can get hit by a few more things
-                int lastMovedLocation = 0;
-                if (pa == PieceAlignment.White)
-                {
-                    lastMovedLocation = b.whitePerPlayerInfo.lastPieceMovedLocation;
-                }
-                if (pa == PieceAlignment.Black)
-                {
-                    lastMovedLocation = b.blackPerPlayerInfo.lastPieceMovedLocation;
-                }
-                if ((x + (y << 3) != lastMovedLocation))
-                {
-                    return true;
-                }
-            }
-        }
 
         //Clockwork Turtle
         if (ptV == PieceType.ClockworkTurtle)
@@ -2376,7 +2485,7 @@ public static class Piece
 
         //Temperance restriction
         //currently hardcoded number
-        if (ptA == PieceType.Temperance && (pteV.pieceValueX2 <= 9 - b.GetMissingPieces(Piece.GetPieceAlignment(attackerPiece) == PieceAlignment.Black)))
+        if (ptA == PieceType.Temperance && (pteV.pieceValueX2 <= 9 - b.GetMissingPieces(paA == PieceAlignment.Black)))
         {
             return true;
         }

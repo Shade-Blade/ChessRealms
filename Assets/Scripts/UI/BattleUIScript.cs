@@ -40,6 +40,9 @@ public class BattleUIScript : MonoBehaviour
     public SpriteRenderer backgroundA;
     public SpriteRenderer backgroundB;
 
+    public UndoButtonScript undoButton;
+    public float undoHoldTime;
+
     //debug panel values
     public TMPro.TMP_Text difficultyText;
     public ConsumableScript debugConsumable;
@@ -49,8 +52,15 @@ public class BattleUIScript : MonoBehaviour
     public TMPro.TMP_InputField valueField;
     public TMPro.TMP_InputField typeField;
     public TMPro.TMP_InputField classField;
+    public TMPro.TMP_InputField enemyModifierField;
+    [NonSerialized]
     public Board.PlayerModifier pm;
+    [NonSerialized]
     public Board.EnemyModifier em;
+    [NonSerialized]
+    public Board.PlayerModifierB pmB;
+    [NonSerialized]
+    public Board.EnemyModifierB emB;
 
     public GameObject debugPanel;
 
@@ -83,7 +93,7 @@ public class BattleUIScript : MonoBehaviour
             sbs.pmps = pmps;
             battleOnlyUI.SetActive(false);
         }
-        whiteValueText.text = "" + (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - 5);
+        whiteValueText.text = "" + (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f));
         whitePieceText.text = bs.board.whitePerPlayerInfo.pieceCount + " pcs " + (bs.board.whitePerPlayerInfo.piecesLost <= 0 ? "" : "(-" + bs.board.whitePerPlayerInfo.piecesLost + ")");
     }
 
@@ -107,14 +117,14 @@ public class BattleUIScript : MonoBehaviour
     {
         if (bs is BattleBoardScript bbs)
         {
-            bbs.whiteIsAI = true;
+            bbs.whiteIsAI = !bbs.whiteIsAI;
         }
     }
     public void BlackAIToggle()
     {
         if (bs is BattleBoardScript bbs)
         {
-            bbs.blackIsAI = true;
+            bbs.blackIsAI = !bbs.blackIsAI;
         }
     }
 
@@ -190,10 +200,18 @@ public class BattleUIScript : MonoBehaviour
             Piece.PieceClass classValue;
             Enum.TryParse(classField.text, out classValue);
 
-            Piece.PieceType[] army = ArmyGenerator.GenerateArmy(tryValue, typeValue, 0.5f, 0.5f, classValue, em);
+            Board.EnemyModifier enemyModifier = Board.EnemyModifier.None;
+            Enum.TryParse(enemyModifierField.text, out enemyModifier);
+            Board.EnemyModifierB enemyModifierB = Board.EnemyModifierB.None;
+            Enum.TryParse(enemyModifierField.text, out enemyModifierB);
+
+            em = enemyModifier;
+            emB = enemyModifierB;
+
+            Piece.PieceType[] army = ArmyGenerator.GenerateArmy(tryValue, typeValue, 0.5f, 0.5f, classValue, em, emB);
 
             MainManager.Instance.playerData.GenerateSeed();
-            bbs.ResetBoard(MainManager.Instance.playerData.army, ArmyGenerator.ConvertPieceTypeArray(army), pm, em, classValue);
+            bbs.ResetBoard(MainManager.Instance.playerData.army, ArmyGenerator.ConvertPieceTypeArray(army), pm, pmB, em, emB, classValue);
             bs.SetTheme(classValue);
         }
     }
@@ -211,10 +229,18 @@ public class BattleUIScript : MonoBehaviour
             Piece.PieceClass classValue;
             Enum.TryParse(classField.text, out classValue);
 
-            Piece.PieceType[] army = ArmyGenerator.GenerateArmy(tryValue, typeValue, 0.5f, 0.5f, classValue, em);
+            Board.EnemyModifier enemyModifier = Board.EnemyModifier.None;
+            Enum.TryParse(enemyModifierField.text, out enemyModifier);
+            Board.EnemyModifierB enemyModifierB = Board.EnemyModifierB.None;
+            Enum.TryParse(enemyModifierField.text, out enemyModifierB);
+
+            em = enemyModifier;
+            emB = enemyModifierB;
+
+            Piece.PieceType[] army = ArmyGenerator.GenerateArmy(tryValue, typeValue, 0.5f, 0.5f, classValue, em, emB);
 
             MainManager.Instance.playerData.GenerateSeed();
-            bbs.ResetBoard(army, pm, em);
+            bbs.ResetBoard(army, pm, pmB, em, emB, classValue);
             bs.SetTheme(classValue);
         }
     }
@@ -260,21 +286,55 @@ public class BattleUIScript : MonoBehaviour
         backgroundA.color = Color.Lerp(Color.black, Color.Lerp(bs.backgroundLight.color, bs.backgroundDark.color, 0.35f), 0.9f);
         backgroundB.color = Color.Lerp(Color.black, Color.Lerp(bs.backgroundLight.color, bs.backgroundDark.color, 0.65f), 0.9f);
 
-        undoButtonText.text = "Undo\n<size=75%><color=#ffffff>(" + MainManager.Instance.playerData.undosLeft + ")</color></size>";
+        if (undoButton.GetHeld())
+        {
+            undoHoldTime += Time.deltaTime;
+        } else
+        {
+            undoHoldTime = 0;
+        }
+
+        if (bs is BattleBoardScript bbs)
+        {
+            if (undoHoldTime > 0.25f)
+            {
+                if (MainManager.Instance.playerData.retriesLeft == 0)
+                {
+                    undoButtonText.text = "Can't Retry";
+                }
+                else
+                {
+                    undoButtonText.text = "Hold To Retry";
+                    if (undoHoldTime > 3f)
+                    {
+                        //execute retry
+                        undoHoldTime = 0;
+                        bbs.TryRetry();
+                    }
+                }
+            }
+            else
+            {
+                undoButtonText.text = "Undo\n<size=75%><color=#ffffff>(" + MainManager.Instance.playerData.undosLeft + ")</color></size>";
+            }
+        } else
+        {
+            undoButtonText.text = "Undo\n<size=75%><color=#ffffff>(" + MainManager.Instance.playerData.undosLeft + ")</color></size>";
+        }
 
         if (MainManager.Instance.playerData.retriesLeft == 1)
         {
-            retryText.text = MainManager.Instance.playerData.retriesLeft + " retry left.";
+            retryText.text = MainManager.Instance.playerData.retriesLeft + " retry left. (Hold Undo to Retry)";
         }
         else
         {
             if (MainManager.Instance.playerData.retriesLeft == 0)
             {
-                retryText.text = "<color=#ffc0c0>" + MainManager.Instance.playerData.retriesLeft + " retries left.</color>";
+                retryText.text = "<color=#ffc0c0>" + MainManager.Instance.playerData.retriesLeft + " retries left. (Hold Undo to Retry)</color>";
             }
             else
             {
-                retryText.text = MainManager.Instance.playerData.retriesLeft + " retries left.";
+                retryText.text = MainManager.Instance.playerData.retriesLeft + " retries left. (Hold Undo to Retry)";
             }
         }
 
@@ -284,9 +344,9 @@ public class BattleUIScript : MonoBehaviour
         firstTurnText.text = bs.board.turn == 0 ? "Can't capture or use Items on Turn 1." : "";
 
         moneyText.text = "$" + MainManager.Instance.playerData.coins;
-        whiteValueText.text = "" + (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - 5);
+        whiteValueText.text = "" + (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f));
         whitePieceText.text = bs.board.whitePerPlayerInfo.pieceCount + " pcs" + (bs.board.whitePerPlayerInfo.piecesLost <= 0 ? "" : " (-" + bs.board.whitePerPlayerInfo.piecesLost + ")");
-        blackValueText.text = "" + (((bs.board.blackPerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - 5);
+        blackValueText.text = "" + (((bs.board.blackPerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f));
         blackPieceText.text = bs.board.blackPerPlayerInfo.pieceCount + " pcs" + (bs.board.blackPerPlayerInfo.piecesLost <= 0 ? "" : " (-" + bs.board.blackPerPlayerInfo.piecesLost + ")");
         float delta = (((bs.board.whitePerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f) - ((bs.board.blackPerPlayerInfo.pieceValueSumX2 & (GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f));
         if (delta > 0)

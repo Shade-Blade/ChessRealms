@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -55,13 +56,31 @@ public sealed class GlobalPieceManager : MonoBehaviour
     public static ulong[] raysDR;
     public static ulong[] raysDL;
 
+    public static ulong[][] ranges;
+    public static ulong[] range1;
+    public static ulong[] range2;
+    public static ulong[] range3;
+    public static ulong[] range4;
+    public static ulong[] range5;
+    public static ulong[] range6;
+    public static ulong[][] rangesOnly;
+    public static ulong[] range1Only;
+    public static ulong[] range2Only;
+    public static ulong[] range3Only;
+    public static ulong[] range4Only;
+    public static ulong[] range5Only;
+    public static ulong[] range6Only;
+    public static ulong[] range7Only;
+
+    public static Dir[][] directionBetweenPoints;
+
+
     //King value is given a big number as a flag to easily get a king count
     //I don't necessarily want to put this in a separate variable as that would be a lot of "if type == king" checks everywhere which is annoying and potentially slows things down
     //This is an easier way
-    //Note that the game will break if you put too many kings on the board at the same time as it will overflow the short counter
-    //1024 might also be reachable if the board is filled with highly valued pieces? So I chose 2048 instead
-    public const short KING_VALUE_BONUS = 1 << 11;  //2048
-    public const short KING_VALUE_BONUS_MINUS_ONE = (1 << 11) - 1;  //2047
+    //note: 65536 / 64 ~= 1000 value per square which means this is way above the strongest possible pieces
+    public const int KING_VALUE_BONUS = 1 << 16;
+    public const int KING_VALUE_BONUS_MINUS_ONE = (1 << 16) - 1;
 
     public MoveGeneratorInfoEntry defensiveModifierMove;
     public MoveGeneratorInfoEntry recallModifierMove;
@@ -147,57 +166,105 @@ public sealed class GlobalPieceManager : MonoBehaviour
         raysDR = new ulong[64];
         raysDL = new ulong[64];
 
+        //range 0 = empty, range 7 = all squares
+        range1 = new ulong[64];
+        range2 = new ulong[64];
+        range3 = new ulong[64];
+        range4 = new ulong[64];
+        range5 = new ulong[64];
+        range6 = new ulong[64];
+        range1Only = new ulong[64];
+        range2Only = new ulong[64];
+        range3Only = new ulong[64];
+        range4Only = new ulong[64];
+        range5Only = new ulong[64];
+        range6Only = new ulong[64];
+        range7Only = new ulong[64];
+        ranges = new ulong[6][] { range1, range2, range3, range4, range5, range6 };
+        rangesOnly = new ulong[7][] { range1Only, range2Only, range3Only, range4Only, range5Only, range6Only, range7Only };
+
+        directionBetweenPoints = new Dir[64][];
+
         for (int xy = 0; xy < 64; xy++)
         {
+            directionBetweenPoints[xy] = new Dir[64];
+
+            for (int txy = 0; txy < 64; txy++)
+            {
+                directionBetweenPoints[xy][txy] = Move.DeltaToDirSoft((txy & 7) - (xy & 7), (txy >> 3) - (xy >> 3));
+            }
+
+
             int x = xy & 7;
             int y = xy >> 3;
             ulong bitindex = 1uL << xy;
 
-            if (x != 7)
+            //Rays
             {
-                //xy < 63
-                //note: x == 7 is true at position 63 so that check is unnecessary
-                raysRight[xy] = (MoveGenerator.BITBOARD_PATTERN_RANK1 << (xy + 1)) & MainManager.GetWraparoundCutoff(x + 1);
-            }
-            if (x != 0)
-            {
-                if (xy >= 8)
+                if (x != 7)
                 {
-                    raysLeft[xy] = (MoveGenerator.BITBOARD_PATTERN_RANK1 << (xy - 8)) & MainManager.GetWraparoundCutoff(x - 8);
+                    //xy < 63
+                    //note: x == 7 is true at position 63 so that check is unnecessary
+                    raysRight[xy] = (MoveGenerator.BITBOARD_PATTERN_RANK1 << (xy + 1)) & MainManager.GetWraparoundCutoff(x + 1);
+                }
+                if (x != 0)
+                {
+                    if (xy >= 8)
+                    {
+                        raysLeft[xy] = (MoveGenerator.BITBOARD_PATTERN_RANK1 << (xy - 8)) & MainManager.GetWraparoundCutoff(x - 8);
+                    }
+                    else
+                    {
+                        raysLeft[xy] = (MoveGenerator.BITBOARD_PATTERN_RANK1 >> (8 - xy)) & MainManager.GetWraparoundCutoff(x - 8);
+                    }
+                }
+                if (y < 7)
+                {
+                    raysUp[xy] = MoveGenerator.BITBOARD_PATTERN_AFILE << (xy + 8);
+                }
+                if (y > 0)
+                {
+                    raysDown[xy] = MoveGenerator.BITBOARD_PATTERN_AFILE >> (64 - xy);
+                }
+
+                raysUR[xy] = ((MoveGenerator.BITBOARD_PATTERN_DIAGONAL << (xy)) & MainManager.GetWraparoundCutoff(x)) & ~bitindex;
+
+                raysDL[xy] = ((MoveGenerator.BITBOARD_PATTERN_DIAGONAL >> (63 - xy)) & MainManager.GetWraparoundCutoff(x - 7)) & ~bitindex;
+
+                if (xy <= 56)
+                {
+                    raysDR[xy] = ((MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL >> (56 - xy)) & MainManager.GetWraparoundCutoff(x)) & ~bitindex;
                 }
                 else
                 {
-                    raysLeft[xy] = (MoveGenerator.BITBOARD_PATTERN_RANK1 >> (8 - xy)) & MainManager.GetWraparoundCutoff(x - 8);
+                    raysDR[xy] = ((MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL << (xy - 56)) & MainManager.GetWraparoundCutoff(x)) & ~bitindex;
+                }
+                if (xy <= 7)
+                {
+                    raysUL[xy] = ((MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL >> (7 - xy)) & MainManager.GetWraparoundCutoff(x - 7)) & ~bitindex;
+                }
+                else
+                {
+                    raysUL[xy] = ((MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL << (xy - 7)) & MainManager.GetWraparoundCutoff(x - 7)) & ~bitindex;
                 }
             }
-            if (y < 7)
-            {
-                raysUp[xy] = MoveGenerator.BITBOARD_PATTERN_AFILE << (xy + 8);
-            }
-            if (y > 0)
-            {
-                raysDown[xy] = MoveGenerator.BITBOARD_PATTERN_AFILE >> (64 - xy);
-            }
 
-            raysUR[xy] = ((MoveGenerator.BITBOARD_PATTERN_DIAGONAL << (xy)) & MainManager.GetWraparoundCutoff(x)) & ~bitindex;
+            //Ranges
+            {
+                range1[xy] = MainManager.SmearBitboard(bitindex);
+                range2[xy] = MainManager.SmearBitboard(range1[xy]);
+                range3[xy] = MainManager.SmearBitboard(range2[xy]);
+                range4[xy] = MainManager.SmearBitboard(range3[xy]);
+                range5[xy] = MainManager.SmearBitboard(range4[xy]);
+                range6[xy] = MainManager.SmearBitboard(range5[xy]);
 
-            raysDL[xy] = ((MoveGenerator.BITBOARD_PATTERN_DIAGONAL >> (63 - xy)) & MainManager.GetWraparoundCutoff(x - 7)) & ~bitindex;
-
-            if (xy <= 56)
-            {
-                raysDR[xy] = ((MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL >> (56 - xy)) & MainManager.GetWraparoundCutoff(x)) & ~bitindex;
-            }
-            else
-            {
-                raysDR[xy] = ((MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL << (xy - 56)) & MainManager.GetWraparoundCutoff(x)) & ~bitindex;
-            }
-            if (xy <= 7)
-            {
-                raysUL[xy] = ((MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL >> (7 - xy)) & MainManager.GetWraparoundCutoff(x - 7)) & ~bitindex;
-            }
-            else
-            {
-                raysUL[xy] = ((MoveGenerator.BITBOARD_PATTERN_ANTIDIAGONAL << (xy - 7)) & MainManager.GetWraparoundCutoff(x - 7)) & ~bitindex;
+                range1Only[xy] = range1[xy];
+                range2Only[xy] = range2[xy] & ~range1[xy];
+                range3Only[xy] = range3[xy] & ~range2[xy];
+                range4Only[xy] = range4[xy] & ~range3[xy];
+                range5Only[xy] = range5[xy] & ~range4[xy];
+                range6Only[xy] = range6[xy] & ~range5[xy];
+                range7Only[xy] = ~range6[xy];   //range 7 = (all squares)
             }
         }
 
@@ -371,6 +438,7 @@ public sealed class GlobalPieceManager : MonoBehaviour
         }
         */
 
+        /*
         Piece.PieceType pt = Piece.GetPieceType(piece);
 
         if (pt == Piece.PieceType.Null)
@@ -379,6 +447,15 @@ public sealed class GlobalPieceManager : MonoBehaviour
         }
 
         return pieceTable[((int)pt - 1)];
+        */
+
+        uint index = (piece & MASK_PIECE_TYPE);
+        if (index == 0)
+        {
+            return null;
+        }
+        return pieceTable[((int)(index - 1))];
+
         //return Instance.GetPieceTableEntry(Piece.GetPieceType(piece));
     }
     /*
@@ -518,11 +595,12 @@ public sealed class PieceTableEntry
     //Redundant but potentially useful to save a few Piece.GetPieceType calls?
     public Piece.PieceType type;
 
-    public short pieceValueX2;
+    public int pieceValueX2;
 
     //Some move generator data
     public MoveGeneratorInfoEntry[] moveInfo;
     public MoveGeneratorInfoEntry[] enhancedMoveInfo;
+    public bool notReallyEnhanced;
 
     public Piece.EnhancedMoveType enhancedMoveType;
     public Piece.BonusMoveType bonusMoveType;
@@ -565,11 +643,16 @@ public sealed class PieceTableEntry
 
         if (tableRow.Length > 1)
         {
-            float.TryParse(tableRow[1], out float floatValue);
+            string numResult = tableRow[1];
+            if (!int.TryParse(tableRow[1].Substring(0,1), out int _))
+            {
+                numResult = tableRow[1].Substring(1);
+            }
+            float.TryParse(numResult, out float floatValue);
 
             output.pieceValueX2 = (byte)(floatValue * 2);
 
-            if (output.type == Piece.PieceType.King)
+            if (tableRow[1].Contains("R"))
             {
                 output.pieceValueX2 += GlobalPieceManager.KING_VALUE_BONUS;
             }
@@ -585,6 +668,18 @@ public sealed class PieceTableEntry
         {
             //Parse piece movement
             output.enhancedMoveInfo = MoveGeneratorInfoEntry.ParseMovement(tableRow[3]);
+
+            if (output.moveInfo.Length == output.enhancedMoveInfo.Length)
+            {
+                output.notReallyEnhanced = true;
+                for (int i = 0; i < output.moveInfo.Length; i++)
+                {
+                    if (output.moveInfo[i].atom != output.enhancedMoveInfo[i].atom || output.moveInfo[i].range != output.enhancedMoveInfo[i].range || output.moveInfo[i].rangeType != output.enhancedMoveInfo[i].rangeType)
+                    {
+                        output.notReallyEnhanced = false;
+                    }
+                }
+            }
         }
 
         if (tableRow.Length > 4)
@@ -734,7 +829,7 @@ public sealed class PieceTableEntry
                     break;
             }
         }
-        if ((output.piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
+        if ((output.piecePropertyB & Piece.PiecePropertyB.NonStandardSize) != 0)
         {
             forbidWinged = true;
         }
@@ -938,7 +1033,7 @@ public sealed class PieceTableEntry
 }
 
 [System.Serializable]
-public sealed class MoveGeneratorInfoEntry
+public struct MoveGeneratorInfoEntry
 {
     public enum MoveGeneratorAtom
     {
@@ -949,15 +1044,15 @@ public sealed class MoveGeneratorInfoEntry
         F,  //ferz
         B,  //bishop
 
-        K,  //King shorthand (= WF)
-        Q,  //Queen shorthand (= RB)
+        //K,  //King shorthand (= WF)
+        //Q,  //Queen shorthand (= RB)
 
         Z,  //crooked bishop (Not using the "Z" modifier because it is hard to do)
         C,  //crooked rook
         I,  //rhino
 
         G, //gryphon
-        M, //manticore
+        M, //manticore (anchorite with the new naming convention)
 
         H, //Wheel movement
 
@@ -972,6 +1067,7 @@ public sealed class MoveGeneratorInfoEntry
         S,  //rose leaper
 
         Leaper,  //(leaper / rider placeholder)
+        Range,  //range X (i.e. all distance 1 moves, or distance 2 leaps, distance 3 leaps) (X parameter is used for the distance moved)
 
         SpecialMoveDivider,     //Used to check for special moves
 
@@ -1030,7 +1126,7 @@ public sealed class MoveGeneratorInfoEntry
         r = 1<<7,  //rifle capture
         l = 1<<8,  //leaper capture
         j = 1<<9,   //forced leaper
-        y = 1<<10,   //flying move only (unused)
+        //y = 1<<10,   //flying move only (unused) (unimplemented)
 
         a = 1<<11,  //Ally ability
         n = 1<<12,  //Special ability that targets empty squares (Similar effect to "m")
@@ -1062,14 +1158,19 @@ public sealed class MoveGeneratorInfoEntry
     public int range;
     public RangeType rangeType;
 
-    public MoveGeneratorInfoEntry()
-    {
-
-    }
+    //public MoveGeneratorInfoEntry()
+    //{
+    //
+    //}
 
     public MoveGeneratorInfoEntry(MoveGeneratorAtom atom)
     {
         this.atom = atom;
+        this.range = 0;
+        this.x = 0;
+        this.y = 0;
+        this.rangeType = RangeType.Normal;
+        this.modifier = MoveGeneratorPreModifier.None;
     }
 
     public MoveGeneratorInfoEntry(MoveGeneratorInfoEntry mgie)
@@ -1098,6 +1199,7 @@ public sealed class MoveGeneratorInfoEntry
 
         //K = WF
         //Q = RB
+        /*
         for (int i = 0; i < output.Count; i++)
         {
             if (output[i].atom == MoveGeneratorAtom.K)
@@ -1117,6 +1219,7 @@ public sealed class MoveGeneratorInfoEntry
                 continue;
             }
         }
+        */
 
         return output.ToArray();
     }
@@ -1149,7 +1252,7 @@ public sealed class MoveGeneratorInfoEntry
             {
                 case 0:
                     //If a state 1 thing is seen: skip to state 1
-                    if (movement[index] == '(')
+                    if (movement[index] == '(' || movement[index] == '[')
                     {
                         state = 1;
                         continue;
@@ -1208,10 +1311,59 @@ public sealed class MoveGeneratorInfoEntry
                             throw new ArgumentException("Failed to parse movement (leaper atom parsing failed, found + " + parenthesisSplit[1] + " for element 1 when a number was expected)");
                         }
 
+                        //force x > y to simplify other code
+                        if (x < y)
+                        {
+                            int temp = y;
+                            y = x;
+                            x = temp;
+                        }
                         nextEntry.x = x;
                         nextEntry.y = y;
                         nextEntry.range = 1;
                         nextEntry.atom = MoveGeneratorAtom.Leaper;
+
+                        index = closeIndex + 1;
+                        state = 2;
+                        continue;
+                    }
+                    //Range [X]
+                    if (movement[index] == '[')
+                    {
+                        int closeIndex = index;
+                        while (closeIndex < movement.Length)
+                        {
+                            if (movement[closeIndex] == ']')
+                            {
+                                break;
+                            }
+                            closeIndex++;
+                        }
+                        if (closeIndex > movement.Length)
+                        {
+                            throw new ArgumentException("Failed to parse movement (range atom parsing failed, no matching ']' found)");
+                        }
+
+                        //Parse stuff between
+                        string insideParenthesis = movement.Substring(index + 1, closeIndex - index - 1);
+
+                        string[] parenthesisSplit = insideParenthesis.Split(",");
+
+                        if (parenthesisSplit.Length != 1)
+                        {
+                            throw new ArgumentException("Failed to parse movement (range atom parsing failed, found + " + parenthesisSplit.Length + " elements parenthesized, expected 1)");
+                        }
+
+                        int x;
+                        if (!int.TryParse(parenthesisSplit[0], out x))
+                        {
+                            throw new ArgumentException("Failed to parse movement (range atom parsing failed, found + " + parenthesisSplit[0] + " for element 1 when a number was expected)");
+                        }
+
+                        nextEntry.x = x;
+                        nextEntry.y = 0;
+                        nextEntry.range = 1;
+                        nextEntry.atom = MoveGeneratorAtom.Range;
 
                         index = closeIndex + 1;
                         state = 2;
@@ -1225,7 +1377,7 @@ public sealed class MoveGeneratorInfoEntry
                         {
                             case MoveGeneratorAtom.W:
                             case MoveGeneratorAtom.F:
-                            case MoveGeneratorAtom.K:
+                            //case MoveGeneratorAtom.K:
                                 nextEntry.range = 1;
                                 break;
                         }
@@ -1240,7 +1392,7 @@ public sealed class MoveGeneratorInfoEntry
                     throw new ArgumentException("Failed to parse movement (atom parsing failed, last character seen = " + movement[index] + ")");
                 case 2:
                     //If state 0 or state 1 thing is seen: you've gone past this current atom
-                    if (movement[index] == '(')
+                    if (movement[index] == '(' || movement[index] == '[')
                     {
                         state = 1;
                         return (nextEntry, index);
@@ -1296,7 +1448,7 @@ public sealed class MoveGeneratorInfoEntry
                     throw new ArgumentException("Failed to parse movement (range parsing failed, last character seen = " + movement[index] + ")");
                 case 3:
                     //If state 0 or state 1 thing is seen: you've gone past this current atom
-                    if (movement[index] == '(')
+                    if (movement[index] == '(' || movement[index] == '[')
                     {
                         state = 1;
                         return (nextEntry, index);
@@ -1370,26 +1522,6 @@ public sealed class MoveGeneratorInfoEntry
     {
         switch (m)
         {
-            case MoveGeneratorAtom.Null:
-            case MoveGeneratorAtom.W:
-            case MoveGeneratorAtom.R:
-            case MoveGeneratorAtom.F:
-            case MoveGeneratorAtom.B:
-            case MoveGeneratorAtom.K:
-            case MoveGeneratorAtom.Q:
-            case MoveGeneratorAtom.Z:
-            case MoveGeneratorAtom.C:
-            case MoveGeneratorAtom.I:
-            case MoveGeneratorAtom.G:
-            case MoveGeneratorAtom.M:
-            case MoveGeneratorAtom.A:
-            case MoveGeneratorAtom.D:
-            case MoveGeneratorAtom.J:
-            case MoveGeneratorAtom.E:
-            case MoveGeneratorAtom.S:
-            case MoveGeneratorAtom.Leaper:
-            case MoveGeneratorAtom.Castling:
-                return null;
             case MoveGeneratorAtom.H:
                 return "[Special] Move around the rings of the board.";
             case MoveGeneratorAtom.O:

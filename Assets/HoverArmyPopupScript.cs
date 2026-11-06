@@ -30,7 +30,7 @@ public class HoverArmyPopupScript : HoverPopupScript
                 rows = 1 + (i >> 3);
             }
 
-            if ((GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(army[i])).piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
+            if ((GlobalPieceManager.GetPieceTableEntry(Piece.GetPieceType(army[i])).piecePropertyB & (Piece.PiecePropertyB.Giant | Piece.PiecePropertyB.Tall)) != 0)
             {
                 if (rows < 2 + (i >> 3))
                 {

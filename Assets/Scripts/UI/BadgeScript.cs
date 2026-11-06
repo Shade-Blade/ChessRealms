@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -16,7 +17,8 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
     public DraggableObject dob;
     public SelectableObject seb;
 
-    public Board.PlayerModifier pm;
+    [NonSerialized]
+    public Board.BadgeType badgeType;
 
     public int badgeIndex = -1;
     public ConsumableBadgePanelScript cps;
@@ -50,14 +52,14 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         cps = FindObjectOfType<ConsumableBadgePanelScript>();
         trashCan = FindObjectOfType<TrashCanScript>();
 
-        Setup(pm);
+        Setup(badgeType);
     }
 
-    public void Setup(Board.PlayerModifier pm)
+    public void Setup(Board.BadgeType bt)
     {
-        this.pm = pm;
+        this.badgeType = bt;
 
-        if (pm == 0)
+        if (bt.pm == 0 && bt.pmB == 0)
         {
             text.enabled = false;
             backSprite.enabled = false;
@@ -68,11 +70,11 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         backSprite.enabled = true;
         bc.enabled = true;
 
-        backSprite.sprite = Text_BadgeSprite.GetBadgeSprite(pm);
+        backSprite.sprite = Text_BadgeSprite.GetBadgeSprite(badgeType);
 
         if (MainManager.Instance.pieceTextVisible)
         {
-            text.text = Board.GetPlayerModifierName(pm);
+            text.text = Board.GetPlayerModifierName(badgeType);
         }
         else
         {
@@ -120,7 +122,7 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
     public int GetCost()
     {
-        return Board.GetPlayerModifierCost(pm);
+        return Board.GetPlayerModifierCost(badgeType);
     }
 
     public void OnDragStart()
@@ -131,7 +133,7 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         isHover = true;
         if (trashCan != null && badgeIndex >= 0 && bs != null && bs.setupMoves)
         {
-            trashCan.text.text = "Sell: $" + GetCost();
+            trashCan.text.text = "Sell: $" + (GetCost() / 2);
             trashCan.SetActive();
         }
         if (cps != null)
@@ -181,7 +183,7 @@ public class BadgeScript : MonoBehaviour, ISelectEventListener, IDragEventListen
 
     public string GetHoverText()
     {
-        return "<outlinecolordark,#c0c0ff>" + Board.GetPlayerModifierName(pm) + "</outlinecolor><line>" + Board.GetPlayerModifierDescription(pm);
+        return "<outlinecolordark,#c0c0ff>" + Board.GetPlayerModifierName(badgeType) + "</outlinecolor><line>" + Board.GetPlayerModifierDescription(badgeType);
     }
 
     public void OnMouseOver()

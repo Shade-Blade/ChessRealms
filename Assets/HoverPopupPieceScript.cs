@@ -26,6 +26,8 @@ public class HoverPopupPieceScript : MonoBehaviour
             text.text = "";
         }
         bool giant = (GlobalPieceManager.GetPieceTableEntry(pieceType).piecePropertyB & Piece.PiecePropertyB.Giant) != 0;
+        bool tall = (GlobalPieceManager.GetPieceTableEntry(pieceType).piecePropertyB & Piece.PiecePropertyB.Tall) != 0;
+        bool wide = (GlobalPieceManager.GetPieceTableEntry(pieceType).piecePropertyB & Piece.PiecePropertyB.Wide) != 0;
 
         if (giant)
         {
@@ -33,7 +35,21 @@ public class HoverPopupPieceScript : MonoBehaviour
             backSprite.rectTransform.sizeDelta = new Vector2(54, 54);
             text.rectTransform.localPosition = new Vector3(15, 15, 0);
             text.rectTransform.sizeDelta = new Vector2(48, 48);
-        } else
+        } else if (tall)
+        {
+            backSprite.rectTransform.localPosition = new Vector3(0, 15, 0);
+            backSprite.rectTransform.sizeDelta = new Vector2(27, 54);
+            text.rectTransform.localPosition = new Vector3(0, 15, 0);
+            text.rectTransform.sizeDelta = new Vector2(24, 48);
+        }
+        else if (wide)
+        {
+            backSprite.rectTransform.localPosition = new Vector3(15, 0, 0);
+            backSprite.rectTransform.sizeDelta = new Vector2(54, 27);
+            text.rectTransform.localPosition = new Vector3(15, 0, 0);
+            text.rectTransform.sizeDelta = new Vector2(48, 24);
+        }
+        else
         {
             backSprite.rectTransform.localPosition = Vector3.zero;
             text.rectTransform.localPosition = Vector3.zero;

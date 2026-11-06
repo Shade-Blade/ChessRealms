@@ -225,3 +225,4 @@ MonoBehaviour:
   realmText: {fileID: 4546099691330565664}
   baseDifficulty: 7
   init: 0
+  finalBoss: 0

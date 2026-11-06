@@ -100,7 +100,7 @@ public class OverworldScript : MonoBehaviour
                 case MapNodeScript.MapNodeType.BossBattle:
                 case MapNodeScript.MapNodeType.FinalBossBattle:
                     setupBoard.gameObject.SetActive(false);
-                    mapNodeSubobject = BattleBoardScript.CreateBoard(ms.army, MainManager.Instance.playerData.GetPlayerModifier(), ms.em, ms.pieceClass).gameObject;
+                    mapNodeSubobject = BattleBoardScript.CreateBoard(ms.army, MainManager.Instance.playerData.GetPlayerModifier(), MainManager.Instance.playerData.GetPlayerModifierB(), ms.em, ms.emB, ms.pieceClass).gameObject;
                     mapNodeSubobject.GetComponent<BattleBoardScript>().SetTheme(realmMap.pieceClass);
                     break;
                 case MapNodeScript.MapNodeType.Shop:

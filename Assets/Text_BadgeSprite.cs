@@ -53,17 +53,44 @@ public class Text_BadgeSprite : Text_SpecialSprite
 
         Enum.TryParse(badge, true, out badgeType);
 
+        Board.PlayerModifierB badgeTypeB;
+
+        Enum.TryParse(badge, true, out badgeTypeB);
+
         //random failsafe thing I guess
         if ((int)badgeType < 1)
         {
-            Debug.Log("Parse fail: " + badge);
-            return MainManager.Instance.badgeSprites[MainManager.Instance.badgeSprites.Length - 1];
+            if ((int)badgeTypeB < 1)
+            {
+                Debug.Log("Parse fail: " + badge);
+                return MainManager.Instance.badgeSprites[MainManager.Instance.badgeSprites.Length - 1];
+            } else
+            {
+                return GetBadgeSprite(badgeTypeB);
+            }
         }
 
         return GetBadgeSprite(badgeType);
     }
 
+    public static Sprite GetBadgeSprite(Board.BadgeType bt)
+    {
+        if (bt.pm != 0)
+        {
+            return GetBadgeSprite(bt.pm);
+        }
+        if (bt.pmB != 0)
+        {
+            return GetBadgeSprite(bt.pmB);
+        }
+        return null;
+    }
     public static Sprite GetBadgeSprite(Board.PlayerModifier pm)
+    {
+        //note that 1 << 0 has lsb1 = 0
+        return MainManager.Instance.badgeSprites[(int)(MainManager.PopBitboardLSB1((ulong)pm))];
+    }
+    public static Sprite GetBadgeSprite(Board.PlayerModifierB pm)
     {
         //note that 1 << 0 has lsb1 = 0
         return MainManager.Instance.badgeSprites[(int)(MainManager.PopBitboardLSB1((ulong)pm))];

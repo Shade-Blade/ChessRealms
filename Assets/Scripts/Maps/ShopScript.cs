@@ -78,7 +78,7 @@ public class ShopScript : MonoBehaviour, IEvent
         {
             for (int i = 0; i < GlobalPieceManager.pieceTable.Length; i++)
             {
-                if (GlobalPieceManager.pieceTable[i] == null || GlobalPieceManager.pieceTable[i].type == Piece.PieceType.King || GlobalPieceManager.pieceTable[i].type == Piece.PieceType.Rock)
+                if (GlobalPieceManager.pieceTable[i] == null || GlobalPieceManager.pieceTable[i].pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS || GlobalPieceManager.pieceTable[i].pieceValueX2 == 0)
                 {
                     continue;
                 }
@@ -165,12 +165,12 @@ public class ShopScript : MonoBehaviour, IEvent
             go.GetComponent<ConsumableScript>().Setup(consumables[i]);
         }
 
-        List<Board.PlayerModifier> badges = new List<Board.PlayerModifier>();
+        List<Board.BadgeType> badges = new List<Board.BadgeType>();
         for (int i = 1; i < (28 + 1); i++)
         {
             if (!MainManager.Instance.playerData.HasBadge((Board.PlayerModifier)(1 << i)))
             {
-                badges.Add((Board.PlayerModifier)(1 << i));
+                badges.Add(new Board.BadgeType((Board.PlayerModifier)(1 << i), 0));
             }
         }
         while (badges.Count > badgeCount)

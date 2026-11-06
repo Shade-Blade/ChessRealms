@@ -3,6 +3,7 @@ Shader "Custom/PieceModifier" {
 		[PerRendererData]_MainTex("Sprite Texture", 2D) = "white" {}
 		_Cutoff("Shadow alpha cutoff", Range(0,1)) = 0.5
 		_LightDesaturation("Light Desaturtion", float) = 0.5
+		_SaturationThreshold("Saturation Threshold", float) = 0.01
 
 		[HDR]
 		_BlackColor("Black Color", Color) = (0,0,1,1)
@@ -42,6 +43,7 @@ Shader "Custom/PieceModifier" {
 		sampler2D _MainTex;
 
 		float _LightDesaturation;
+        float _SaturationThreshold;
 
 		half4 _BlackColor;
 		half4 _GrayColor;
@@ -141,7 +143,7 @@ Shader "Custom/PieceModifier" {
 
 			//White pieces have pastel ish colors while Black pieces can have fully saturated colors
 			//(This is probably the best way to have a bit of color on pieces?)
-			if (saturation > 0.05) {
+			if (saturation > _SaturationThreshold) {
 				newcol.rgb = lerp(newcol.rgb, float3(1,1,1), factor * _LightDesaturation * (0.25));
 			} else {
 				newcol.rgb = lerp(newcol.rgb, float3(1,1,1), factor * _LightDesaturation * (1));

@@ -356,6 +356,7 @@ MonoBehaviour:
   consumableTemplate: {fileID: 8130598408745144858, guid: 0bded293bd2364c4e812e3919ecca33e, type: 3}
   badgeTemplate: {fileID: 7412938456320869349, guid: 9caa31b046419ed4fa61c28b6a354487, type: 3}
   bs: {fileID: 0}
+  trashCan: {fileID: 7646794818146616221}
   colorListA:
   - {fileID: 4550269996297316544}
   - {fileID: 5930557390973409292}

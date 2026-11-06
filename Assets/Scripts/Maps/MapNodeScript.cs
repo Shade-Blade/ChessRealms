@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -26,7 +27,10 @@ public class MapNodeScript : MonoBehaviour
     public int pieceTypes;
     public Piece.PieceClass pieceClass;
     public uint[] army;          //Reused for the free pieces or shop pieces
+    [NonSerialized]
     public Board.EnemyModifier em;
+    [NonSerialized]
+    public Board.EnemyModifierB emB;
 
     public bool active;
     public bool done;
@@ -218,22 +222,40 @@ public class MapNodeScript : MonoBehaviour
     {
         if (nodeType == MapNodeType.BossBattle)
         {
-            int i = Random.Range(1, 24);
+            int failures = 0;
+            while (true)
+            {
+                failures++;
+                if (failures > 100)
+                {
+                    //default
+                    em = (Board.EnemyModifier.Jester);
+                    break;
+                }
+                int i = UnityEngine.Random.Range(1, 24);
 
-            em = (Board.EnemyModifier)(1 << i);
+                em = (Board.EnemyModifier)(1 << i);
+
+                float power = Board.GetEnemyModifierPower(em);
+                //if value is too much: don't use it
+                if (power < truePieceValueTotal / 2)
+                {
+                    break;
+                }
+            }
         }
         if (nodeType == MapNodeType.FinalBossBattle)
         {
             em = Board.EnemyModifier.Zenith;
         }
-        army = ArmyGenerator.ConvertPieceTypeArray(ArmyGenerator.GenerateArmy(truePieceValueTotal, pieceTypes, truePieceValueTotal > 15f ? 0.5f + ((10f * 0.25f) / (truePieceValueTotal - 5)) : 0.75f, 0.5f, pieceClass, em));
+        army = ArmyGenerator.ConvertPieceTypeArray(ArmyGenerator.GenerateArmy(truePieceValueTotal, pieceTypes, truePieceValueTotal > 15f ? 0.5f + ((10f * 0.25f) / (truePieceValueTotal - 5)) : 0.75f, 0.5f, pieceClass, em, emB));
         //Recount piece value because it could be off by 1 or something
         pieceValueTotal = 0;
         for (int i = 0; i < army.Length; i++)
         {
             PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(army[i]);
 
-            if (pte == null || pte.type == Piece.PieceType.King)
+            if (pte == null || pte.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS)
             {
                 continue;
             }

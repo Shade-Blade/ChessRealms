@@ -24,6 +24,7 @@ Shader "UI/PieceModifier" {
 		_Midpoint("Midpoint", Range(0,1)) = 0.5
 		_Leak("Leak", Range(0,1)) = 0.5
 		_LightDesaturation("Light Desaturtion", float) = 0.5
+		_SaturationThreshold("Saturation Threshold", float) = 0.01
 
         _OverlayColor("Overlay Color", Color) = (0,0,0,0)
 		_OverlayTex("Overlay Texture", 2D) = "white" {}
@@ -97,6 +98,7 @@ Shader "UI/PieceModifier" {
             float4 _MainTex_ST;
 
             float _LightDesaturation;
+            float _SaturationThreshold;
 
 		    half4 _BlackColor;
 		    half4 _GrayColor;
@@ -177,7 +179,7 @@ Shader "UI/PieceModifier" {
 
 			    //White pieces have pastel ish colors while Black pieces can have fully saturated colors
 			    //(This is probably the best way to have a bit of color on pieces?)
-                if (saturation > 0.05) {
+                if (saturation > _SaturationThreshold) {
                     c.rgb = lerp(c.rgb, float3(1,1,1), factor * _LightDesaturation * (0.25)); //lerp(c.rgb, float3(1,1,1), factor * _LightDesaturation);
                 } else {
 			        c.rgb = lerp(c.rgb, float3(1,1,1), factor * _LightDesaturation * (1)); //lerp(c.rgb, float3(1,1,1), factor * _LightDesaturation);

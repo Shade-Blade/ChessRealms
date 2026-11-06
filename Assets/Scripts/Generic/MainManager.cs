@@ -16,7 +16,10 @@ public class PlayerData
 
     public bool[] consumablesDisabled;  
     public Move.ConsumableMoveType[] consumables;
-    public Board.PlayerModifier[] badges;
+
+    //need to adapt to use playermodifierB as well
+    [NonSerialized]
+    public Board.BadgeType[] badges;
 
     public int difficulty;
 
@@ -29,6 +32,9 @@ public class PlayerData
     public ulong seed;
     public float animationSpeed;
 
+    public int undoResetAmount;
+    public int retryResetAmount;
+    public const int INFINITE_UNDOS = 1000000000;
     public int undosLeft;
     public int retriesLeft;
 
@@ -38,19 +44,16 @@ public class PlayerData
 
         consumables = new Move.ConsumableMoveType[4];
         consumablesDisabled = new bool[4];
-        badges = new Board.PlayerModifier[4];
+        badges = new Board.BadgeType[4];
 
         difficulty = 3;
-        coins = 5;
+        coins = 8;
 
-        //the normal king position to start with
-        army[2] = Piece.SetPieceType(Piece.PieceType.Bishop, 0);
-        army[3] = Piece.SetPieceType(Piece.PieceType.Knight, 0);
-        army[4] = Piece.SetPieceType(Piece.PieceType.King, 0);
-        army[10] = Piece.SetPieceType(Piece.PieceType.Pawn, 0);
+        army[2] = Piece.SetPieceType(Piece.PieceType.Knight, 0);
+        army[3] = Piece.SetPieceType(Piece.PieceType.King, 0);
+        army[4] = Piece.SetPieceType(Piece.PieceType.Rook, 0);
         army[11] = Piece.SetPieceType(Piece.PieceType.Pawn, 0);
         army[12] = Piece.SetPieceType(Piece.PieceType.Pawn, 0);
-        army[13] = Piece.SetPieceType(Piece.PieceType.Pawn, 0);
 
         realmsComplete = 0;
         realmBattlesComplete = 0;
@@ -59,14 +62,16 @@ public class PlayerData
         animationSpeed = 36;
         realmRouteChoices = new List<int>();
 
-        undosLeft = 3;
-        retriesLeft = 1;
+        undoResetAmount = 3;
+        retryResetAmount = 1;
+        undosLeft = undoResetAmount;
+        retriesLeft = retryResetAmount;
     }
 
     public void GenerateSeed()
     {
         //arbitrary thing I guess
-        UnityEngine.Random.InitState(DateTime.UtcNow.ToString().GetHashCode());
+        UnityEngine.Random.InitState(DateTime.UtcNow.ToString().GetHashCode() ^ DateTime.Now.Millisecond.GetHashCode());
 
         uint randomA = (uint)UnityEngine.Random.Range(0, 256);
         ulong newRandom = 0;
@@ -85,7 +90,18 @@ public class PlayerData
     {
         for (int i = 0; i < badges.Length; i++)
         {
-            if ((badges[i] & pm) != 0)
+            if ((badges[i].pm & pm) != 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    public bool HasBadge(Board.PlayerModifierB pm)
+    {
+        for (int i = 0; i < badges.Length; i++)
+        {
+            if ((badges[i].pmB & pm) != 0)
             {
                 return true;
             }
@@ -97,7 +113,16 @@ public class PlayerData
         Board.PlayerModifier output = 0;
         for (int i = 0; i < badges.Length; i++)
         {
-            output |= badges[i];
+            output |= badges[i].pm;
+        }
+        return output;
+    }
+    public Board.PlayerModifierB GetPlayerModifierB()
+    {
+        Board.PlayerModifierB output = 0;
+        for (int i = 0; i < badges.Length; i++)
+        {
+            output |= badges[i].pmB;
         }
         return output;
     }
@@ -107,6 +132,55 @@ public class PlayerData
         for (int i = 0; i < MainManager.Instance.playerData.consumablesDisabled.Length; i++)
         {
             MainManager.Instance.playerData.consumablesDisabled[i] = false;
+        }
+    }
+
+    public void SetUndoAmountBasedOnDifficulty()
+    {
+        switch (difficulty)
+        {
+            case -1:
+                undoResetAmount = INFINITE_UNDOS;
+                retryResetAmount = INFINITE_UNDOS;
+                break;
+            case 0:
+                undoResetAmount = INFINITE_UNDOS;
+                retryResetAmount = INFINITE_UNDOS;
+                break;
+            case 1:
+                undoResetAmount = 5;
+                retryResetAmount = 2;
+                break;
+            case 2:
+                undoResetAmount = 3;
+                retryResetAmount = 1;
+                break;
+            case 3:
+                undoResetAmount = 2;
+                retryResetAmount = 1;
+                break;
+        }
+
+        undosLeft = undoResetAmount;
+        retriesLeft = retryResetAmount;
+    }
+
+    public void SetAnimationSpeedBasedOnSetting(int setting)
+    {
+        switch (setting)
+        {
+            case 0:
+                animationSpeed = 18;
+                break;
+            case 1:
+                animationSpeed = 36;
+                break;
+            case 2:
+                animationSpeed = 72;
+                break;
+            case 3:
+                animationSpeed = 10000;
+                break;
         }
     }
 } 
@@ -213,6 +287,238 @@ public class MainManager : MonoBehaviour
         }
     }
 
+    public void PieceCategorizationTest()
+    {
+        List<int> pieceCategorization = new List<int>();
+        List<List<Piece.PieceType>> categories = new List<List<Piece.PieceType>>();
+        for (int i = 1; i < (int)Piece.PieceType.EndOfTable; i++)
+        {
+            int pieceCategory = 0;
+
+            //64    128   256
+            //32
+            //16
+            //8
+            //4      2    1
+
+            //Some notable move types
+            //Amazon (all possible directions) = 511
+            //Queen/King (all 8 normal directions)  (341)
+            //Marshal           (443)
+            //Cardinal          (238)
+            //Knight            (170)
+            //Rook              (273)
+            //Bishop            (68)
+            //Pawn              (320)
+
+            //Knishop           (164)
+            //Bishight          (74)
+
+            //Other exotic types
+            //Robber            (201)       (Robber)
+            //Horn Spirit       (251)       (Horn Spirit)
+
+            //Narrow Bishop = (130)         (Narrow Bishop)
+            //Flat Bishop =     (40)        (Flat Bishop)
+            //Front Knight =    (165)       (Front Bishop)
+
+            //Diiligence =      (56)
+            //Back crab =        (34)            
+            //Crab =             (136)      (Crab)
+            //Trojan Horse =     (175)      (Trojan Horse)
+            //Arcana Moon =      (187)      (Arcana Moon)
+
+            //The other subsets of ortho/diagonal (all the usable ones at least)
+            //  I won't use any backwards only or no forwards moves
+            //  Odd numbers must contain straight forward or straight backwards
+            //7
+            //  No back         (340)       (Arcana Magician)
+            //  No front        (85)       (Magnet)
+            //6 
+            //  No vertical     (84)        (n/a)
+            //  No horizontal   (325)       (Assassin)
+            //  No forward diagonal (277)   (Front Rook)
+            //  No backwards diagonal (337) (Light Wisp)
+            //5
+            //  F + fW          (324)       (Arcana Empress)
+            //  F + bW          (69)        (Front Bishop)
+            //  fF + hbW        (81)        (Ace Of Swords)
+            //  fF + hfW        (336)       (Axe Pawn)
+            //  bF + hfW        (276)       (Arcana Star)
+            //4
+            //  W               (273)       (Rook)
+            //  F               (68)        (Bishop)
+            //  fF + hW         (80)        (Canoe)
+            //  fF + vW         (321)       (Ace of Cups)
+            //  bF + vW         (261)       (Scorpio)
+            //3
+            //  fF + fW         (320)       (Pawn)
+            //  fF + bW         (65)        (Rabbit)
+            //  fW + bF         (260)       (Skeleton)
+            //  fhW             (272)       (Shielder)
+            //2
+            //  Forward diagonal    (64)    (Priest)
+            //1
+            //  Forward only        (256)   (Peasant)
+
+
+            PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry((Piece.PieceType)i);
+            for (int j = 0; j < pte.moveInfo.Length; j++)
+            {
+                MoveGeneratorInfoEntry mgie = pte.moveInfo[j];
+                switch (mgie.atom)
+                {
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.W:
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.R:
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.Z:
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.G:
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.D:
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.E:
+                        if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.DirectionModifiers) == 0)
+                        {
+                            pieceCategory |= (256 + 16 + 1);
+                        }
+                        else
+                        {
+                            if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.f) != 0)
+                            {
+                                pieceCategory |= 256;
+                            }
+                            if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.v) != 0)
+                            {
+                                pieceCategory |= 257;
+                            }
+                            if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.b) != 0)
+                            {
+                                pieceCategory |= 1;
+                            }
+                            if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.h) != 0)
+                            {
+                                pieceCategory |= 16;
+                            }
+                        }
+                        break;
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.F:
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.B:
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.C:
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.M:
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.A:
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.J:
+                        if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.DirectionModifiers) == 0)
+                        {
+                            pieceCategory |= 68;
+                        }
+                        else
+                        {
+                            if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.f) != 0)
+                            {
+                                pieceCategory |= 64;
+                            }
+                            if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.b) != 0)
+                            {
+                                pieceCategory |= 4;
+                            }
+                        }
+                        break;
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.I:
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.S:
+                        //knight ish leapers also end up here
+                        if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.DirectionModifiers) == 0)
+                        {
+                            pieceCategory |= 2 + 8 + 32 + 128;
+                        }
+                        else
+                        {
+                            if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.f) != 0)
+                            {
+                                if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.v) != 0)
+                                {
+                                    pieceCategory |= 128;
+                                }
+                                else if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.h) != 0)
+                                {
+                                    pieceCategory |= 32;
+                                }
+                                else
+                                {
+                                    pieceCategory |= 32 + 128;
+                                }
+                            }
+                            else if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.b) != 0)
+                            {
+                                if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.v) != 0)
+                                {
+                                    pieceCategory |= 2;
+                                }
+                                else if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.h) != 0)
+                                {
+                                    pieceCategory |= 8;
+                                }
+                                else
+                                {
+                                    pieceCategory |= 10;
+                                }
+                            }
+                            else if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.v) != 0)
+                            {
+                                pieceCategory |= 130;
+                            }
+                            else if ((mgie.modifier & MoveGeneratorInfoEntry.MoveGeneratorPreModifier.h) != 0)
+                            {
+                                pieceCategory |= 40;
+                            }
+                        }
+                        break;
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.H:
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.O:
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.P:
+                        pieceCategory |= 512;
+                        break;
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.Leaper:
+                        //if orthogonal / diagonal: add in those directions
+                        if (mgie.x == 0 || mgie.y == 0)
+                        {
+                            goto case MoveGeneratorInfoEntry.MoveGeneratorAtom.R;
+                        }
+                        else if (mgie.x == mgie.y)
+                        {
+                            goto case MoveGeneratorInfoEntry.MoveGeneratorAtom.B;
+                        }
+                        goto case MoveGeneratorInfoEntry.MoveGeneratorAtom.I;
+                    case MoveGeneratorInfoEntry.MoveGeneratorAtom.Range:
+                        if (mgie.x > 1)
+                        {
+                            pieceCategory |= (511);
+                        }
+                        else
+                        {
+                            pieceCategory |= (256 + 64 + 16 + 4 + 1);
+                        }
+                        break;
+                }
+            }
+            pieceCategorization.Add(pieceCategory);
+        }
+
+        for (int i = 0; i < 1024; i++)
+        {
+            categories.Add(new List<Piece.PieceType>());
+        }
+
+        for (int i = 0; i < pieceCategorization.Count; i++)
+        {
+            int pieceCategory = pieceCategorization[i];
+            categories[pieceCategory].Add((Piece.PieceType)(i + 1));
+        }
+
+        string lines = "";
+        for (int i = 0; i < pieceCategorization.Count; i++)
+        {
+            lines = lines + pieceCategorization[i] + "\n";
+        }
+        Debug.Log(lines);
+    }
+
     // Start is called before the first frame update
     void Start()
     {
@@ -247,6 +553,8 @@ public class MainManager : MonoBehaviour
         //Now 1.2m with inlining annotations for tiny methods
         //1.5m with other random tiny things
 
+        //New laptop: 3.2m at base without profiler on (1.2m ish with profiler active)
+
         //90 ish seconds for depth 6 normal
 
         //Note that this does not match normal perft test because the perft test does not check for checks
@@ -258,7 +566,6 @@ public class MainManager : MonoBehaviour
         //4896537
         //120882519
 
-        //Bugs fixed now
         /*
         for (int i = 0; i <= 4; i++)
         {
@@ -277,11 +584,27 @@ public class MainManager : MonoBehaviour
             //BattleBoardScript bbs = FindObjectOfType<BattleBoardScript>();
             //bbs.thinkingText.text = output;
             Debug.Log(output);
-        } 
+        }
         */
 
-        //AI testing
+        //PieceCategorizationTest();
+
         /*
+        uint piece = 0;
+        piece = Piece.SetPieceType(Piece.PieceType.Pawn, piece);
+        Debug.Log(piece);
+        piece = Piece.SetPieceModifier(Piece.PieceModifier.Vengeful, piece);
+        Debug.Log(piece);
+        piece = Piece.SetPieceStatusEffect(Piece.PieceStatusEffect.Bloodlust, piece);
+        Debug.Log(piece);
+        piece = Piece.SetPieceStatusDuration((byte)3, piece);
+        Debug.Log(piece);
+        piece = Piece.SetPieceSpecialData(5, piece);
+        Debug.Log(piece);
+        */
+
+        /*
+        //AI testing
         ChessAI cai = new ChessAI();
         Board board = new Board();
         board.Setup(Board.BoardPreset.Normal);
@@ -400,6 +723,15 @@ public class MainManager : MonoBehaviour
         sameFrameSelected = false;
     }
 
+    public void LogException(string method, Exception ex)
+    {
+        LogError("Exception in method: " + method + ": " + ex.GetType() + ": " + ex.Message + "\n" + ex.StackTrace);
+    }
+    public void LogError(string error)
+    {
+        Debug.LogError(error);
+        //print to screen somehow
+    }
 
     public Vector2 RealMousePos()
     {
@@ -420,7 +752,11 @@ public class MainManager : MonoBehaviour
 
     public void StartRun()
     {
+        int difficulty = playerData.difficulty;
+        float animationSpeed = playerData.animationSpeed;
         playerData = new PlayerData();
+        playerData.difficulty = difficulty;
+        playerData.animationSpeed = animationSpeed;
         playerData.GenerateSeed();
         SceneManager.LoadScene("GameScene");
     }

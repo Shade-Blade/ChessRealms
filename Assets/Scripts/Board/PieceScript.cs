@@ -159,6 +159,15 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             }
         }
 
+        if ((pte.piecePropertyB & PiecePropertyB.WeakStart) != 0 && bs.board.turn < 4)
+        {
+            hoverText += "\nWeak Start: Can't capture until turn 3";
+        }
+        if ((pte.piecePropertyB & PiecePropertyB.LateStart) != 0 && bs.board.turn < 4)
+        {
+            hoverText += "\nLate Start: Can't move until turn 3";
+        }
+
         if (squareBelow != null)
         {
             if (hoverText.Length > 0)
@@ -548,7 +557,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         transform.position = BoardScript.GetSpritePositionFromCoordinates(x, y, -0.5f);
     }
 
-    public void ResetRelay()
+    public void ResetPieceLines()
     {
         for (int i = 0; i < relayAttackedList.Count; i++)
         {
@@ -561,9 +570,9 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
         }
         relayDefendersList = new List<LineRenderer>();
     }
-    public void UpdateRelay()
+    public void UpdatePieceLines()
     {
-        ResetRelay();
+        ResetPieceLines();
         ulong test = relayDefenders;
         while (test != 0)
         {
@@ -602,6 +611,36 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             relayTrailLine.positionCount = pointList.Count;
             relayTrailLine.SetPositions(pointList.ToArray());
             relayAttackedList.Add(relayTrailLine);
+        }
+
+        switch (Piece.GetPieceType(piece))
+        {
+            case PieceType.MegaCannon:
+            case PieceType.SteelGolem:
+            case PieceType.SteelPuppet:
+            case PieceType.Cannon:
+            case PieceType.MetalFox:
+                int targettedB = Piece.GetPieceSpecialData(piece);
+                if (targettedB != 0)
+                {
+                    int targetIndex = targettedB & 63;  //(mega cannon's timer takes up the extra bits) (They all use at least 1 extra bit anyway to distinguish aiming at square 0)
+
+                    GameObject relayTrail = Instantiate(relayTrailTemplate, transform);
+                    LineRenderer relayTrailLine = relayTrail.GetComponent<LineRenderer>();
+                    relayTrailLine.startColor = new Color(1, 0.75f, 0.75f, 1f);
+                    relayTrailLine.endColor = new Color(0.75f, 0.5f, 0.5f, 1f);
+
+                    Vector3 posA = BoardScript.GetSpritePositionFromCoordinates(x, y, -0.8f);
+                    Vector3 posB = BoardScript.GetSpritePositionFromCoordinates(targetIndex & 7, targetIndex >> 3, -0.8f);
+                    List<Vector3> pointList = new List<Vector3>();
+                    pointList.Add(posA);
+                    MoveTrailScript.AddLeaperSegment(pointList, posA, posB);
+                    pointList.Add(posB);
+
+                    relayTrailLine.positionCount = pointList.Count;
+                    relayTrailLine.SetPositions(pointList.ToArray());
+                }
+                break;
         }
     }
 
@@ -690,7 +729,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             }
             else
             {
-                trashCan.text.text = "Sell: $" + (GetCost() & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE);
+                trashCan.text.text = "Sell: $" + ((GetCost() & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) / 2);
             }
             trashCan.SetActive();
             if (!canDelete)
@@ -737,7 +776,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
                     bool value = bs.TrySetupMove(this, Move.PackMove(x, y, 15, 15));
                     if (value)
                     {
-                        MainManager.Instance.playerData.coins += GlobalPieceManager.GetPieceTableEntry(piece).pieceValueX2;
+                        MainManager.Instance.playerData.coins += (GlobalPieceManager.GetPieceTableEntry(piece).pieceValueX2 / 2);
                     }
                 } else
                 {
@@ -781,7 +820,7 @@ public class PieceScript : MonoBehaviour, ISelectEventListener, IDragEventListen
             x = bs.hoverX;
             y = bs.hoverY;
             transform.position = BoardScript.GetSpritePositionFromCoordinates(bs.hoverX, bs.hoverY, -0.5f);
-            bs.FixBoardBasedOnPosition();
+            bs.FixBoardBasedOnPosition(false);
         }
     }
 

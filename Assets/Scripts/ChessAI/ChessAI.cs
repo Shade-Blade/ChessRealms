@@ -6,6 +6,7 @@ using System.Linq;
 using System;
 using UnityEngine.SocialPlatforms.Impl;
 using System.Threading;
+using System.Reflection;
 
 public struct ZTableEntry   //= 32? bytes per entry
 {
@@ -58,9 +59,9 @@ public class ChessAI
 
     ulong[] moveHashes;
 
-    public const float KING_CAPTURE = 160000000000; //(1 << 30);        //illegal position: invalidates any position that leads to it (Can't move into check)
-    public const float WHITE_VICTORY = 100000; //(1 << 24);     //White wins (mate in X = this - X)
-    public const float BLACK_VICTORY = -100000; //-(1 << 24);    //Black wins (mate in X = this + X)
+    public const float KING_CAPTURE = -1e30F; //(1 << 30);        //illegal position: invalidates any position that leads to it (Can't move into check)
+    public const float WHITE_VICTORY = GlobalPieceManager.KING_VALUE_BONUS; //(1 << 24);     //White wins (mate in X = this - X)
+    public const float BLACK_VICTORY = -GlobalPieceManager.KING_VALUE_BONUS; //-(1 << 24);    //Black wins (mate in X = this + X)
 
     ulong nodesSearched;
     ulong quiNodeSearched;
@@ -71,6 +72,16 @@ public class ChessAI
 
     public Dictionary<int, Board> boardCache;
     public Dictionary<int, List<uint>> moveListCache;
+    public Dictionary<int, List<uint>> subMoveListCache;
+
+    //so that I can cache all boards 1 level deeper than the current?
+    //(does this help)
+    public Dictionary<int, HashSet<uint>> killerMoveDictCache;
+    //public Dictionary<int, List<Board>> boardPool;  //1 pool per turn so that I can clear out the pool after certain turns
+    //public int lastBoardPoolIndexFree;
+
+    public Dictionary<int, Dictionary<uint, float>> scoreDictCache;
+    public Dictionary<int, Dictionary<uint, bool>> nonpassiveDictCache;
 
     //problem: move board cache is bugging out somehow
     //and it is also not seeming to be worth it (too much overhead?)
@@ -107,6 +118,12 @@ public class ChessAI
         Debug.Log("AI init");
         boardCache = new Dictionary<int, Board>();
         moveListCache = new Dictionary<int, List<uint>>();
+        subMoveListCache = new Dictionary<int, List<uint>>();
+        scoreDictCache = new Dictionary<int, Dictionary<uint, float>>();
+        nonpassiveDictCache = new Dictionary<int, Dictionary<uint, bool>>();
+        killerMoveDictCache = new Dictionary<int, HashSet<uint>>();
+        //boardPool = new Dictionary<int, List<Board>>();
+        //lastBoardPoolIndexFree = 0;
         history = new HashSet<ulong>();
         ZobristTableInit();
         //MoveBoardCacheTableInit();
@@ -141,15 +158,15 @@ public class ChessAI
                 valueMult = 1f;
                 openingDeviation = 0.05f;
                 randomDeviation = 0.1f;
-                blunderDeviation = 1f;
-                maxDepth = 5;   //pretty fast
+                blunderDeviation = 0.3f;
+                maxDepth = 6;   //pretty fast
                 break;
             case 4:
                 valueMult = 1;
                 openingDeviation = 0.05f;
                 randomDeviation = 0.05f;
                 blunderDeviation = 0f;
-                maxDepth = 20;  //basically infinite
+                maxDepth = 10;  //a lot
                 break;
             case 5:
                 valueMult = 1;
@@ -199,40 +216,40 @@ public class ChessAI
         this.difficulty = difficulty;
         switch (difficulty)
         {
-            case 1: //0.5s
+            case 1: //0.25s
                 valueMult = 0.8f;
                 openingDeviation = 0.2f;   //Opening value roughly shifts by +- this (bigger on turn 1)
                 randomDeviation = 0.5f;    //Value roughly shifts by +- this
                 blunderDeviation = 3f;
                 maxDepth = 2;   //very fast
                 break;
-            case 2: //1s
+            case 2: //0.5s
                 valueMult = 0.9f;
                 openingDeviation = 0.1f;   //Opening value roughly shifts by +- this (bigger on turn 1)
                 randomDeviation = 0.3f;    //Value roughly shifts by +- this
                 blunderDeviation = 2f;
                 maxDepth = 3;   //very fast
                 break;
-            case 3: //2s
+            case 3: //1s
                 valueMult = 1f;
                 openingDeviation = 0.05f;
                 randomDeviation = 0.1f;
                 blunderDeviation = 1f;
                 maxDepth = 5;   //pretty fast
                 break;
-            case 4: //4s
+            case 4: //2s
                 valueMult = 1;
                 openingDeviation = 0.05f;
                 randomDeviation = 0.05f;
-                blunderDeviation = 0f;
-                maxDepth = 20;  //basically infinite
+                blunderDeviation = 0.5f;
+                maxDepth = 7;  //pretty good
                 break;
-            case 5: //8s
+            case 5: //5s
                 valueMult = 1;
                 openingDeviation = 0.04f;
                 randomDeviation = 0.04f;
-                blunderDeviation = 0f;
-                maxDepth = 40;  //yeah you aren't getting this
+                blunderDeviation = 0.2f;
+                maxDepth = 40;  //basically infinite
                 break;
         }
 
@@ -404,104 +421,115 @@ public class ChessAI
         return output;
     }
 
-    public float EvaluateBoard(ref Board b, ulong boardHash, List<uint> moves)
+    public float EvaluateBoard(ref Board b, ref Board copy, ulong boardHash, List<uint> moves)
     {
-        return EvaluateBoardFunction(ref b, boardHash, moves);
+        return EvaluateBoardFunction(ref b, ref copy, boardHash, moves);
     }
 
-    public float EvaluateBoardFunction(ref Board b, ulong boardHash, List<uint> moves)
+    public float EvaluateBoardFunction(ref Board b, ref Board copy, ulong boardHash, List<uint> moves)
     {
-        Piece.PieceAlignment winner = b.GetVictoryCondition();
-        if (winner != PieceAlignment.Null)
+        try
         {
-            //Has precedence
-            //because moving into check for a win condition feels very contrary to normal chess logic
-            //It seems fine for multi king because you can intuitively understand why you can ignore check in that case
-            if (!b.CheckForKings() || Board.IsKingCapturePossible(ref b, moves))
+            Piece.PieceAlignment winner = b.GetVictoryCondition();
+            if (winner != PieceAlignment.Null)
             {
-                return KING_CAPTURE;
+                //Has precedence
+                //because moving into check for a win condition feels very contrary to normal chess logic
+                //It seems fine for multi king because you can intuitively understand why you can ignore check in that case
+                if (!b.CheckForKings() || Board.IsKingCapturePossible(ref b, ref copy, moves))
+                {
+                    return KING_CAPTURE;
+                }
+
+                switch (winner)
+                {
+                    case PieceAlignment.White:
+                        return WHITE_VICTORY;
+                    case PieceAlignment.Black:
+                        return BLACK_VICTORY;
+                    case PieceAlignment.Neutral:
+                        return 0;
+                }
             }
 
-            switch (winner)
+            //Debug.Log("Start eval");
+            //Note that this is immediately after a GenerateMoves call so the bitboards for the board are properly set up
+            //So you can count value of crystal pieces
+
+            float value = 0;
+            float endgameValue = GetEndgameValue(ref b);
+
+            //Piece value sum
+            float pieceValueSum = ((b.whitePerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) - (b.blackPerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f;
+
+            //Easy mode thing
+            pieceValueSum *= valueMult;
+
+            value += pieceValueSum;
+
+            //Crystal pieces
+            float crystalMaterial = EvaluateCrystalPieceMaterial(ref b);
+            value += crystalMaterial;
+
+            //Pieces with modifiers
+            //should incentivize keeping Shielded instead of wasting it
+            float modifierMaterial = EvaluateModifierMaterial(ref b);
+            value += modifierMaterial;
+
+            //Castling value
+            //Small bonus for castling
+            if (!b.whitePerPlayerInfo.canCastle)
             {
-                case PieceAlignment.White:
-                    return WHITE_VICTORY;
-                case PieceAlignment.Black:
-                    return BLACK_VICTORY;
-                case PieceAlignment.Neutral:
-                    return 0;
+                value += 0.2f;
             }
+            if (!b.blackPerPlayerInfo.canCastle)
+            {
+                value -= 0.2f;
+            }
+
+            //Piece table values
+            float pstDelta = GetPSTDelta(ref b, endgameValue);
+            value += pstDelta;
+
+            float kingSafety = EvaluateKingSafety(ref b, endgameValue);
+            value += kingSafety * valueMult * valueMult;    //Bad AI undervalues king safety
+
+            float passedPawns = GetPassedPawns(ref b, endgameValue);
+            value += passedPawns;
+
+            float endgameKingCloseness = EvaluateEndgameKingCloseness(ref b, endgameValue);
+
+            float endgameKingOvertaken = EvaluateEndgameKingOvertaken(ref b, endgameValue);
+            value += endgameKingOvertaken;
+
+            //hacky setup
+            //the side that's winning in the endgame wants the kings to be close, the other side wants to run away
+            //Should encourage the winning side to get closer to a checkmating situation
+            value *= endgameKingCloseness;
+
+            //Random delta
+            value += (((((boardHash >> 4) & 15)) / 16f) - ((((boardHash >> 20) & 15)) / 16f)) * randomDeviation;
+            if ((boardHash & 511) <= 2)   //6/512 (since this shows up in the search tree this will be worse than it looks?)
+            {
+                //this gives a triangle distribution?
+                value += blunderDeviation * (((((boardHash >> 8) & 15)) / 16f) - ((((boardHash >> 16) & 15)) / 16f));
+            }
+            //Debug.Log((((((boardHash >> 4) & 15)) / 16f) - ((((boardHash >> 20) & 15)) / 16f)) * randomDeviation);
+            //Debug.Log(blunderDeviation * (((((boardHash >> 8) & 15)) / 16f) - ((((boardHash >> 16) & 15)) / 16f)));
+
+            //Debug.Log("End eval");
+
+            //Debug.Log(b.whitePerPlayerInfo.pieceValueSumX2 + " " + b.blackPerPlayerInfo.pieceValueSumX2);
+            //Debug.Log(pieceValueSum + " " + modifierMaterial + " " + pstDelta + " " + kingSafety + " endgame = " + endgameValue + " Total Material = " + ((b.whitePerPlayerInfo.pieceValueSumX2 + b.blackPerPlayerInfo.pieceValueSumX2) & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE));
+            //Debug.Log(value);
+            return value;
         }
-
-        //Debug.Log("Start eval");
-        //Note that this is immediately after a GenerateMoves call so the bitboards for the board are properly set up
-        //So you can count value of crystal pieces
-
-        float value = 0;
-        float endgameValue = GetEndgameValue(ref b);
-
-        //Piece value sum
-        float pieceValueSum = ((b.whitePerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) - (b.blackPerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) / 2f;
-
-        //Easy mode thing
-        pieceValueSum *= valueMult;
-
-        value += pieceValueSum;
-
-        //Crystal pieces
-        float crystalMaterial = EvaluateCrystalPieceMaterial(ref b);
-        value += crystalMaterial;
-
-        //Pieces with modifiers
-        //should incentivize keeping Shielded instead of wasting it
-        float modifierMaterial = EvaluateModifierMaterial(ref b);
-        value += modifierMaterial;
-
-        //Castling value
-        //Small bonus for castling
-        if (!b.whitePerPlayerInfo.canCastle)
+        catch (Exception ex)
         {
-            value += 0.2f;
+            MainManager.Instance.LogException(MethodBase.GetCurrentMethod().Name, ex);
+            b.BoardPrint();
         }
-        if (!b.blackPerPlayerInfo.canCastle)
-        {
-            value -= 0.2f;
-        }
-
-        //Piece table values
-        float pstDelta = GetPSTDelta(ref b, endgameValue);
-        value += pstDelta;
-
-        float kingSafety = EvaluateKingSafety(ref b, endgameValue);
-        value += kingSafety * valueMult * valueMult;    //Bad AI undervalues king safety
-
-        float passedPawns = GetPassedPawns(ref b, endgameValue);
-        value += passedPawns;
-
-        float endgameKingCloseness = EvaluateEndgameKingCloseness(ref b, endgameValue);
-
-        float endgameKingOvertaken = EvaluateEndgameKingOvertaken(ref b, endgameValue);
-        value += endgameKingOvertaken;
-
-        //hacky setup
-        //the side that's winning in the endgame wants the kings to be close, the other side wants to run away
-        //Should encourage the winning side to get closer to a checkmating situation
-        value *= endgameKingCloseness;
-
-        //Random delta
-        value += (((((boardHash >> 4) & 15)) / 16f) - ((((boardHash >> 20) & 15)) / 16f)) * randomDeviation;
-        if ((boardHash & 511) <= 2)   //6/512 (since this shows up in the search tree this will be worse than it looks?)
-        {
-            //this gives a triangle distribution?
-            value += blunderDeviation * (((((boardHash >> 8) & 15)) / 16f) - ((((boardHash >> 16) & 15)) / 16f));
-        }
-
-        //Debug.Log("End eval");
-
-        //Debug.Log(b.whitePerPlayerInfo.pieceValueSumX2 + " " + b.blackPerPlayerInfo.pieceValueSumX2);
-        //Debug.Log(pieceValueSum + " " + modifierMaterial + " " + pstDelta + " " + kingSafety + " endgame = " + endgameValue + " Total Material = " + ((b.whitePerPlayerInfo.pieceValueSumX2 + b.blackPerPlayerInfo.pieceValueSumX2) & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE));
-        //Debug.Log(value);
-        return value;
+        return 0;
     }
 
     public float EvaluateCrystalPieceMaterial(ref Board b)
@@ -541,8 +569,8 @@ public class ChessAI
     //      The non poison ones are better at low turn count
     public float EvaluateModifierMaterial(ref Board b)
     {
-        ulong bitboard_white = b.globalData.bitboard_piecesWhite;
-        ulong bitboard_black = b.globalData.bitboard_piecesBlack;
+        ulong bitboard_white = b.globalData.bitboard_piecesWhite & b.globalData.bitboard_nonNormalValue;
+        ulong bitboard_black = b.globalData.bitboard_piecesBlack & b.globalData.bitboard_nonNormalValue;
 
         float output = 0;
         while (bitboard_white != 0)
@@ -615,6 +643,44 @@ public class ChessAI
                         valueMult += 0.5f;
                     }
                     break;
+                //all the ConsumeAllies and ChargeByMoving property pieces called out by name to reduce property checks
+                case PieceType.SoulCannon:
+                case PieceType.Lich:
+                case PieceType.SoulDevourer:
+                case PieceType.QueenLeech:
+                    {
+                        float value = pte.pieceValueX2 * 0.25f;
+                        if (value > 1.5f)
+                        {
+                            value = 1.5f;
+                        }
+                        value *= Piece.GetPieceSpecialData(piece);
+                        if (value > 6)
+                        {
+                            value = 6;
+                        }
+                        output += value;
+                    }
+                    break;
+                case PieceType.ChargeBeast:
+                case PieceType.ChargeCannon:
+                case PieceType.ChargeWarper:
+                case PieceType.ChargeKnight:
+                case PieceType.ChargePawn:
+                    {
+                        float value = pte.pieceValueX2 * 0.05f;
+                        if (value > 1.5f)
+                        {
+                            value = 1.5f;
+                        }
+                        value *= Piece.GetPieceSpecialData(piece);
+                        if (value > 6)
+                        {
+                            value = 6;
+                        }
+                        output += value;
+                    }
+                    break;
                 case PieceType.MegaCannon:
                     ushort data = Piece.GetPieceSpecialData(piece);
 
@@ -626,7 +692,7 @@ public class ChessAI
                     {
                         PieceTableEntry pteC = b.globalData.GetPieceTableEntryFromCache((targetX + (targetY << 3)), b.pieces[targetX + (targetY << 3)]);
                         output += (timer / 30f) * (pteC.pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) * valueMult;
-                        if (pteC.type == PieceType.King && timer >= 5)
+                        if (pteC.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS && timer >= 5)
                         {
                             output += (timer - 4);
                         }
@@ -637,7 +703,7 @@ public class ChessAI
                     {
                         PieceTableEntry pteC = b.globalData.GetPieceTableEntryFromCache((targetX + (targetY << 3)), b.pieces[targetX + (targetY << 3)]);
                         output += (timer / 30f) * (pteC.pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) * valueMult;
-                        if (pteC.type == PieceType.King && timer >= 5)
+                        if (pteC.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS && timer >= 5)
                         {
                             output += (timer - 4);
                         }
@@ -648,7 +714,7 @@ public class ChessAI
                     {
                         PieceTableEntry pteC = b.globalData.GetPieceTableEntryFromCache((targetX + (targetY << 3)), b.pieces[targetX + (targetY << 3)]);
                         output += (timer / 30f) * (pteC.pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) * valueMult;
-                        if (pteC.type == PieceType.King && timer >= 5)
+                        if (pteC.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS && timer >= 5)
                         {
                             output += (timer - 4);
                         }
@@ -660,7 +726,7 @@ public class ChessAI
                     {
                         PieceTableEntry pteC = b.globalData.GetPieceTableEntryFromCache((targetX + (targetY << 3)), b.pieces[targetX + (targetY << 3)]);
                         output += (timer / 30f) * (pteC.pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) * valueMult;
-                        if (pteC.type == PieceType.King && timer >= 5)
+                        if (pteC.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS && timer >= 5)
                         {
                             output += (timer - 4);
                         }
@@ -671,7 +737,7 @@ public class ChessAI
                     {
                         PieceTableEntry pteC = b.globalData.GetPieceTableEntryFromCache((targetX + (targetY << 3)), b.pieces[targetX + (targetY << 3)]);
                         output += (timer / 30f) * (pteC.pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) * valueMult;
-                        if (pteC.type == PieceType.King && timer >= 5)
+                        if (pteC.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS && timer >= 5)
                         {
                             output += (timer - 4);
                         }
@@ -680,35 +746,6 @@ public class ChessAI
             }
 
             output -= this.valueMult * ((1 - valueMult) * pte.pieceValueX2);
-
-            if ((pte.pieceProperty & PieceProperty.ConsumeAllies) != 0)
-            {
-                float value = pte.pieceValueX2 * 0.25f;
-                if (value > 1.5f)
-                {
-                    value = 1.5f;
-                }
-                value *= Piece.GetPieceSpecialData(piece);
-                if (value > 6)
-                {
-                    value = 6;
-                }
-                output += value;
-            }
-            if ((pte.piecePropertyB & PiecePropertyB.ChargeByMoving) != 0)
-            {
-                float value = pte.pieceValueX2 * 0.05f;
-                if (value > 1.5f)
-                {
-                    value = 1.5f;
-                }
-                value *= Piece.GetPieceSpecialData(piece);
-                if (value > 6)
-                {
-                    value = 6;
-                }
-                output += value;
-            }
         }
         while (bitboard_black != 0)
         {
@@ -784,6 +821,44 @@ public class ChessAI
                         valueMult += 0.5f;
                     }
                     break;
+                //all the ConsumeAllies and ChargeByMoving property pieces called out by name to reduce property checks
+                case PieceType.SoulCannon:
+                case PieceType.Lich:
+                case PieceType.SoulDevourer:
+                case PieceType.QueenLeech:
+                    {
+                        float value = pte.pieceValueX2 * 0.25f;
+                        if (value > 1.5f)
+                        {
+                            value = 1.5f;
+                        }
+                        value *= Piece.GetPieceSpecialData(piece);
+                        if (value > 6)
+                        {
+                            value = 6;
+                        }
+                        output -= value;
+                    }
+                    break;
+                case PieceType.ChargeBeast:
+                case PieceType.ChargeCannon:
+                case PieceType.ChargeWarper:
+                case PieceType.ChargeKnight:
+                case PieceType.ChargePawn:
+                    {
+                        float value = pte.pieceValueX2 * 0.05f;
+                        if (value > 1.5f)
+                        {
+                            value = 1.5f;
+                        }
+                        value *= Piece.GetPieceSpecialData(piece);
+                        if (value > 6)
+                        {
+                            value = 6;
+                        }
+                        output -= value;
+                    }
+                    break;
                 case PieceType.MegaCannon:
                     ushort data = Piece.GetPieceSpecialData(piece);
 
@@ -795,7 +870,7 @@ public class ChessAI
                     {
                         PieceTableEntry pteC = b.globalData.GetPieceTableEntryFromCache((targetX + (targetY << 3)), b.pieces[targetX + (targetY << 3)]);
                         output -= (timer / 30f) * (pteC.pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) * valueMult;
-                        if (pteC.type == PieceType.King && timer >= 5)
+                        if (pteC.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS && timer >= 5)
                         {
                             output -= (timer - 4);
                         }
@@ -806,7 +881,7 @@ public class ChessAI
                     {
                         PieceTableEntry pteC = b.globalData.GetPieceTableEntryFromCache((targetX + (targetY << 3)), b.pieces[targetX + (targetY << 3)]);
                         output -= (timer / 30f) * (pteC.pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) * valueMult;
-                        if (pteC.type == PieceType.King && timer >= 5)
+                        if (pteC.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS && timer >= 5)
                         {
                             output -= (timer - 4);
                         }
@@ -817,7 +892,7 @@ public class ChessAI
                     {
                         PieceTableEntry pteC = b.globalData.GetPieceTableEntryFromCache((targetX + (targetY << 3)), b.pieces[targetX + (targetY << 3)]);
                         output -= (timer / 30f) * (pteC.pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) * valueMult;
-                        if (pteC.type == PieceType.King && timer >= 5)
+                        if (pteC.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS && timer >= 5)
                         {
                             output -= (timer - 4);
                         }
@@ -829,7 +904,7 @@ public class ChessAI
                     {
                         PieceTableEntry pteC = b.globalData.GetPieceTableEntryFromCache((targetX + (targetY << 3)), b.pieces[targetX + (targetY << 3)]);
                         output -= (timer / 30f) * (pteC.pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) * valueMult;
-                        if (pteC.type == PieceType.King && timer >= 5)
+                        if (pteC.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS && timer >= 5)
                         {
                             output -= (timer - 4);
                         }
@@ -840,7 +915,7 @@ public class ChessAI
                     {
                         PieceTableEntry pteC = b.globalData.GetPieceTableEntryFromCache((targetX + (targetY << 3)), b.pieces[targetX + (targetY << 3)]);
                         output -= (timer / 30f) * (pteC.pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE) * valueMult;
-                        if (pteC.type == PieceType.King && timer >= 5)
+                        if (pteC.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS && timer >= 5)
                         {
                             output -= (timer - 4);
                         }
@@ -849,35 +924,6 @@ public class ChessAI
             }
 
             output += this.valueMult * ((1 - valueMult) * pte.pieceValueX2);
-
-            if ((pte.pieceProperty & PieceProperty.ConsumeAllies) != 0)
-            {
-                float value = pte.pieceValueX2 * 0.25f;
-                if (value > 1.5f)
-                {
-                    value = 1.5f;
-                }
-                value *= Piece.GetPieceSpecialData(piece);
-                if (value > 6)
-                {
-                    value = 6;
-                }
-                output -= value;
-            }
-            if ((pte.piecePropertyB & PiecePropertyB.ChargeByMoving) != 0)
-            {
-                float value = pte.pieceValueX2 * 0.05f;
-                if (value > 1.5f)
-                {
-                    value = 1.5f;
-                }
-                value *= Piece.GetPieceSpecialData(piece);
-                if (value > 6)
-                {
-                    value = 6;
-                }
-                output -= value;
-            }
         }
         return output;
     }
@@ -902,6 +948,13 @@ public class ChessAI
             Piece.PieceType pt = pte.type; //Piece.GetPieceType(b.pieces[i]);
             Piece.PieceAlignment pa = Piece.GetPieceAlignment(piece);
 
+            switch (pa)
+            {
+                case PieceAlignment.Neutral:
+                case PieceAlignment.Crystal:
+                    continue;
+            }
+
             /*
             if (pt == Piece.PieceType.Null)
             {
@@ -909,7 +962,7 @@ public class ChessAI
             }
             */
 
-            if (pt == Piece.PieceType.King || pt == Piece.PieceType.Prince || pt == Piece.PieceType.RoyalDouble)
+            if (pte.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS || pt == Piece.PieceType.Prince || pt == Piece.PieceType.RoyalDouble)
             {
                 //Make this more aggressive
                 psqt += 2 * (endgameValue * GlobalPieceManager.ReadPSTTopCenter(pa, i) + (1 - endgameValue) * GlobalPieceManager.ReadPSTEdge(pa, i));
@@ -949,10 +1002,10 @@ public class ChessAI
         ulong wBitboard = b.globalData.bitboard_piecesWhite;
         ulong bBitboard = b.globalData.bitboard_piecesBlack;
         ulong kingBitboardW = b.globalData.bitboard_king & wBitboard;
-        int kingPopW = (b.whitePerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS) >> 11;           //if you have multi kings these factors get massively reduced (*0.2?) (because you can afford to lose one of them to an attack?) (they still appear so the AI still wants to chase them down)
+        int kingPopW = (b.whitePerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS) >> 16;           //if you have multi kings these factors get massively reduced (*0.2?) (because you can afford to lose one of them to an attack?) (they still appear so the AI still wants to chase them down)
         float kingPopPenaltyW = 1;
         ulong kingBitboardB = b.globalData.bitboard_king & bBitboard;
-        int kingPopB = (b.blackPerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS) >> 11;
+        int kingPopB = (b.blackPerPlayerInfo.pieceValueSumX2 & GlobalPieceManager.KING_VALUE_BONUS) >> 16;
         float kingPopPenaltyB = 1;
 
         float midPenaltyW = 0.5f;
@@ -1468,8 +1521,56 @@ public class ChessAI
         moveListCache[turn].Clear();
         return moveListCache[turn];
     }
+    public List<uint> GetSubMoveListFromHistoryCache(int turn)
+    {
+        if (!subMoveListCache.ContainsKey(turn))
+        {
+            subMoveListCache[turn] = new List<uint>(30);
+            return subMoveListCache[turn];
+        }
+        subMoveListCache[turn].Clear();
+        return subMoveListCache[turn];
+    }
+    public HashSet<uint> GetKillerMovesFromHistoryCache(int turn)
+    {
+        if (!killerMoveDictCache.ContainsKey(turn))
+        {
+            killerMoveDictCache[turn] = new HashSet<uint>();
+            return killerMoveDictCache[turn];
+        }
+        killerMoveDictCache[turn].Clear();
+        return killerMoveDictCache[turn];
+    }
+    public Dictionary<uint, float> GetScoreDictFromHistoryCache(int turn)
+    {
+        if (!scoreDictCache.ContainsKey(turn))
+        {
+            scoreDictCache[turn] = new Dictionary<uint, float>(30);
+            return scoreDictCache[turn];
+        }
+        scoreDictCache[turn].Clear();
+        return scoreDictCache[turn];
+    }
+    public Dictionary<uint, bool> GetNonpassiveDictFromHistoryCache(int turn)
+    {
+        if (!nonpassiveDictCache.ContainsKey(turn))
+        {
+            nonpassiveDictCache[turn] = new Dictionary<uint, bool>(4);
+            return nonpassiveDictCache[turn];
+        }
+        nonpassiveDictCache[turn].Clear();
+        return nonpassiveDictCache[turn];
+    }
     public void ClearOldCacheEntries(int lastTurn)
     {
+        //should this just clear out everything from scratch?
+        boardCache.Clear();
+        moveListCache.Clear();
+        nonpassiveDictCache.Clear();
+        scoreDictCache.Clear();
+        killerMoveDictCache.Clear();
+
+        /*
         for (int i = 0; i < lastTurn; i++)
         {
             if (boardCache.ContainsKey(i))
@@ -1481,27 +1582,146 @@ public class ChessAI
                 moveListCache.Remove(i);
             }
         }
+        */
     }
 
-    public void TryPrintBestLine()
+    public void TryPrintBestLine(Board b)
     {
-        int ply = board.ply;
-
-        string output = "Turn " + board.GetTurn() + ": ";
-
-        while (true)
+        try
         {
-            ply++;
-            if (boardCache.ContainsKey(ply))
-            {
-                output += " " + Move.ConvertToStringMinimal(boardCache[ply].GetLastMove());
-            } else
-            {
-                break;
-            }
-        }
+            Board t = new Board();
+            t.CopyOverwrite(b);
+            ulong hash = HashFromScratch(ref t);
 
-        Debug.Log(output);
+            string output = "Turn " + board.GetTurn() + ": ";
+
+            List<uint> moves = new List<uint>();
+            ZTableEntry zte;
+            int iteration = 0;
+            while (true)
+            {
+                if (iteration > 20)
+                {
+                    output += " (infinite loop?)";
+                    break;
+                }
+
+                zte = GetZTableEntry(hash);
+                if (zte.hash != hash || zte.move == 0)
+                {
+                    if (zte.hash != hash)
+                    {
+                        output += " (hash trail ends)";
+                    }
+                    else if (zte.move == 0)
+                    {
+                        output += " (0)";
+                    }
+                    break;
+                }
+
+                output += " [" + zte.depth + "] " + Move.ConvertToString(zte.move);
+
+                //ulong newHash = copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, oldHash);
+                //ZTableEntry zte = GetZTableEntry(newHash);
+
+                MoveGenerator.GenerateMovesForPlayer(moves, ref t, t.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+                if (!moves.Contains(zte.move) || t.pieces[Move.GetFromXYInt(zte.move)] == 0)
+                {
+                    output += " (impossible move)";
+                    break;
+                }
+                t.ApplyMove(zte.move);
+                hash = HashFromScratch(ref t);
+                iteration++;
+            }
+
+            Debug.Log(output);
+            t.CopyOverwrite(b);
+            hash = HashFromScratch(ref t);
+            output = "Turn " + board.GetTurn() + ": ";
+
+            zte = GetZTableEntry(hash);
+            if (zte.hash != hash || zte.move == 0)
+            {
+                if (zte.hash != hash)
+                {
+                    output += " (hash trail ends)";
+                }
+                else if (zte.move == 0)
+                {
+                    output += " (0)";
+                }
+                return;
+            }
+            string firstOutput = output;
+
+            t.ApplyMove(zte.move);
+            MoveGenerator.GenerateMovesForPlayer(moves, ref t, t.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+            if (!moves.Contains(zte.move) || t.pieces[Move.GetFromXYInt(zte.move)] == 0)
+            {
+                output += " (impossible move)";
+                return;
+            }
+
+            Board possibleMoveHead = new Board();
+            possibleMoveHead.CopyOverwrite(t);
+            moves = new List<uint>();
+
+            string alternateMoveOutput = "";
+
+            for (int i = 0; i < moves.Count; i++)
+            {
+                t.CopyOverwrite(possibleMoveHead);
+                hash = HashFromScratch(ref t);
+                output = firstOutput;
+                alternateMoveOutput = "";
+                iteration = 0;
+                while (true)
+                {
+                    if (iteration > 20)
+                    {
+                        output += " (infinite loop?)";
+                        break;
+                    }
+
+                    zte = GetZTableEntry(hash);
+                    if (zte.hash != hash || zte.move == 0)
+                    {
+                        if (zte.hash != hash)
+                        {
+                            output += " (hash trail ends)";
+                        }
+                        else if (zte.move == 0)
+                        {
+                            output += " (0)";
+                        }
+                        alternateMoveOutput = "\n" + output;
+                        break;
+                    }
+
+                    output += " [" + zte.depth + "] " + Move.ConvertToString(zte.move);
+
+                    //ulong newHash = copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, oldHash);
+                    //ZTableEntry zte = GetZTableEntry(newHash);
+
+                    MoveGenerator.GenerateMovesForPlayer(moves, ref t, t.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+                    if (!moves.Contains(zte.move) || t.pieces[Move.GetFromXYInt(zte.move)] == 0)
+                    {
+                        output += " (impossible move)";
+                        break;
+                    }
+                    t.ApplyMove(zte.move);
+                    hash = HashFromScratch(ref t);
+                    iteration++;
+                }
+                alternateMoveOutput = "\n" + output;
+            }
+            Debug.Log(alternateMoveOutput);
+        } catch (Exception ex)
+        {
+
+        }
     }
 
     //Very quick depth 1 search
@@ -1524,7 +1744,8 @@ public class ChessAI
             copy.ApplyMove(moves[i]);
             if (!Board.IsKingCapturePossible(ref copy))
             {
-                float evaluation = EvaluateBoard(ref copy, HashFromScratch(ref copy), null);
+                Board copyB = GetBoardFromHistoryCache(b.ply + 1);
+                float evaluation = EvaluateBoard(ref copy, ref copyB, HashFromScratch(ref copy), null);
 
                 if (evaluation < bestEvaluation)
                 {
@@ -1678,13 +1899,19 @@ public class ChessAI
 
         if (this.bestMove == 0)
         {
-            //error: need to failsafe I guess?
-            Debug.LogError("Null move failsafe");
+            if (bestEvaluation == KING_CAPTURE || bestEvaluation == WHITE_VICTORY || bestEvaluation == BLACK_VICTORY)
+            {
+                Debug.Log("AI thinks the game is over");
+            } else
+            {
+                //error: need to failsafe I guess?
+                Debug.LogError("Null move failsafe");
+            }
             NaiveAI();
         }
 
 
-        //TryPrintBestLine();
+        TryPrintBestLine(b);
 
         moveFound = true;
         //this.bestMove = bestMove;
@@ -1695,7 +1922,7 @@ public class ChessAI
         version++;
     }
 
-    public float MoveScore(ref Board b, ref Board copy, ulong oldHash, uint move, Dictionary<uint, bool> nonpassiveDict)
+    public float MoveScore(ref Board b, ref Board copy, ulong oldHash, uint move, Dictionary<uint, bool> nonpassiveDict, bool inCheck, uint checkThreat)
     {
         float score = 0;
 
@@ -1729,6 +1956,7 @@ public class ChessAI
             SetMoveBoardCacheEntry(oldHash, move, mbce);
         }
         */
+
         copy.CopyOverwrite(b);
         copy.ApplyMove(move);
 
@@ -1744,6 +1972,11 @@ public class ChessAI
         //If it is M1 or something just use that immediately because you can't really do better than that with any other kind of move
         if (zte.hash == newHash)
         {
+            if (zte.score < KING_CAPTURE / 2)
+            {
+                //give some large negative that is not equal to KING_CAPTURE
+                return BLACK_VICTORY * 2;
+            }
             if (zte.score > WHITE_VICTORY / 2 || zte.score < BLACK_VICTORY / 2)
             {
                 return zte.score * mult;
@@ -1778,15 +2011,30 @@ public class ChessAI
         score += lostMaterial * 1f;
 
         //LVA
-        int x = Move.GetFromX(move);
-        int y = Move.GetFromY(move);
+        int xy = Move.GetFromXYInt(move);
 
-        PieceTableEntry pte = b.globalData.GetPieceTableEntryFromCache((x + (y << 3)), b.pieces[x + (y << 3)]); //GlobalPieceManager.GetPieceTableEntry(pt);
-        Piece.PieceType pt = pte.type; //Piece.GetPieceType(b.pieces[x + y * 8]);
+        PieceTableEntry pte = b.globalData.GetPieceTableEntryFromCache(xy, b.pieces[xy]); //GlobalPieceManager.GetPieceTableEntry(pt);
+        //Piece.PieceType pt = pte.type; //Piece.GetPieceType(b.pieces[x + y * 8]);
 
         if (lostMaterial > 0)
         {
             score += 0.1f - (0.001f * (pte.pieceValueX2 & GlobalPieceManager.KING_VALUE_BONUS_MINUS_ONE)) + 500;
+        }
+
+        if (inCheck)
+        {
+            //prioritize moving the king or capturing the attacker
+            //Prioritized lower than transposes since the transposition table will know which moves avoid check properly
+            if (pte.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS)
+            {
+                score += 200;
+            } else
+            { 
+                if (((move ^ checkThreat) & 0xff00) == 0)
+                {
+                    score += 200;
+                }
+            }
         }
 
         return score;
@@ -1803,10 +2051,10 @@ public class ChessAI
         if (precondition)
         {
             int fxy = Move.GetFromXYInt(move);
-            int txy = Move.GetToXYInt(move);
+            //int txy = Move.GetToXYInt(move);
             uint oldPiece = b.pieces[fxy];
             uint targetPiece = b.pieces[fxy];
-            bool passPrecondition = (targetPiece != 0 && Piece.GetPieceAlignment(oldPiece) != Piece.GetPieceAlignment(targetPiece)) || b.globalData.GetPieceTableEntryFromCache(fxy, oldPiece).canIndirectCapture;
+            bool passPrecondition = (targetPiece != 0 && (((oldPiece ^ targetPiece) & MASK_ALIGNMENT) != 0)) || b.globalData.GetPieceTableEntryFromCache(fxy, oldPiece).canIndirectCapture;
             if (!passPrecondition)
             {
                 return -1;
@@ -1844,8 +2092,9 @@ public class ChessAI
             SetMoveBoardCacheEntry(oldHash, move, mbce);
         }
         */
+
         copy.CopyOverwrite(b);
-        copy.ApplyMove(move, null, false);
+        copy.ApplyMove(move);
 
         //zte check will often fail because it's missing the turn end stuff?
         //But with no status effects, terrains, etc it will still pass
@@ -1862,6 +2111,12 @@ public class ChessAI
         //If it is M1 or something just use that immediately because you can't really do better than that with any other kind of move
         if (zte.hash == newHash)
         {
+            if (zte.score < KING_CAPTURE / 2)
+            {
+                //give some large negative that is not equal to KING_CAPTURE
+                return BLACK_VICTORY * 2;
+            }
+
             if (zte.score > WHITE_VICTORY / 2 || zte.score < BLACK_VICTORY / 2)
             {
                 return zte.score * mult;
@@ -1873,6 +2128,7 @@ public class ChessAI
         //Instead of MVV I will just detect the lost material
         //And LVA is based on piece value of attacker
 
+        //Losing a king will get sorted to the front
         int lostMaterial = 0;
         if (b.blackToMove)
         {
@@ -1892,11 +2148,12 @@ public class ChessAI
         score += lostMaterial * 1f;
 
         //LVA
-        int x = Move.GetFromX(move);
-        int y = Move.GetFromY(move);
+        int xy = Move.GetFromXYInt(move);
+        //int x = Move.GetFromX(move);
+        //int y = Move.GetFromY(move);
 
-        PieceTableEntry pte = b.globalData.GetPieceTableEntryFromCache((x + (y << 3)), b.pieces[(x + (y << 3))]); //GlobalPieceManager.GetPieceTableEntry(pt);
-        Piece.PieceType pt = pte.type; //Piece.GetPieceType(b.pieces[x + y * 8]);
+        PieceTableEntry pte = b.globalData.GetPieceTableEntryFromCache((xy), b.pieces[(xy)]); //GlobalPieceManager.GetPieceTableEntry(pt);
+        //Piece.PieceType pt = pte.type; //Piece.GetPieceType(b.pieces[x + y * 8]);
 
         if (lostMaterial > 0)
         {
@@ -1923,214 +2180,556 @@ public class ChessAI
 
     public (uint, float) AlphaBetaSearch(ref Board b, ulong boardOldHash, int depth, int ext, int red, float alpha, float beta, HashSet<uint> killerMoves = null)
     {
-        nodesSearched++;
-
-        //Try to find it in the Z table
-        ZTableEntry zte = GetZTableEntry(boardOldHash);
-
-        HashSet<uint> currentKillerMoves = new HashSet<uint>();
-
-        //Usable?
-        //Triggers instant cutoff?
-
-        uint bestMove = 0;
-        float bestEvaluation = float.NaN;
-
-        if (zte.hash == boardOldHash)
+        try
         {
-            bestMove = zte.move;
-            //Root node is given by killerMoves == null
-            //zte.move != 0 is a bug, add a second condition to fix?
-            //Victory scores are probably not going to change by depth so can be used no matter what depth there is?
-            if (((zte.depth >= depth && killerMoves != null) || (zte.score < BLACK_VICTORY / 2 || zte.score > WHITE_VICTORY / 2)) && !history.Contains(boardOldHash) && zte.move != 0)
+            nodesSearched++;
+
+            //Try to find it in the Z table
+            ZTableEntry zte = GetZTableEntry(boardOldHash);
+
+            //Usable?
+            //Triggers instant cutoff?
+
+            uint bestMove = 0;
+            float bestEvaluation = float.NaN;
+
+            if (zte.hash == boardOldHash)
             {
-                //root node choosing a null move is a problem (transpose hash collision?)
-                if (killerMoves != null || zte.move != 0)
+                bestMove = zte.move;
+                //Root node is given by killerMoves == null
+                //zte.move != 0 is a bug, add a second condition to fix?
+                //Victory scores are probably not going to change by depth so can be used no matter what depth there is?
+                if (((zte.depth >= depth && killerMoves != null) || (zte.score < BLACK_VICTORY / 2 || zte.score > WHITE_VICTORY / 2)) && !history.Contains(boardOldHash) && zte.move != 0)
                 {
-                    //Exact number: can use immediately
-                    if (zte.flags == ZTableEntry.BOUND_EXACT)
+                    //root node choosing a null move is a problem (transpose hash collision?)
+                    if (killerMoves != null || zte.move != 0)
                     {
-                        nodesTransposed++;
-                        return (zte.move, zte.score);
+                        //Exact number: can use immediately
+                        if (zte.flags == ZTableEntry.BOUND_EXACT)
+                        {
+                            nodesTransposed++;
+                            return (zte.move, zte.score);
+                        }
+
+                        if (b.blackToMove)
+                        {
+                            //Reduce the score (check for < alpha)
+                            if (zte.flags == ZTableEntry.BOUND_ALPHA)
+                            {
+                                if (zte.score <= alpha)
+                                {
+                                    nodesTransposed++;
+                                    return (zte.move, zte.score);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //Increase the score (check for > beta)
+                            if (zte.flags == ZTableEntry.BOUND_BETA)
+                            {
+                                if (zte.score >= beta)
+                                {
+                                    nodesTransposed++;
+                                    return (zte.move, zte.score);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            //Max depth: use Q search
+            if (depth <= 0)
+            {
+                return QSearch(ref b, boardOldHash, alpha, beta, 0);
+            }
+            //Do a search
+
+
+            Board copy = GetBoardFromHistoryCache(b.ply); //new Board();
+            copy.CopyOverwrite(b);
+
+            List<uint> moves = GetMoveListFromHistoryCache(b.ply); //new List<uint>(30);
+            MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+            //If you already won then just return that immediately
+            PieceAlignment winner = b.GetVictoryCondition();
+            if (winner != PieceAlignment.Null)
+            {
+                //Has precedence
+                //because moving into check for a win condition feels very contrary to normal chess logic
+                //It seems fine for multi king because you can intuitively understand why you can ignore check in that case
+                uint kingcapture = Board.FindKingCaptureMove(ref b, moves);
+                if (kingcapture != 0)
+                {
+                    //return (0, KING_CAPTURE);
+                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, KING_CAPTURE));
+                    return (kingcapture, KING_CAPTURE);
+                }
+
+                if (winner == PieceAlignment.White)
+                {
+                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
+                    return (0, WHITE_VICTORY);
+                }
+                if (winner == PieceAlignment.Black)
+                {
+                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
+                    return (0, BLACK_VICTORY);
+                }
+            }
+
+            //new setup means that the hash may change
+            boardOldHash = b.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref copy, boardOldHash);
+            //copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash)
+
+            //score moves
+            //Catastrophically bad idea(?)
+            //Removing it didn't make any difference?
+            //My engine is still glacially slow :(
+            //I think this will kill my performance but idk how else to do this
+            Dictionary<uint, float> scoreDict = GetScoreDictFromHistoryCache(b.ply); //= new Dictionary<uint, float>();
+            Dictionary<uint, bool> nonpassiveDict = GetNonpassiveDictFromHistoryCache(b.ply); // new Dictionary<uint, bool>();
+
+
+            int newExt = ext;
+
+
+            //Null move pruning is buggy right now so I turned it off
+            //It also isn't helping me at all?
+            /*
+            bool allowNullEvaluation = depth > 1;
+            allowNullEvaluation = false;
+
+            if (b.whitePerPlayerInfo.pieceValueSumX2 < 10 || b.blackPerPlayerInfo.pieceValueSumX2 < 10)
+            {
+                allowNullEvaluation = false;
+            }
+            if (alpha == float.MinValue || alpha == beta)    //Root node should not try null move, don't use multi null moves
+            {
+                allowNullEvaluation = false;
+            }
+
+            uint nullMoveBest;
+            float nullEvaluation;
+            //This also generates possible killer moves to try
+            if (allowNullEvaluation)
+            {
+                if (b.blackToMove)
+                {
+                    copy.CopyOverwrite(b);
+                    copy.ApplyNullMove();
+                    //0 window search
+                    (nullMoveBest, nullEvaluation) = AlphaBetaSearch(ref copy, copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash), (depth - 2), ext, red, alpha, alpha, currentKillerMoves);
+
+                    if (nullEvaluation != KING_CAPTURE && nullEvaluation <= alpha)
+                    {
+                        return (0, nullEvaluation);
+                    }
+                }
+                else
+                {
+                    copy.CopyOverwrite(b);
+                    copy.ApplyNullMove();
+                    //0 window search
+                    (nullMoveBest, nullEvaluation) = AlphaBetaSearch(ref copy, copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash), (depth - 2), ext, red, beta, beta, currentKillerMoves);
+
+                    if (nullEvaluation != KING_CAPTURE && nullEvaluation >= beta)
+                    {
+                        return (0, nullEvaluation);
+                    }
+                }
+                //if you are in check, null move returns King Capture
+                //  (Note: maybe not if it gets pruned out early)
+                //  (But this scenario 
+                //Check extension
+                if (nullEvaluation == KING_CAPTURE)
+                {
+                    if (ext < 1)
+                    {
+                        newExt++;
+                    }
+                }
+            }
+            */
+
+            //Check for check?
+            //Try to find an equivalent null position
+            //copy.CopyOverwrite(b);
+            //With last move hash this can't really work
+            bool inCheck = false;
+            uint checkThreat = 0;
+            if (b.globalData.noLastMoveHash)
+            {
+                copy.ApplyNullMove(true);
+                ulong nhash = copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash);
+                zte = GetZTableEntry(nhash);
+                if (zte.hash == nhash)
+                {
+                    if (zte.score < KING_CAPTURE / 2)
+                    {
+                        if (ext < 1)
+                        {
+                            inCheck = true;
+                            checkThreat = zte.move;
+                            newExt++;
+                        }
+                    }
+                }
+            }
+
+            /*
+            if (killerMoves != null && killerMoves.Count > 0)
+            {
+                MainManager.PrintMoveList(moves);
+                MainManager.PrintMoveSet(killerMoves);
+            }
+            */
+            HashSet<uint> currentKillerMoves = GetKillerMovesFromHistoryCache(b.ply); //new HashSet<uint>();
+            uint skipMove = 0;
+            for (int i = 0; i < moves.Count; i++)
+            {
+                //Ordering problem: MVA LVV ordering can put some idiotic moves in front (If the queen gets pulled out early the extremely bad "kamikaze queen" captures get searched first)
+                //I guess it also removes all the benefit of iterative deepening? :P
+                //So I should make the transposition table take precedence over MVA LVV
+                //If a move is better according to the table the idiotic moves should get pruned out
+
+                //new optimization?
+                //Try to use the previous best move to prune before completing all the move scoring?
+                if (moves[i] == bestMove)
+                {
+                    skipMove = bestMove;
+                    copy.CopyOverwrite(b);
+                    copy.ApplyMove(moves[i]);
+
+                    if (!copy.CheckForKings())
+                    {
+                        SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, KING_CAPTURE));
+                        return (moves[i], KING_CAPTURE);
+                    }
+
+                    uint candidateMove;
+                    float candidateEval;
+
+                    ulong chash = copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash);
+                    (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, chash, (depth - 1 + (newExt - ext)), newExt, red, alpha, beta, currentKillerMoves);
+
+                    if (history.Contains(chash))
+                    {
+                        PenalizeMove(candidateEval, 0f);
+                    }
+
+                    if (killerMoves == null)
+                    {
+                        if (((chash >> 32) & 127) <= 7)   //10/128 chance of a blunder I guess?
+                        {
+                            //shift right so the check bits and the bits that determine value are not the same
+                            candidateEval += blunderDeviation * (((((chash >> 24) & 15)) / 16f) - ((((chash >> 28) & 15)) / 16f));
+                        }
+                    }
+
+
+                    if (!keepSearching)
+                    {
+                        if (!float.IsNaN(bestEvaluation) && bestEvaluation > KING_CAPTURE / 2)
+                        {
+                            SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)(depth - 1), ZTableEntry.BOUND_EXACT, bestMove, bestEvaluation));
+                        }
+                        return (bestMove, bestEvaluation);
+                    }
+
+                    if (candidateEval < KING_CAPTURE / 2 || float.IsNaN(candidateEval))
+                    {
+                        //bestMove turns out to be illegal
+                        //Don't score as KING_CAPTURE though because here it is used for moves that captures kings instead of moves that lead to KING_CAPTURE positions
+                        //scoreDict[bestMove] = KING_CAPTURE;
+
+                        //Give it some other big negative value instead
+                        scoreDict[bestMove] = BLACK_VICTORY;
+                        continue;
+                    }
+
+                    if (b.turn < 3)
+                    {
+                        candidateEval += ((((boardOldHash & 15) - 8f) / 16f) * openingDeviation * (3 - b.turn));
                     }
 
                     if (b.blackToMove)
                     {
-                        //Reduce the score (check for < alpha)
-                        if (zte.flags == ZTableEntry.BOUND_ALPHA)
+                        //Reduce the score (beta cutoff)
+                        if (float.IsNaN(bestEvaluation) || candidateEval < bestEvaluation)
                         {
-                            if (zte.score <= alpha)
+                            bestEvaluation = candidateEval;
+                            bestMove = moves[i];
+                        }
+
+                        if (bestEvaluation < beta)
+                        {
+                            beta = bestEvaluation;
+                        }
+
+                        if (bestEvaluation <= alpha)
+                        {
+                            prunes++;
+                            if (killerMoves != null)
                             {
-                                nodesTransposed++;
-                                return (zte.move, zte.score);
+                                uint newKiller = Move.RemoveNonLocation(bestMove);
+                                killerMoves.Add(newKiller);
                             }
+
+                            //double check this isn't an illegal position?
+                            if (Board.IsKingCapturePossible(ref b, ref copy, moves))
+                            {
+                                //King capture move is possible in this position therefore this position is illegal
+                                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, KING_CAPTURE));
+                                return (moves[i], KING_CAPTURE);
+                            }
+
+                            //Mate in X
+                            if (bestEvaluation > WHITE_VICTORY / 2)
+                            {
+                                bestEvaluation = bestEvaluation - 1;
+                            }
+                            else if (bestEvaluation < BLACK_VICTORY / 2)
+                            {
+                                bestEvaluation = bestEvaluation + 1;
+                            }
+
+                            //Populate the Z table
+                            ulong newHash = copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash);
+                            SetZTableEntry(newHash, new ZTableEntry(newHash, (byte)copy.turn, (byte)depth, ZTableEntry.BOUND_ALPHA, bestMove, bestEvaluation));
+                            return (bestMove, bestEvaluation);
                         }
                     }
                     else
                     {
-                        //Increase the score (check for > beta)
-                        if (zte.flags == ZTableEntry.BOUND_BETA)
+                        //Increase the score (alpha cutoff)
+                        if (float.IsNaN(bestEvaluation) || candidateEval > bestEvaluation)
                         {
-                            if (zte.score >= beta)
+                            bestEvaluation = candidateEval;
+                            bestMove = moves[i];
+                        }
+
+                        if (bestEvaluation > alpha)
+                        {
+                            alpha = bestEvaluation;
+                        }
+
+                        if (bestEvaluation >= beta)
+                        {
+                            prunes++;
+                            if (killerMoves != null)
                             {
-                                nodesTransposed++;
-                                return (zte.move, zte.score);
+                                uint newKiller = Move.RemoveNonLocation(bestMove);
+                                killerMoves.Add(newKiller);
                             }
+
+                            //double check this isn't an illegal position?
+                            if (Board.IsKingCapturePossible(ref b, ref copy, moves))
+                            {
+                                //King capture move is possible in this position therefore this position is illegal
+                                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, KING_CAPTURE));
+                                return (moves[i], KING_CAPTURE);
+                            }
+
+                            //Mate in X
+                            if (bestEvaluation > WHITE_VICTORY / 2)
+                            {
+                                bestEvaluation = bestEvaluation - 1;
+                            }
+                            else if (bestEvaluation < BLACK_VICTORY / 2)
+                            {
+                                bestEvaluation = bestEvaluation + 1;
+                            }
+
+                            //Populate the Z table
+                            ulong newHash = copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash);
+                            SetZTableEntry(newHash, new ZTableEntry(newHash, (byte)copy.turn, (byte)depth, ZTableEntry.BOUND_BETA, bestMove, bestEvaluation));
+                            return (bestMove, bestEvaluation);
                         }
                     }
                 }
-            }
-        }
 
-        //Max depth: use Q search
-        if (depth <= 0)
-        {
-            return QSearch(ref b, boardOldHash, alpha, beta, 0);
-        }
+                //King capture is always sorted to the front
+                scoreDict[moves[i]] = MoveScore(ref b, ref copy, boardOldHash, moves[i], nonpassiveDict, inCheck, checkThreat);
 
-        //Do a search
-
-
-        Board copy = GetBoardFromHistoryCache(b.ply); //new Board();
-        copy.CopyOverwrite(b);
-
-        List<uint> moves = GetMoveListFromHistoryCache(b.ply); //new List<uint>(30);
-        MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
-
-        //If you already won then just return that immediately
-        PieceAlignment winner = b.GetVictoryCondition();
-        if (winner != PieceAlignment.Null)
-        {
-            //Has precedence
-            //because moving into check for a win condition feels very contrary to normal chess logic
-            //It seems fine for multi king because you can intuitively understand why you can ignore check in that case
-            uint kingcapture = Board.FindKingCaptureMove(ref b, moves);
-            if (kingcapture != 0)
-            {
-                //return (0, KING_CAPTURE);
-                return (kingcapture, KING_CAPTURE);
-            }
-
-            if (winner == PieceAlignment.White)
-            {
-                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
-                return (0, WHITE_VICTORY);
-            }
-            if (winner == PieceAlignment.Black)
-            {
-                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
-                return (0, BLACK_VICTORY);
-            }
-        }
-
-        //new setup means that the hash may change
-        boardOldHash = b.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref copy, boardOldHash);
-        //copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash)
-
-        //score moves
-        //Catastrophically bad idea(?)
-        //Removing it didn't make any difference?
-        //My engine is still glacially slow :(
-        //I think this will kill my performance but idk how else to do this
-        Dictionary<uint, float> scoreDict = new Dictionary<uint, float>();
-        Dictionary<uint, bool> nonpassiveDict = new Dictionary<uint, bool>();
-
-
-        int newExt = ext;
-
-
-        //Null move pruning is buggy right now so I turned it off
-        //It also isn't helping me at all?
-        /*
-        bool allowNullEvaluation = depth > 1;
-        allowNullEvaluation = false;
-
-        if (b.whitePerPlayerInfo.pieceValueSumX2 < 10 || b.blackPerPlayerInfo.pieceValueSumX2 < 10)
-        {
-            allowNullEvaluation = false;
-        }
-        if (alpha == float.MinValue || alpha == beta)    //Root node should not try null move, don't use multi null moves
-        {
-            allowNullEvaluation = false;
-        }
-
-        uint nullMoveBest;
-        float nullEvaluation;
-        //This also generates possible killer moves to try
-        if (allowNullEvaluation)
-        {
-            if (b.blackToMove)
-            {
-                copy.CopyOverwrite(b);
-                copy.ApplyNullMove();
-                //0 window search
-                (nullMoveBest, nullEvaluation) = AlphaBetaSearch(ref copy, copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash), (depth - 2), ext, red, alpha, alpha, currentKillerMoves);
-
-                if (nullEvaluation != KING_CAPTURE && nullEvaluation <= alpha)
+                if (scoreDict[moves[i]] == KING_CAPTURE)
                 {
-                    return (0, nullEvaluation);
+                    //this kind of confuses the king capture check
+                    //Normally: a move scored KING_CAPTURE = move that leads to a King Capture position and is thus illegal
+                    //But here the KING_CAPTURE score is for king capture moves
+
+                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, KING_CAPTURE));
+                    return (moves[i], KING_CAPTURE);
+                }
+
+                //Don't touch hash move scores with this?
+                //Maybe touching MVVLVA scores is fine
+                if (killerMoves != null && scoreDict[moves[i]] < 900 && killerMoves.Contains(Move.RemoveNonLocation(moves[i])))
+                {
+                    //A small ish bonus
+                    scoreDict[moves[i]] += 25;
                 }
             }
-            else
-            {
-                copy.CopyOverwrite(b);
-                copy.ApplyNullMove();
-                //0 window search
-                (nullMoveBest, nullEvaluation) = AlphaBetaSearch(ref copy, copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash), (depth - 2), ext, red, beta, beta, currentKillerMoves);
 
-                if (nullEvaluation != KING_CAPTURE && nullEvaluation >= beta)
+            //force the ztable best move to be searched first?
+            /*
+            if (bestMove != 0 && scoreDict.ContainsKey(bestMove))
+            {
+                scoreDict[bestMove] += 50000;
+            }
+            */
+
+            int FloatCompare(float a, float b)
+            {
+                if (a == b)
                 {
-                    return (0, nullEvaluation);
+                    return 0;
+                }
+                if (a > b)
+                {
+                    return 1;
+                }
+                else
+                {
+                    return -1;
                 }
             }
-            //if you are in check, null move returns King Capture
-            //  (Note: maybe not if it gets pruned out early)
-            //  (But this scenario 
-            //Check extension
-            if (nullEvaluation == KING_CAPTURE)
+
+            //sort moves
+            //put the best ones first
+            moves.Sort((a, b) => -FloatCompare(scoreDict[a], scoreDict[b]));
+            //moves.OrderBy((e) => -scoreDict[e]);
+
+            //Debug.Log("Post order");
+
+            int passiveMoves = 0;
+            int lateReductionThreshold = moves.Count / 3;
+            if (lateReductionThreshold < 3)
             {
-                if (ext < 1)
-                {
-                    newExt++;
-                }
+                lateReductionThreshold = 3;
             }
-        }
-        */
+            bool doReduction = false;
 
-        /*
-        if (killerMoves != null && killerMoves.Count > 0)
-        {
-            MainManager.PrintMoveList(moves);
-            MainManager.PrintMoveSet(killerMoves);
-        }
-        */
-
-        uint skipMove = 0;
-        for (int i = 0; i < moves.Count; i++)
-        {
-            //Ordering problem: MVA LVV ordering can put some idiotic moves in front (If the queen gets pulled out early the extremely bad "kamikaze queen" captures get searched first)
-            //I guess it also removes all the benefit of iterative deepening? :P
-            //So I should make the transposition table take precedence over MVA LVV
-            //If a move is better according to the table the idiotic moves should get pruned out
-
-            //new optimization?
-            //Try to use the previous best move to prune before completing all the move scoring?
-            if (moves[i] == bestMove)
+            /*
+            if (alpha == float.MinValue && beta == float.MaxValue)
             {
-                skipMove = bestMove;
+                Debug.Log("Last best: " + Move.ConvertToStringMinimal(bestMove) + " " + (scoreDict.ContainsKey(bestMove) ? scoreDict[bestMove] : "X"));
+            }
+            */
+            //MoveBoardCacheEntry mbce;
+
+            //failsafe
+            //In most cases the first move searched should be good
+            if (bestMove == 0 && moves.Count > 0)
+            {
+                bestMove = moves[0];
+            }
+
+            for (int i = 0; i < moves.Count; i++)
+            {
+                if (moves[i] == skipMove)
+                {
+                    continue;
+                }
+
+                /*
+                if (alpha == float.MinValue && beta == float.MaxValue)
+                {
+                    Debug.Log(Move.ConvertToStringMinimal(moves[i]) + " " + scoreDict[moves[i]] + " " + depth);
+                }
+                */
+
+                /*
+                if (depth == 3)
+                {
+                    Debug.Log("Score " + scoreDict[moves[i]] + " " + Move.ConvertToString(moves[i]));
+                }
+                */
+
+                /*
+                float ms = MoveScore(ref b, ref copy, boardOldHash, moves[i]);
+                if (ms != 0)
+                {
+                    Debug.Log("ms " + ms);
+                }
+                */
+
+                //try to use board cache
+                /*
+                mbce = GetMoveBoardCacheEntry(boardOldHash, moves[i]);
+
+                if (mbce.hash == boardOldHash && mbce.move == moves[i])
+                {
+                    //Cache hit (Saves 1 ApplyMove call)
+                    //copy = mbce.board;
+                    moveboardcachehits++;
+                    copy.CopyOverwrite(mbce.board);
+                }
+                else
+                {
+                    moveboardcachemisses++;
+                    //Cache miss
+                    copy.CopyOverwrite(b);
+                    copy.ApplyMove(moves[i]);
+
+                    mbce.hash = boardOldHash;
+                    mbce.move = moves[i];
+                    mbce.board.CopyOverwrite(copy);
+                    SetMoveBoardCacheEntry(boardOldHash, moves[i], mbce);
+                }
+                */
                 copy.CopyOverwrite(b);
                 copy.ApplyMove(moves[i]);
 
+                //scorer finds this early
+                /*
                 if (!copy.CheckForKings())
                 {
+                    //King capture move is possible in this position therefore this position is illegal
                     return (moves[i], KING_CAPTURE);
+                }
+                */
+
+                /*
+                if (copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash) != copy.MakeZobristHashFromScratch(zobristHashes, zobristSupplemental))
+                {
+                    Debug.Log(copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash) + " vs " + copy.MakeZobristHashFromScratch(zobristHashes, zobristSupplemental));
+                }
+                */
+
+                int newRed = red;
+                /*
+                if (newRed < 0 + (depth * 0.333f))
+                {
+                    newRed = (int)(0 + (depth * 0.333f));
+                }
+                */
+                if (newRed < 1 + (depth * 0.15f))
+                {
+                    newRed = (int)(1 + (depth * 0.15f));
+                }
+                if (!nonpassiveDict.ContainsKey(moves[i]))
+                {
+                    passiveMoves++;
+                    if (depth > 2 && passiveMoves >= lateReductionThreshold) // && scoreDict[moves[i]] == 0)
+                    {
+                        doReduction = true;
+                    }
                 }
 
                 uint candidateMove;
                 float candidateEval;
 
                 ulong chash = copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash);
-                (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, chash, (depth - 1 + (newExt - ext)), newExt, red, alpha, beta, currentKillerMoves);
+                if (doReduction)
+                {
+                    (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, chash, (depth - 1 - (newRed - red) + (newExt - ext)), newExt, newRed, alpha, beta, currentKillerMoves);
+                }
+                else
+                {
+                    (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, chash, (depth - 1 + (newExt - ext)), newExt, red, alpha, beta, currentKillerMoves);
+                }
 
                 if (history.Contains(chash))
                 {
@@ -2149,13 +2748,26 @@ public class ChessAI
 
                 if (!keepSearching)
                 {
+                    //Mate in X
+                    if (bestEvaluation > WHITE_VICTORY / 2)
+                    {
+                        bestEvaluation = bestEvaluation - 1;
+                    }
+                    else if (bestEvaluation < BLACK_VICTORY / 2)
+                    {
+                        bestEvaluation = bestEvaluation + 1;
+                    }
+
+                    if (!float.IsNaN(bestEvaluation) && bestEvaluation > KING_CAPTURE / 2)
+                    {
+                        SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)(depth - 1), ZTableEntry.BOUND_EXACT, bestMove, bestEvaluation));
+                    }
                     return (bestMove, bestEvaluation);
                 }
 
-                if (candidateEval == KING_CAPTURE || float.IsNaN(candidateEval))
+                if (candidateEval < KING_CAPTURE / 2 || float.IsNaN(candidateEval))
                 {
                     //That move is illegal
-                    scoreDict[bestMove] = KING_CAPTURE;
                     continue;
                 }
 
@@ -2169,8 +2781,34 @@ public class ChessAI
                     //Reduce the score (beta cutoff)
                     if (float.IsNaN(bestEvaluation) || candidateEval < bestEvaluation)
                     {
-                        bestEvaluation = candidateEval;
-                        bestMove = moves[i];
+                        if (doReduction && newRed != red)
+                        {
+                            //re-search
+                            //Wastes time but is unavoidable
+                            (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash), (depth - 1), ext, red, alpha, beta, currentKillerMoves);
+                            if (candidateEval < KING_CAPTURE / 2 || float.IsNaN(candidateEval))
+                            {
+                                //That move is illegal
+                                continue;
+                            }
+                            if (float.IsNaN(bestEvaluation) || candidateEval < bestEvaluation)
+                            {
+                                bestEvaluation = candidateEval;
+                                bestMove = moves[i];
+                            }
+                        }
+                        else
+                        {
+                            bestEvaluation = candidateEval;
+                            bestMove = moves[i];
+                        }
+
+                        /*
+                        if (depth == 3)
+                        {
+                            Debug.Log(Move.ConvertToString(bestMove) + " " + bestEvaluation);
+                        } 
+                        */
                     }
 
                     if (bestEvaluation < beta)
@@ -2188,13 +2826,24 @@ public class ChessAI
                         }
 
                         //double check this isn't an illegal position?
-                        if (Board.IsKingCapturePossible(ref b, moves))
+                        if (Board.IsKingCapturePossible(ref b, ref copy, moves))
                         {
                             //King capture move is possible in this position therefore this position is illegal
+                            SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, KING_CAPTURE));
                             return (moves[i], KING_CAPTURE);
                         }
 
-                        //Populate the Z table
+                        //Mate in X
+                        if (bestEvaluation > WHITE_VICTORY / 2)
+                        {
+                            bestEvaluation = bestEvaluation - 1;
+                        }
+                        else if (bestEvaluation < BLACK_VICTORY / 2)
+                        {
+                            bestEvaluation = bestEvaluation + 1;
+                        }
+
+                        //Populate the Z table0
                         ulong newHash = copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash);
                         SetZTableEntry(newHash, new ZTableEntry(newHash, (byte)copy.turn, (byte)depth, ZTableEntry.BOUND_ALPHA, bestMove, bestEvaluation));
                         return (bestMove, bestEvaluation);
@@ -2205,8 +2854,26 @@ public class ChessAI
                     //Increase the score (alpha cutoff)
                     if (float.IsNaN(bestEvaluation) || candidateEval > bestEvaluation)
                     {
-                        bestEvaluation = candidateEval;
-                        bestMove = moves[i];
+                        if (doReduction && newRed != red)
+                        {
+                            //re-search
+                            //Wastes time but is unavoidable
+                            (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash), (depth - 1), ext, red, alpha, beta, currentKillerMoves);
+                            if (candidateEval < KING_CAPTURE / 2 || float.IsNaN(candidateEval))
+                            {
+                                //That move is illegal
+                                continue;
+                            }
+                            if (float.IsNaN(bestEvaluation) || candidateEval > bestEvaluation)
+                            {
+                                bestEvaluation = candidateEval;
+                                bestMove = moves[i];
+                            }
+                        } else
+                        {
+                            bestEvaluation = candidateEval;
+                            bestMove = moves[i];
+                        }
                     }
 
                     if (bestEvaluation > alpha)
@@ -2224,10 +2891,21 @@ public class ChessAI
                         }
 
                         //double check this isn't an illegal position?
-                        if (Board.IsKingCapturePossible(ref b, moves))
+                        if (Board.IsKingCapturePossible(ref b, ref copy, moves))
                         {
                             //King capture move is possible in this position therefore this position is illegal
+                            SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, KING_CAPTURE));
                             return (moves[i], KING_CAPTURE);
+                        }
+
+                        //Mate in X
+                        if (bestEvaluation > WHITE_VICTORY / 2)
+                        {
+                            bestEvaluation = bestEvaluation - 1;
+                        }
+                        else if (bestEvaluation < BLACK_VICTORY / 2)
+                        {
+                            bestEvaluation = bestEvaluation + 1;
                         }
 
                         //Populate the Z table
@@ -2238,359 +2916,69 @@ public class ChessAI
                 }
             }
 
-            //King capture is always sorted to the front
-            scoreDict[moves[i]] = MoveScore(ref b, ref copy, boardOldHash, moves[i], nonpassiveDict);
+            //Successful in search
 
-            if (scoreDict[moves[i]] == KING_CAPTURE)
+            //Every move leads to king capture = stalemate or checkmate
+            if (float.IsNaN(bestEvaluation) || bestEvaluation < KING_CAPTURE / 2)
             {
-                //Bad
-                //return (0, KING_CAPTURE);
-                return (moves[i], KING_CAPTURE);
-            }
-
-            //Don't touch hash move scores with this?
-            //Maybe touching MVVLVA scores is fine
-            if (killerMoves != null && scoreDict[moves[i]] < 900 && killerMoves.Contains(Move.RemoveNonLocation(moves[i])))
-            {
-                //A small ish bonus
-                scoreDict[moves[i]] += 25;
-            }
-        }
-
-        //force the ztable best move to be searched first?
-        /*
-        if (bestMove != 0 && scoreDict.ContainsKey(bestMove))
-        {
-            scoreDict[bestMove] += 50000;
-        }
-        */
-
-        int FloatCompare(float a, float b)
-        {
-            if (a == b)
-            {
-                return 0;
-            }
-            if (a > b)
-            {
-                return 1;
-            } else
-            {
-                return -1;
-            }
-        }
-
-        //sort moves
-        //put the best ones first
-        moves.Sort((a, b) => -FloatCompare(scoreDict[a], scoreDict[b]));
-        //moves.OrderBy((e) => -scoreDict[e]);
-
-        //Debug.Log("Post order");
-
-        int passiveMoves = 0;
-        int lateReductionThreshold = moves.Count / 3;
-        if (lateReductionThreshold < 3)
-        {
-            lateReductionThreshold = 3;
-        }
-        bool doReduction = false;
-
-        /*
-        if (alpha == float.MinValue && beta == float.MaxValue)
-        {
-            Debug.Log("Last best: " + Move.ConvertToStringMinimal(bestMove) + " " + (scoreDict.ContainsKey(bestMove) ? scoreDict[bestMove] : "X"));
-        }
-        */
-        //MoveBoardCacheEntry mbce;
-
-        //failsafe
-        //In most cases the first move searched should be good
-        if (bestMove == 0 && moves.Count > 0)
-        {
-            bestMove = moves[0];
-        }
-
-        for (int i = 0; i < moves.Count; i++)
-        {
-            if (moves[i] == skipMove)
-            {
-                continue;
-            }
-
-            /*
-            if (alpha == float.MinValue && beta == float.MaxValue)
-            {
-                Debug.Log(Move.ConvertToStringMinimal(moves[i]) + " " + scoreDict[moves[i]] + " " + depth);
-            }
-            */
-
-            /*
-            if (depth == 3)
-            {
-                Debug.Log("Score " + scoreDict[moves[i]] + " " + Move.ConvertToString(moves[i]));
-            }
-            */
-
-            /*
-            float ms = MoveScore(ref b, ref copy, boardOldHash, moves[i]);
-            if (ms != 0)
-            {
-                Debug.Log("ms " + ms);
-            }
-            */
-
-            //try to use board cache
-            /*
-            mbce = GetMoveBoardCacheEntry(boardOldHash, moves[i]);
-
-            if (mbce.hash == boardOldHash && mbce.move == moves[i])
-            {
-                //Cache hit (Saves 1 ApplyMove call)
-                //copy = mbce.board;
-                moveboardcachehits++;
-                copy.CopyOverwrite(mbce.board);
-            }
-            else
-            {
-                moveboardcachemisses++;
-                //Cache miss
-                copy.CopyOverwrite(b);
-                copy.ApplyMove(moves[i]);
-
-                mbce.hash = boardOldHash;
-                mbce.move = moves[i];
-                mbce.board.CopyOverwrite(copy);
-                SetMoveBoardCacheEntry(boardOldHash, moves[i], mbce);
-            }
-            */
-            copy.CopyOverwrite(b);
-            copy.ApplyMove(moves[i]);
-
-            //scorer finds this early
-            /*
-            if (!copy.CheckForKings())
-            {
-                //King capture move is possible in this position therefore this position is illegal
-                return (moves[i], KING_CAPTURE);
-            }
-            */
-
-            /*
-            if (copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash) != copy.MakeZobristHashFromScratch(zobristHashes, zobristSupplemental))
-            {
-                Debug.Log(copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash) + " vs " + copy.MakeZobristHashFromScratch(zobristHashes, zobristSupplemental));
-            }
-            */
-
-            int newRed = red;
-            /*
-            if (newRed < 0 + (depth * 0.333f))
-            {
-                newRed = (int)(0 + (depth * 0.333f));
-            }
-            */
-            if (newRed < 1 + (depth * 0.15f))
-            {
-                newRed = (int)(1 + (depth * 0.15f));
-            }
-            if (!nonpassiveDict.ContainsKey(moves[i]))
-            {
-                passiveMoves++;
-                if (depth > 2 && passiveMoves >= lateReductionThreshold) // && scoreDict[moves[i]] == 0)
+                if (!keepSearching)
                 {
-                    doReduction = true;
+                    //fix weird bugs?
+                    return (0, float.NaN);
                 }
-            }
 
-            uint candidateMove;
-            float candidateEval;
-
-            ulong chash = copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash);
-            if (doReduction)
-            {
-                (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, chash, (depth - 1 - (newRed - red) + (newExt - ext)), newExt, newRed, alpha, beta, currentKillerMoves);
-            }
-            else
-            {
-                (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, chash, (depth - 1 + (newExt - ext)), newExt, red, alpha, beta, currentKillerMoves);
-            }
-
-            if (history.Contains(chash))
-            {
-                PenalizeMove(candidateEval, 0f);
-            }
-
-            if (killerMoves == null)
-            {
-                if (((chash >> 32) & 127) <= 7)   //10/128 chance of a blunder I guess?
+                /*
+                if (Board.PositionIsCheck(ref b))
                 {
-                    //shift right so the check bits and the bits that determine value are not the same
-                    candidateEval += blunderDeviation * (((((chash >> 24) & 15)) / 16f) - ((((chash >> 28) & 15)) / 16f));
-                }
-            }
-
-
-            if (!keepSearching)
-            {
-                return (bestMove, bestEvaluation);
-            }
-
-            if (candidateEval == KING_CAPTURE || float.IsNaN(candidateEval))
-            {
-                //That move is illegal
-                continue;
-            }
-
-            if (b.turn < 3)
-            {
-                candidateEval += ((((boardOldHash & 15) - 8f) / 16f) * openingDeviation * (3 - b.turn));
-            }
-
-            if (b.blackToMove)
-            {
-                //Reduce the score (beta cutoff)
-                if (float.IsNaN(bestEvaluation) || candidateEval < bestEvaluation)
-                {
-                    if (doReduction && newRed != red)
+                    //Checkmate :(
+                    if (b.blackToMove)
                     {
-                        //re-search
-                        //Wastes time but is unavoidable
-                        (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash), (depth - 1), ext, red, alpha, beta, currentKillerMoves);
+                        SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
+                        return (0, WHITE_VICTORY);
+                    } else
+                    {
+                        SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
+                        return (0, BLACK_VICTORY);
                     }
-
-                    bestEvaluation = candidateEval;
-                    bestMove = moves[i];
-                    /*
-                    if (depth == 3)
-                    {
-                        Debug.Log(Move.ConvertToString(bestMove) + " " + bestEvaluation);
-                    } 
-                    */
-                }
-
-                if (bestEvaluation < beta)
+                } else
                 {
-                    beta = bestEvaluation;
+                    //Stalemate :|
+                    //Populate the Z table still
                 }
-
-                if (bestEvaluation <= alpha)
-                {
-                    prunes++;
-                    if (killerMoves != null)
-                    {
-                        uint newKiller = Move.RemoveNonLocation(bestMove);
-                        killerMoves.Add(newKiller);
-                    }
-
-                    //double check this isn't an illegal position?
-                    if (Board.IsKingCapturePossible(ref b, moves))
-                    {
-                        //King capture move is possible in this position therefore this position is illegal
-                        return (moves[i], KING_CAPTURE);
-                    }
-
-                    //Populate the Z table
-                    ulong newHash = copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash);
-                    SetZTableEntry(newHash, new ZTableEntry(newHash, (byte)copy.turn, (byte)depth, ZTableEntry.BOUND_ALPHA, bestMove, bestEvaluation));
-                    return (bestMove, bestEvaluation);
-                }
-            }
-            else
-            {
-                //Increase the score (alpha cutoff)
-                if (float.IsNaN(bestEvaluation) || candidateEval > bestEvaluation)
-                {
-                    if (doReduction && newRed != red)
-                    {
-                        //re-search
-                        //Wastes time but is unavoidable
-                        (candidateMove, candidateEval) = AlphaBetaSearch(ref copy, copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash), (depth - 1), ext, red, alpha, beta, currentKillerMoves);
-                    }
-
-                    bestEvaluation = candidateEval;
-                    bestMove = moves[i];
-                }
-
-                if (bestEvaluation > alpha)
-                {
-                    alpha = bestEvaluation;
-                }
-
-                if (bestEvaluation >= beta)
-                {
-                    prunes++;
-                    if (killerMoves != null)
-                    {
-                        uint newKiller = Move.RemoveNonLocation(bestMove);
-                        killerMoves.Add(newKiller);
-                    }
-
-                    //double check this isn't an illegal position?
-                    if (Board.IsKingCapturePossible(ref b, moves))
-                    {
-                        //King capture move is possible in this position therefore this position is illegal
-                        return (moves[i], KING_CAPTURE);
-                    }
-
-                    //Populate the Z table
-                    ulong newHash = copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash);
-                    SetZTableEntry(newHash, new ZTableEntry(newHash, (byte)copy.turn, (byte)depth, ZTableEntry.BOUND_BETA, bestMove, bestEvaluation));
-                    return (bestMove, bestEvaluation);
-                }
-            }
-        }
-
-        //Successful in search
-
-        //Every move leads to king capture = stalemate or checkmate
-        if (float.IsNaN(bestEvaluation) || bestEvaluation > KING_CAPTURE / 2)
-        {
-            /*
-            if (Board.PositionIsCheck(ref b))
-            {
-                //Checkmate :(
+                */
+                //new: stalemate for side to move is loss
+                //So there is no point in checking for check
                 if (b.blackToMove)
                 {
                     SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
                     return (0, WHITE_VICTORY);
-                } else
+                }
+                else
                 {
                     SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
                     return (0, BLACK_VICTORY);
                 }
-            } else
-            {
-                //Stalemate :|
-                //Populate the Z table still
             }
-            */
-            //new: stalemate for side to move is loss
-            //So there is no point in checking for check
-            if (b.blackToMove)
-            {
-                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
-                return (0, WHITE_VICTORY);
-            }
-            else
-            {
-                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
-                return (0, BLACK_VICTORY);
-            }
-        }
 
-        //Mate in X
-        if (bestEvaluation > WHITE_VICTORY / 2)
-        {
-            bestEvaluation = bestEvaluation - 1;
-        }
-        if (bestEvaluation < BLACK_VICTORY / 2)
-        {
-            bestEvaluation = bestEvaluation + 1;
-        }
+            //Mate in X
+            if (bestEvaluation > WHITE_VICTORY / 2)
+            {
+                bestEvaluation = bestEvaluation - 1;
+            } else if (bestEvaluation < BLACK_VICTORY / 2)
+            {
+                bestEvaluation = bestEvaluation + 1;
+            }
 
-        //Populate the Z table
-        SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, bestMove, bestEvaluation));
-        return (bestMove, bestEvaluation);
+            //Populate the Z table
+            SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, (byte)depth, ZTableEntry.BOUND_EXACT, bestMove, bestEvaluation));
+            return (bestMove, bestEvaluation);
+        }
+        catch (Exception ex)
+        {
+            MainManager.Instance.LogException(MethodBase.GetCurrentMethod().Name, ex);
+            b.BoardPrint();
+        }
+        return (0, float.NaN);
     }
 
     public float PenalizeMove(float score, float multPenalty)
@@ -2623,152 +3011,466 @@ public class ChessAI
     //Does not check transposition table?
     public (uint, float) QSearch(ref Board b, ulong boardOldHash, float alpha, float beta, int qdepth, HashSet<uint> killerMoves = null)
     {
-        quiNodeSearched++;
-        HashSet<uint> currentKillerMoves = new HashSet<uint>();
-
-        //Something has gone catastrophically wrong
-        //need to limit it so it doesn't stack overflow
-        //Unfortunately for me a stack overflow in the AI thread is invisible and doesn't show me any error messages >:(
-        if (qdepth >= 10)
+        try
         {
-            //Debug.LogError("Too much quiescence, last move = " + Move.ConvertToString(b.GetLastMove()));
-            return (0, float.NaN);
-        }
+            quiNodeSearched++;
+            HashSet<uint> currentKillerMoves = GetKillerMovesFromHistoryCache(b.ply);
 
-        //Try to find it in the Z table
-        ZTableEntry zte = GetZTableEntry(boardOldHash);
-
-        //depth 0 q search acts on the current board so it shows up in the history (But it is not a repeat position)
-        float repetitionPenalty = 1f;
-        if (history.Contains(boardOldHash) && killerMoves != null)
-        {
-            repetitionPenalty = 0;
-        }
-
-        uint bestMove = 0;
-        float evaluation = float.NaN;
-
-        //Usable?
-        //Triggers instant cutoff?
-        if (zte.hash == boardOldHash)
-        {
-            bestMove = zte.move;
-
-            //Exact number: can use immediately
-            if (zte.flags == ZTableEntry.BOUND_EXACT)
+            //Something has gone catastrophically wrong
+            //need to limit it so it doesn't stack overflow
+            //Unfortunately for me a stack overflow in the AI thread is invisible and doesn't show me any error messages >:(
+            if (qdepth >= 10)
             {
-                nodesTransposed++;
-                return (zte.move, PenalizeMove(zte.score, repetitionPenalty));
+                //Debug.LogError("Too much quiescence, last move = " + Move.ConvertToString(b.GetLastMove()));
+                return (0, float.NaN);
             }
 
+            //Try to find it in the Z table
+            ZTableEntry zte = GetZTableEntry(boardOldHash);
+
+            //depth 0 q search acts on the current board so it shows up in the history (But it is not a repeat position)
+            float repetitionPenalty = 1f;
+            if (history.Contains(boardOldHash) && killerMoves != null)
+            {
+                repetitionPenalty = 0;
+            }
+
+            uint bestMove = 0;
+            float evaluation = float.NaN;
+
+            //Usable?
+            //Triggers instant cutoff?
+            if (zte.hash == boardOldHash)
+            {
+                bestMove = zte.move;
+
+                //Exact number: can use immediately
+                if (zte.flags == ZTableEntry.BOUND_EXACT)
+                {
+                    nodesTransposed++;
+                    return (zte.move, PenalizeMove(zte.score, repetitionPenalty));
+                }
+
+                if (b.blackToMove)
+                {
+                    //Reduce the score (check for < alpha)
+                    if (zte.flags == ZTableEntry.BOUND_ALPHA)
+                    {
+                        if (zte.score < beta)
+                        {
+                            nodesTransposed++;
+                            return (zte.move, PenalizeMove(zte.score, repetitionPenalty));
+                        }
+                    }
+                }
+                else
+                {
+                    //Increase the score (check for > beta)
+                    if (zte.flags == ZTableEntry.BOUND_BETA)
+                    {
+                        if (zte.score > alpha)
+                        {
+                            nodesTransposed++;
+                            return (zte.move, PenalizeMove(zte.score, repetitionPenalty));
+                        }
+                    }
+                }
+            }
+
+            Board copy = GetBoardFromHistoryCache(b.ply);
+            copy.CopyOverwrite(b);
+
+            List<uint> moves = GetMoveListFromHistoryCache(b.ply); //new List<uint>(30);
+            MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
+            boardOldHash = b.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref copy, boardOldHash);
+
+            //Null move might actually better?
+            //You are not forced to do all these captures, so not doing them might be better
+            float nullEvaluation = EvaluateBoard(ref b, ref copy, boardOldHash, moves);
+
+            if (nullEvaluation == KING_CAPTURE)
+            {
+                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, 0, KING_CAPTURE));
+                return (0, KING_CAPTURE);
+            }
+            if (nullEvaluation == WHITE_VICTORY)
+            {
+                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
+                return (0, WHITE_VICTORY);
+            }
+            if (nullEvaluation == BLACK_VICTORY)
+            {
+                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
+                return (0, BLACK_VICTORY);
+            }
+
+
+            //?
+            //If you have a good capture available you should do better than the null evaluation
+            //The alpha and beta cutoffs mean that a bad capture will be avoided as the null evaluation is better for the player than them so the cutoff would be avoided
+            //
+
+            evaluation = nullEvaluation;
             if (b.blackToMove)
             {
-                //Reduce the score (check for < alpha)
-                if (zte.flags == ZTableEntry.BOUND_ALPHA)
+                if (nullEvaluation < beta)
                 {
-                    if (zte.score < beta)
-                    {
-                        nodesTransposed++;
-                        return (zte.move, PenalizeMove(zte.score, repetitionPenalty));
-                    }
+                    beta = nullEvaluation;
                 }
             }
             else
             {
-                //Increase the score (check for > beta)
-                if (zte.flags == ZTableEntry.BOUND_BETA)
+                if (nullEvaluation > alpha)
                 {
-                    if (zte.score > alpha)
+                    alpha = nullEvaluation;
+                }
+            }
+
+            //this seems like an impossible scenario
+            /*
+            if (alpha > beta)
+            {
+                return (0, float.NaN);
+            }
+            */
+
+
+            //I want to sort the moves still because there can still be good pruning
+            //score moves
+            //in alpha beta search this is below the win condition check
+            //but this is the king capture check also so it has to be before
+            Dictionary<uint, float> scoreDict = GetScoreDictFromHistoryCache(b.ply); //= new Dictionary<uint, float>();
+
+            uint skipMove = 0;
+            for (int i = 0; i < moves.Count; i++)
+            {
+                float score = QMoveScore(ref b, ref copy, boardOldHash, moves[i], true);    //qdepth > 1
+
+                //bad
+                if (score == KING_CAPTURE)
+                {
+                    return (moves[i], KING_CAPTURE);
+                }
+
+                //new optimization: pre-search the previous best move to try to prune early?
+                //Note: QMoveScore may say that the best move is not valid for q search
+                //(I.e. if AB search touched that node with a passive move and gave it a score but now later the Q search sees that node)
+                if (moves[i] == bestMove && score > 0)
+                {
+                    skipMove = bestMove;
+                    copy.CopyOverwrite(b);
+                    copy.ApplyMove(moves[i]);
+
+                    (uint candidateMove, float candidateEval) = QSearch(ref copy, copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash), alpha, beta, qdepth + 1);
+
+                    //not safe to return a value here as the position may not be quiet?
+                    if (!keepSearching)
                     {
-                        nodesTransposed++;
-                        return (zte.move, PenalizeMove(zte.score, repetitionPenalty));
+                        return (bestMove, float.NaN);
+                    }
+
+                    if (candidateEval == KING_CAPTURE)
+                    {
+                        //move not allowed but does not invalidate this position
+                        scoreDict[bestMove] = BLACK_VICTORY * 2;
+                        continue;
+                    }
+
+                    if (b.blackToMove)
+                    {
+                        //Reduce the score (beta cutoff)
+                        if (float.IsNaN(evaluation) || candidateEval < evaluation)
+                        {
+                            evaluation = candidateEval;
+                            bestMove = moves[i];
+                        }
+
+                        if (evaluation < beta)
+                        {
+                            beta = evaluation;
+                        }
+
+                        if (evaluation <= alpha)
+                        {
+                            prunes++;
+                            //Populate the Z table
+                            SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_ALPHA, bestMove, evaluation));
+                            return (bestMove, PenalizeMove(evaluation, repetitionPenalty));
+                        }
+                    }
+                    else
+                    {
+                        //Increase the score (alpha cutoff)
+                        if (float.IsNaN(evaluation) || candidateEval > evaluation)
+                        {
+                            evaluation = candidateEval;
+                            bestMove = moves[i];
+                        }
+
+                        if (evaluation > alpha)
+                        {
+                            alpha = evaluation;
+                        }
+
+                        if (evaluation >= beta)
+                        {
+                            prunes++;
+                            //Populate the Z table
+                            SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_BETA, bestMove, evaluation));
+                            return (bestMove, PenalizeMove(evaluation, repetitionPenalty));
+                        }
+                    }
+                    scoreDict[moves[i]] = score;
+                    continue;
+                }
+
+                //killer moves
+                //note that legit captures get a +1000 so no check for that
+                if (killerMoves != null && killerMoves.Contains(Move.RemoveNonLocation(moves[i])))
+                {
+                    //A small ish bonus
+                    score += 25;
+                }
+
+                scoreDict[moves[i]] = score;
+            }
+
+            /*
+            //force the ztable best move to be searched first?
+            if (bestMove != 0 && scoreDict.ContainsKey(bestMove))
+            {
+                scoreDict[bestMove] += 50000;
+            }
+            */
+
+            //inefficient but important to have?
+            //Do I need this
+            //I can just make future Q searches include king captures
+            //No? Maybe it finds a move that blunders a queen and prunes early but doesn't even see that king capture is possible
+            //no: move score setup now forces king captures to the front
+            /*
+            if (Board.IsKingCapturePossible(ref b, moves))
+            {
+                //Populate the Z table
+                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, 0, ZTableEntry.BOUND_EXACT, bestMove, KING_CAPTURE));
+                return (0, KING_CAPTURE);
+            }
+            */
+            //If you already won then just return that immediately
+            //redundant: null evaluation finds these values first
+
+            /*
+            PieceAlignment winner = b.GetVictoryCondition();
+            if (winner != PieceAlignment.Null)
+            {
+                //this check is superceded by the above check
+                //Has precedence
+                //because moving into check for a win condition feels very contrary to normal chess logic
+                //It seems fine for multi king because you can intuitively understand why you can ignore check in that case
+                if (Board.IsKingCapturePossible(ref b))
+                {
+                    return (0, KING_CAPTURE);
+                }
+
+                if (winner == PieceAlignment.White)
+                {
+                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
+                    return (0, WHITE_VICTORY);
+                }
+                if (winner == PieceAlignment.Black)
+                {
+                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
+                    return (0, BLACK_VICTORY);
+                }
+            }
+            */
+
+            int FloatCompare(float a, float b)
+            {
+                if (a == b)
+                {
+                    return 0;
+                }
+                if (a > b)
+                {
+                    return 1;
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+
+            //sort moves
+            //put the best ones first
+
+            //only consider the quiescence stuff that has a chance of getting seen
+            //List<uint> moveSubset = moves.FindAll((e) => (scoreDict[e] > 0 || (Move.GetToX(e) == x && Move.GetToY(e) == y)));
+            List<uint> moveSubset = GetSubMoveListFromHistoryCache(b.ply); //new List<uint>(4);  //4 is the default after it starts at 0
+
+            for (int i = 0; i < moves.Count; i++)
+            {
+                if (skipMove == moves[i])
+                {
+                    continue;
+                }
+
+                if (scoreDict[moves[i]] == KING_CAPTURE)
+                {
+                    return (moves[i], KING_CAPTURE);
+                }
+
+                //removed the toX and toY check because it would end up in the score dict if it was capture
+                //int txy = Move.GetToX(moves[i]) + Move.GetToY(moves[i]) * 8;
+                //int fxy = Move.GetFromX(moves[i]) + Move.GetFromY(moves[i]) * 8;
+
+                if (qdepth > 2)
+                {
+                    //only legit captures get in
+                    if (scoreDict[moves[i]] > 1000)    // || ((txy & 7) == x && (txy >> 3) == y) && b.pieces[txy] != 0 && Piece.GetPieceAlignment(b.pieces[txy]) != Piece.GetPieceAlignment(b.pieces[fxy]))
+                    {
+                        moveSubset.Add(moves[i]);
+                    }
+                }
+                else
+                {
+                    if (scoreDict[moves[i]] > 0)    // || ((txy & 7) == x && (txy >> 3) == y) && b.pieces[txy] != 0 && Piece.GetPieceAlignment(b.pieces[txy]) != Piece.GetPieceAlignment(b.pieces[fxy]))
+                    {
+                        moveSubset.Add(moves[i]);
                     }
                 }
             }
-        }
 
-        Board copy = GetBoardFromHistoryCache(b.ply);
-        copy.CopyOverwrite(b);
+            //MoveBoardCacheEntry mbce;
 
-        List<uint> moves = GetMoveListFromHistoryCache(b.ply); //new List<uint>(30);
-        MoveGenerator.GenerateMovesForPlayer(moves, ref b, b.blackToMove ? PieceAlignment.Black : PieceAlignment.White, null);
-        boardOldHash = b.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref copy, boardOldHash);
+            moveSubset.Sort((a, b) => -FloatCompare(scoreDict[a], scoreDict[b]));
 
-        //Null move might actually better?
-        //You are not forced to do all these captures, so not doing them might be better
-        float nullEvaluation = EvaluateBoard(ref b, boardOldHash, moves);
-
-        if (nullEvaluation == KING_CAPTURE)
-        {
-            return (0, KING_CAPTURE);
-        }
-        if (nullEvaluation == WHITE_VICTORY)
-        {
-            return (0, WHITE_VICTORY);
-        }
-        if (nullEvaluation == BLACK_VICTORY)
-        {
-            return (0, BLACK_VICTORY);
-        }
-
-
-        //?
-        //If you have a good capture available you should do better than the null evaluation
-        //The alpha and beta cutoffs mean that a bad capture will be avoided as the null evaluation is better for the player than them so the cutoff would be avoided
-        //
-
-        evaluation = nullEvaluation;
-        if (b.blackToMove)
-        {
-            if (nullEvaluation < beta)
+            for (int i = 0; i < moveSubset.Count; i++)
             {
-                beta = nullEvaluation;
-            }
-        } else
-        {
-            if (nullEvaluation > alpha)
-            {
-                alpha = nullEvaluation;
-            }
-        }       
+                /*
+                if (Move.GetToX(moves[i]) == x && Move.GetToY(moves[i]) == y)
+                {
+                    //double check this is a capture and not some exotic other kind of move?
+                    //Push moves would cause infinite quiescence recursion?
 
-        //this seems like an impossible scenario
-        /*
-        if (alpha > beta)
-        {
-            return (0, float.NaN);
-        }
-        */
+                    if (Move.GetSpecialType(moves[i]) == Move.SpecialType.PushMove || Move.GetSpecialType(moves[i]) == Move.SpecialType.PullMove)
+                    {
+                        int tx = Move.GetToX(moves[i]);
+                        int ty = Move.GetToY(moves[i]);
 
+                        //Target must be non zero and different alignment
+                        if (b.pieces[tx + ty * 8] == 0 || Piece.GetPieceAlignment(b.pieces[tx + ty * 8]) == Piece.GetPieceAlignment(copy.pieces[tx + ty * 8]))
+                        {
+                            continue;
+                        }
+                    }
+                }
+                */
 
-        //I want to sort the moves still because there can still be good pruning
-        //score moves
-        //in alpha beta search this is below the win condition check
-        //but this is the king capture check also so it has to be before
-        Dictionary<uint, float> scoreDict = new Dictionary<uint, float>();
+                /*
+                bool considerMove = false;
 
-        uint skipMove = 0;
-        for (int i = 0; i < moves.Count; i++)
-        {
-            float score = QMoveScore(ref b, ref copy, boardOldHash, moves[i], true);    //qdepth > 1
-
-            //If you see a KING CAPTURE you can just stop immediately
-            if (score == KING_CAPTURE)
-            {
-                //Debug.Log(Move.ConvertToString(moves[i]) + " is kingcapture");
-                //Is this the cause of the bugs?
-                //SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, bestMove, KING_CAPTURE));
-                return (moves[i], KING_CAPTURE);
-            }
-
-            //new optimization: pre-search the previous best move to try to prune early?
-            //Note: QMoveScore may say that the best move is not valid for q search
-            //(I.e. if AB search touched that node with a passive move and gave it a score but now later the Q search sees that node)
-            if (moves[i] == bestMove && score > 0)
-            {
-                skipMove = bestMove;
                 copy.CopyOverwrite(b);
                 copy.ApplyMove(moves[i]);
+
+                //int condition = 0;
+                if (Move.GetToX(moves[i]) == x && Move.GetToY(moves[i]) == y)
+                {
+                    //double check this is a capture and not some exotic other kind of move?
+                    //Push moves would cause infinite quiescence recursion :(
+                    //2 pushers push each other back and forth which satisfies the position check infinitely while the enemy mops up your pieces
+                    //Can also do the same thing with pullers
+                    //Maybe I can just change the capture X,Y check to fix this?
+                    //No it didn't work
+                    considerMove = true;
+                    //condition = 1;
+
+                    if (Move.GetSpecialType(moves[i]) == Move.SpecialType.PushMove || Move.GetSpecialType(moves[i]) == Move.SpecialType.PullMove)
+                    {
+                        int tx = Move.GetToX(moves[i]);
+                        int ty = Move.GetToY(moves[i]);
+
+                        //Target must be non zero and different alignment
+                        if (b.pieces[tx + ty * 8] == 0 || Piece.GetPieceAlignment(b.pieces[tx + ty * 8]) == Piece.GetPieceAlignment(copy.pieces[tx + ty * 8]))
+                        {
+                            considerMove = false;
+                        }
+                    }
+                }
+
+                //Consider all weak takes strong captures also
+                //These moves are also rare enough to not cause branching factor problems
+                //(This helps fix problems with pins against strong pieces)
+                //Problem: what about the tree branch where 
+
+                if (!considerMove)
+                {
+                    //condition = 2;
+                    int lostMaterial = 0;
+                    if (b.blackToMove)
+                    {
+                        lostMaterial = b.whitePerPlayerInfo.pieceValueSumX2 - copy.whitePerPlayerInfo.pieceValueSumX2;
+                    }
+                    else
+                    {
+                        lostMaterial = b.blackPerPlayerInfo.pieceValueSumX2 - copy.blackPerPlayerInfo.pieceValueSumX2;
+                    }
+
+                    //LVA
+                    int fx = Move.GetFromX(moves[i]);
+                    int fy = Move.GetFromY(moves[i]);
+
+                    Piece.PieceType pt = Piece.GetPieceType(b.pieces[fx + fy * 8]);
+
+                    PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pt);
+
+                    if (pte.pieceValueX2 < lostMaterial)
+                    {
+                        considerMove = true;
+                    }
+                }
+                */
+
+                //if (considerMove)
+                //{
+                //Debug.Log("Condition " + condition + " consider " + Move.ConvertToString(moves[i]));
+                //Debug.Log(Move.ConvertToString(moveSubset[i]) + " " + scoreDict[moveSubset[i]] + " with qui target square " + x + " " + y);
+
+                //?
+                //how are score 0 moves getting in
+                /*
+                if (scoreDict[moveSubset[i]] == 0)
+                {
+                    break;
+                }
+                */
+
+                /*
+                //try to use board cache
+                mbce = GetMoveBoardCacheEntry(boardOldHash, moveSubset[i]);
+
+                if (mbce.hash == boardOldHash && mbce.move == moveSubset[i])
+                {
+                    //Cache hit (Saves 1 ApplyMove call)
+                    //copy = mbce.board;
+                    moveboardcachehits++;
+                    copy.CopyOverwrite(mbce.board);
+                }
+                else
+                {
+                    moveboardcachemisses++;
+                    //Cache miss
+                    copy.CopyOverwrite(b);
+                    copy.ApplyMove(moveSubset[i]);
+
+                    mbce.hash = boardOldHash;
+                    mbce.move = moveSubset[i];
+                    mbce.board.CopyOverwrite(copy);
+                    SetMoveBoardCacheEntry(boardOldHash, moveSubset[i], mbce);
+                }
+                */
+                copy.CopyOverwrite(b);
+                copy.ApplyMove(moveSubset[i]);
 
                 (uint candidateMove, float candidateEval) = QSearch(ref copy, copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash), alpha, beta, qdepth + 1);
 
@@ -2780,7 +3482,6 @@ public class ChessAI
 
                 if (candidateEval == KING_CAPTURE)
                 {
-                    scoreDict[bestMove] = KING_CAPTURE;
                     continue;
                 }
 
@@ -2790,7 +3491,7 @@ public class ChessAI
                     if (float.IsNaN(evaluation) || candidateEval < evaluation)
                     {
                         evaluation = candidateEval;
-                        bestMove = moves[i];
+                        bestMove = moveSubset[i];
                     }
 
                     if (evaluation < beta)
@@ -2812,7 +3513,7 @@ public class ChessAI
                     if (float.IsNaN(evaluation) || candidateEval > evaluation)
                     {
                         evaluation = candidateEval;
-                        bestMove = moves[i];
+                        bestMove = moveSubset[i];
                     }
 
                     if (evaluation > alpha)
@@ -2828,327 +3529,30 @@ public class ChessAI
                         return (bestMove, PenalizeMove(evaluation, repetitionPenalty));
                     }
                 }
-                scoreDict[moves[i]] = score;
-                continue;
+                //}
             }
 
-            //killer moves
-            //note that legit captures get a +1000 so no check for that
-            if (killerMoves != null && killerMoves.Contains(Move.RemoveNonLocation(moves[i])))
+            /*
+            if (float.IsNaN(evaluation))
             {
-                //A small ish bonus
-                score += 25;
+                //give up on finding move?
+                //Need to handle this specially later?
+                return (0, EvaluateBoard(ref b));
+            } else
+            {
             }
+            */
 
-            scoreDict[moves[i]] = score;
-        }
-
-        /*
-        //force the ztable best move to be searched first?
-        if (bestMove != 0 && scoreDict.ContainsKey(bestMove))
-        {
-            scoreDict[bestMove] += 50000;
-        }
-        */
-
-        //inefficient but important to have?
-        //Do I need this
-        //I can just make future Q searches include king captures
-        //No? Maybe it finds a move that blunders a queen and prunes early but doesn't even see that king capture is possible
-        //no: move score setup now forces king captures to the front
-        /*
-        if (Board.IsKingCapturePossible(ref b, moves))
-        {
+            //Above case is no longer necessary as the board was evaluated once before
             //Populate the Z table
-            SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (byte)b.turn, 0, ZTableEntry.BOUND_EXACT, bestMove, KING_CAPTURE));
-            return (0, KING_CAPTURE);
+            SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, bestMove, evaluation));
+            return (bestMove, PenalizeMove(evaluation, repetitionPenalty));
         }
-        */
-        //If you already won then just return that immediately
-        //redundant: null evaluation finds these values first
-
-        /*
-        PieceAlignment winner = b.GetVictoryCondition();
-        if (winner != PieceAlignment.Null)
+        catch (Exception ex)
         {
-            //this check is superceded by the above check
-            //Has precedence
-            //because moving into check for a win condition feels very contrary to normal chess logic
-            //It seems fine for multi king because you can intuitively understand why you can ignore check in that case
-            if (Board.IsKingCapturePossible(ref b))
-            {
-                return (0, KING_CAPTURE);
-            }
-
-            if (winner == PieceAlignment.White)
-            {
-                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, 0, WHITE_VICTORY));
-                return (0, WHITE_VICTORY);
-            }
-            if (winner == PieceAlignment.Black)
-            {
-                SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, 0, BLACK_VICTORY));
-                return (0, BLACK_VICTORY);
-            }
+            MainManager.Instance.LogException(MethodBase.GetCurrentMethod().Name, ex);
+            b.BoardPrint();
         }
-        */
-
-        int FloatCompare(float a, float b)
-        {
-            if (a == b)
-            {
-                return 0;
-            }
-            if (a > b)
-            {
-                return 1;
-            }
-            else
-            {
-                return -1;
-            }
-        }
-
-        //sort moves
-        //put the best ones first
-
-        //only consider the quiescence stuff that has a chance of getting seen
-        //List<uint> moveSubset = moves.FindAll((e) => (scoreDict[e] > 0 || (Move.GetToX(e) == x && Move.GetToY(e) == y)));
-        List<uint> moveSubset = new List<uint>(4);  //4 is the default after it starts at 0
-
-        for (int i = 0; i < moves.Count; i++)
-        {
-            if (skipMove == moves[i])
-            {
-                continue;
-            }
-
-            //removed the toX and toY check because it would end up in the score dict if it was capture
-            //int txy = Move.GetToX(moves[i]) + Move.GetToY(moves[i]) * 8;
-            //int fxy = Move.GetFromX(moves[i]) + Move.GetFromY(moves[i]) * 8;
-
-            if (qdepth > 2)
-            {
-                //only legit captures get in
-                if (scoreDict[moves[i]] > 1000)    // || ((txy & 7) == x && (txy >> 3) == y) && b.pieces[txy] != 0 && Piece.GetPieceAlignment(b.pieces[txy]) != Piece.GetPieceAlignment(b.pieces[fxy]))
-                {
-                    moveSubset.Add(moves[i]);
-                }
-            }
-            else
-            {
-                if (scoreDict[moves[i]] > 0)    // || ((txy & 7) == x && (txy >> 3) == y) && b.pieces[txy] != 0 && Piece.GetPieceAlignment(b.pieces[txy]) != Piece.GetPieceAlignment(b.pieces[fxy]))
-                {
-                    moveSubset.Add(moves[i]);
-                }
-            }
-        }
-
-        //MoveBoardCacheEntry mbce;
-
-        moveSubset.Sort((a, b) => -FloatCompare(scoreDict[a], scoreDict[b]));
-
-        for (int i = 0; i < moveSubset.Count; i++)
-        {
-            /*
-            if (Move.GetToX(moves[i]) == x && Move.GetToY(moves[i]) == y)
-            {
-                //double check this is a capture and not some exotic other kind of move?
-                //Push moves would cause infinite quiescence recursion?
-
-                if (Move.GetSpecialType(moves[i]) == Move.SpecialType.PushMove || Move.GetSpecialType(moves[i]) == Move.SpecialType.PullMove)
-                {
-                    int tx = Move.GetToX(moves[i]);
-                    int ty = Move.GetToY(moves[i]);
-
-                    //Target must be non zero and different alignment
-                    if (b.pieces[tx + ty * 8] == 0 || Piece.GetPieceAlignment(b.pieces[tx + ty * 8]) == Piece.GetPieceAlignment(copy.pieces[tx + ty * 8]))
-                    {
-                        continue;
-                    }
-                }
-            }
-            */
-
-            /*
-            bool considerMove = false;
-
-            copy.CopyOverwrite(b);
-            copy.ApplyMove(moves[i]);
-
-            //int condition = 0;
-            if (Move.GetToX(moves[i]) == x && Move.GetToY(moves[i]) == y)
-            {
-                //double check this is a capture and not some exotic other kind of move?
-                //Push moves would cause infinite quiescence recursion :(
-                //2 pushers push each other back and forth which satisfies the position check infinitely while the enemy mops up your pieces
-                //Can also do the same thing with pullers
-                //Maybe I can just change the capture X,Y check to fix this?
-                //No it didn't work
-                considerMove = true;
-                //condition = 1;
-
-                if (Move.GetSpecialType(moves[i]) == Move.SpecialType.PushMove || Move.GetSpecialType(moves[i]) == Move.SpecialType.PullMove)
-                {
-                    int tx = Move.GetToX(moves[i]);
-                    int ty = Move.GetToY(moves[i]);
-
-                    //Target must be non zero and different alignment
-                    if (b.pieces[tx + ty * 8] == 0 || Piece.GetPieceAlignment(b.pieces[tx + ty * 8]) == Piece.GetPieceAlignment(copy.pieces[tx + ty * 8]))
-                    {
-                        considerMove = false;
-                    }
-                }
-            }
-
-            //Consider all weak takes strong captures also
-            //These moves are also rare enough to not cause branching factor problems
-            //(This helps fix problems with pins against strong pieces)
-            //Problem: what about the tree branch where 
-
-            if (!considerMove)
-            {
-                //condition = 2;
-                int lostMaterial = 0;
-                if (b.blackToMove)
-                {
-                    lostMaterial = b.whitePerPlayerInfo.pieceValueSumX2 - copy.whitePerPlayerInfo.pieceValueSumX2;
-                }
-                else
-                {
-                    lostMaterial = b.blackPerPlayerInfo.pieceValueSumX2 - copy.blackPerPlayerInfo.pieceValueSumX2;
-                }
-
-                //LVA
-                int fx = Move.GetFromX(moves[i]);
-                int fy = Move.GetFromY(moves[i]);
-
-                Piece.PieceType pt = Piece.GetPieceType(b.pieces[fx + fy * 8]);
-
-                PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pt);
-
-                if (pte.pieceValueX2 < lostMaterial)
-                {
-                    considerMove = true;
-                }
-            }
-            */
-
-            //if (considerMove)
-            //{
-            //Debug.Log("Condition " + condition + " consider " + Move.ConvertToString(moves[i]));
-            //Debug.Log(Move.ConvertToString(moveSubset[i]) + " " + scoreDict[moveSubset[i]] + " with qui target square " + x + " " + y);
-
-            //?
-            //how are score 0 moves getting in
-            /*
-            if (scoreDict[moveSubset[i]] == 0)
-            {
-                break;
-            }
-            */
-
-            /*
-            //try to use board cache
-            mbce = GetMoveBoardCacheEntry(boardOldHash, moveSubset[i]);
-
-            if (mbce.hash == boardOldHash && mbce.move == moveSubset[i])
-            {
-                //Cache hit (Saves 1 ApplyMove call)
-                //copy = mbce.board;
-                moveboardcachehits++;
-                copy.CopyOverwrite(mbce.board);
-            }
-            else
-            {
-                moveboardcachemisses++;
-                //Cache miss
-                copy.CopyOverwrite(b);
-                copy.ApplyMove(moveSubset[i]);
-
-                mbce.hash = boardOldHash;
-                mbce.move = moveSubset[i];
-                mbce.board.CopyOverwrite(copy);
-                SetMoveBoardCacheEntry(boardOldHash, moveSubset[i], mbce);
-            }
-            */
-            copy.CopyOverwrite(b);
-            copy.ApplyMove(moveSubset[i]);
-
-            (uint candidateMove, float candidateEval) = QSearch(ref copy, copy.MakeZobristHashFromDelta(zobristHashes, zobristSupplemental, ref b, boardOldHash), alpha, beta, qdepth + 1);
-
-            //not safe to return a value here as the position may not be quiet?
-            if (!keepSearching)
-            {
-                return (bestMove, float.NaN);
-            }
-
-            if (candidateEval == KING_CAPTURE)
-            {
-                continue;
-            }
-
-            if (b.blackToMove)                    
-            {
-                //Reduce the score (beta cutoff)
-                if (float.IsNaN(evaluation) || candidateEval < evaluation)
-                {
-                    evaluation = candidateEval;
-                    bestMove = moveSubset[i];
-                }
-
-                if (evaluation < beta)
-                {
-                    beta = evaluation;
-                }
-
-                if (evaluation <= alpha)
-                {
-                    prunes++;
-                    //Populate the Z table
-                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_ALPHA, bestMove, evaluation));
-                    return (bestMove, PenalizeMove(evaluation, repetitionPenalty));
-                }
-            }
-            else
-            {
-                //Increase the score (alpha cutoff)
-                if (float.IsNaN(evaluation) || candidateEval > evaluation)
-                {
-                    evaluation = candidateEval;
-                    bestMove = moveSubset[i];
-                }
-
-                if (evaluation > alpha)
-                {
-                    alpha = evaluation;
-                }
-
-                if (evaluation >= beta)
-                {
-                    prunes++;
-                    //Populate the Z table
-                    SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_BETA, bestMove, evaluation));
-                    return (bestMove, PenalizeMove(evaluation, repetitionPenalty));
-                }
-            }
-            //}
-        }
-
-        /*
-        if (float.IsNaN(evaluation))
-        {
-            //give up on finding move?
-            //Need to handle this specially later?
-            return (0, EvaluateBoard(ref b));
-        } else
-        {
-        }
-        */
-
-        //Above case is no longer necessary as the board was evaluated once before
-        //Populate the Z table
-        SetZTableEntry(boardOldHash, new ZTableEntry(boardOldHash, (short)b.ply, 0, ZTableEntry.BOUND_EXACT, bestMove, evaluation));
-        return (bestMove, PenalizeMove(evaluation, repetitionPenalty));
+        return (0, float.NaN);
     }
 }

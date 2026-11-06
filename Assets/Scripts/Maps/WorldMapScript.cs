@@ -46,11 +46,11 @@ public class WorldMapScript : MonoBehaviour
                     MainManager.Instance.scalingFactor = 1.125f;
                     break;
                 case 4:
-                    baseDifficulty = 8;
+                    baseDifficulty = 6.5f;
                     MainManager.Instance.scalingFactor = 1.175f;
                     break;
                 case 5:
-                    baseDifficulty = 9;
+                    baseDifficulty = 7;
                     MainManager.Instance.scalingFactor = 1.2f;
                     break;
             }
@@ -115,94 +115,137 @@ public class WorldMapScript : MonoBehaviour
         MapNodeScript mns = MakeMapNodeScript(startPos + Vector3.up * 0.1f, pc, Mathf.Min(500, baseDifficulty), 2, MapNodeScript.MapNodeType.Start);
         //todo: find better way to do stuff to have branching paths and generated layouts
 
-        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(1, 71253));
         MapNodeScript a;
+        MapNodeScript b1;
+        MapNodeScript b2;
+        MapNodeScript c1;
+        MapNodeScript c2;
+        MapNodeScript c3;
+        MapNodeScript d1;
+        MapNodeScript d2;
+        MapNodeScript e;
+
+
+        Vector3 CoordinateShift(float axisA, float axisB)
+        {
+            return Vector3.Lerp(startPos, endPos, axisA) + delta * axisB;
+        }
+
+        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(1, 71253));
         if (MainManager.Instance.playerData.realmsComplete > 2)
         {
-            a = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.25f) + delta * Random.Range(-0.3f, 0.3f), 0, 3, pc, baseDifficulty, MapNodeScript.MapNodeType.WorldNode);
+            a = MakeWorldNode(pieceClasses, CoordinateShift(0.25f, 0), 0, 3, pc, baseDifficulty, MapNodeScript.MapNodeType.WorldNode);
         } else
         {
-            a = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.25f) + delta * Random.Range(-0.3f, 0.3f), 0, 0, pc, baseDifficulty, MapNodeScript.MapNodeType.WorldNode);
+            a = MakeWorldNode(pieceClasses, CoordinateShift(0.25f, 0), 0, 0, pc, baseDifficulty, MapNodeScript.MapNodeType.WorldNode);
         }
+
         pc = a.pieceClass;
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(2, 71253));
-        MapNodeScript b1;
         if (MainManager.Instance.playerData.realmsComplete > 2)
         {
-            b1 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(-1.2f, -1f), 0, 4, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 2f)), MapNodeScript.MapNodeType.WorldNode);
+            b1 = MakeWorldNode(pieceClasses, CoordinateShift(0.4f, -1), 0, 4, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 2f)), MapNodeScript.MapNodeType.WorldNode);
         }
         else
         {
-            b1 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(-1.2f, -1f), 1, 1, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 2f)), MapNodeScript.MapNodeType.WorldNode);
+            b1 = MakeWorldNode(pieceClasses, CoordinateShift(0.4f, -1), 1, 1, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 2f)), MapNodeScript.MapNodeType.WorldNode);
         }
+
         pc = a.pieceClass;
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(3, 71253));
-        MapNodeScript b2;
         if (MainManager.Instance.playerData.realmsComplete > 2)
         {
-            b2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.6f) + delta * Random.Range(-0.2f, 0.2f), 3, 5, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 3.5f)), MapNodeScript.MapNodeType.WorldNode);
+            b2 = MakeWorldNode(pieceClasses, CoordinateShift(0.4f, 1), 3, 5, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 2.5f)), MapNodeScript.MapNodeType.WorldNode);
         }
         else
         {
-            b2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.6f) + delta * Random.Range(-0.2f, 0.2f), 2, 2, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 3.5f)), MapNodeScript.MapNodeType.WorldNode);
+            b2 = MakeWorldNode(pieceClasses, CoordinateShift(0.4f, 1), 2, 4, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 2.5f)), MapNodeScript.MapNodeType.WorldNode);
         }
-        pc = a.pieceClass;
-        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(4, 71253));
-        MapNodeScript b3;
-        if (MainManager.Instance.playerData.realmsComplete > 2)
-        {
-            b3 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(1f, 1.2f), 1, 4, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 2.5f)), MapNodeScript.MapNodeType.WorldNode);
-        }
-        else
-        {
-            b3 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.4f) + delta * Random.Range(1f, 1.2f), 1, 2, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 2.5f)), MapNodeScript.MapNodeType.WorldNode);
-        }
+
         pc = b1.pieceClass;
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(5, 71253));
-        MapNodeScript c1;
         if (MainManager.Instance.playerData.realmsComplete > 2)
         {
-            c1 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(-0.8f, -0.7f), 4, 6, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 4.5f)), MapNodeScript.MapNodeType.WorldNode);
+            c1 = MakeWorldNode(pieceClasses, CoordinateShift(0.6f, -1.8f), 4, 6, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 4.5f)), MapNodeScript.MapNodeType.WorldNode);
         }
         else
         {
-            c1 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(-0.8f, -0.7f), 3, 4, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 4.5f)), MapNodeScript.MapNodeType.WorldNode);
+            c1 = MakeWorldNode(pieceClasses, CoordinateShift(0.6f, -1.8f), 3, 4, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 4.5f)), MapNodeScript.MapNodeType.WorldNode);
         }
-        pc = b3.pieceClass;
+
+        pc = b2.pieceClass;
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(6, 71253));
-        MapNodeScript c2;
         if (MainManager.Instance.playerData.realmsComplete > 2)
         {
-            c2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(0.7f, 0.8f), 5, 7, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 5.5f)), MapNodeScript.MapNodeType.WorldNode);
+            c2 = MakeWorldNode(pieceClasses, CoordinateShift(0.6f, 0), 4, 7, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 5f)), MapNodeScript.MapNodeType.WorldNode);
         }
         else
         {
-            c2 = MakeWorldNode(pieceClasses, Vector3.Lerp(startPos, endPos, 0.8f) + delta * Random.Range(0.7f, 0.8f), 3, 4, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 5.5f)), MapNodeScript.MapNodeType.WorldNode);
+            c2 = MakeWorldNode(pieceClasses, CoordinateShift(0.6f, 0), 3, 5, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 5f)), MapNodeScript.MapNodeType.WorldNode);
         }
+
+        pc = b2.pieceClass;
+        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(7, 71253));
+        if (MainManager.Instance.playerData.realmsComplete > 2)
+        {
+            c3 = MakeWorldNode(pieceClasses, CoordinateShift(0.6f, 1.8f), 5, 7, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 5.5f)), MapNodeScript.MapNodeType.WorldNode);
+        }
+        else
+        {
+            c3 = MakeWorldNode(pieceClasses, CoordinateShift(0.6f, 1.8f), 4, 5, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 5.5f)), MapNodeScript.MapNodeType.WorldNode);
+        }
+
+        pc = c1.pieceClass;
+        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(8, 71253));
+        if (MainManager.Instance.playerData.realmsComplete > 2)
+        {
+            d1 = MakeWorldNode(pieceClasses, CoordinateShift(0.8f, -1), 5, 7, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 7f)), MapNodeScript.MapNodeType.WorldNode);
+        }
+        else
+        {
+            d1 = MakeWorldNode(pieceClasses, CoordinateShift(0.8f, -1), 5, 6, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 7f)), MapNodeScript.MapNodeType.WorldNode);
+        }
+
+        pc = c3.pieceClass;
+        UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(9, 71253));
+        if (MainManager.Instance.playerData.realmsComplete > 2)
+        {
+            d2 = MakeWorldNode(pieceClasses, CoordinateShift(0.8f, 1), 5, 7, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 8f)), MapNodeScript.MapNodeType.WorldNode);
+        }
+        else
+        {
+            d2 = MakeWorldNode(pieceClasses, CoordinateShift(0.8f, 1), 5, 7, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 8f)), MapNodeScript.MapNodeType.WorldNode);
+        }
+
 
         mns.children.Add(a);
 
         a.children.Add(b1);
         a.children.Add(b2);
-        a.children.Add(b3);
 
         b1.children.Add(c1);
-        b2.children.Add(c1);
+        b1.children.Add(c2);
         b2.children.Add(c2);
-        b3.children.Add(c2);
+        b2.children.Add(c3);
+
+        c1.children.Add(d1);
+        c2.children.Add(d1);
+        c2.children.Add(d2);
+        c3.children.Add(d2);
+
 
         UnityEngine.Random.InitState(MainManager.ConvertSeedNodeOffset(7, 71253));
         if (MainManager.Instance.playerData.realmsComplete > 2)
         {
-            mns = MakeWorldNode(pieceClasses, endPos, 7, 8, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 7.5f)), MapNodeScript.MapNodeType.WorldNode);
+            mns = MakeWorldNode(pieceClasses, endPos, 7, 8, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 10f)), MapNodeScript.MapNodeType.WorldNode);
         }
         else
         {
-            mns = MakeWorldNode(pieceClasses, endPos, 4, 8, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 7.5f)), MapNodeScript.MapNodeType.WorldNode);
+            mns = MakeWorldNode(pieceClasses, endPos, 5, 8, pc, Mathf.Min(500, baseDifficulty * Mathf.Pow(MainManager.Instance.scalingFactor, 10f)), MapNodeScript.MapNodeType.WorldNode);
         }
         mns.em = Board.EnemyModifier.Zenith;
-        c1.children.Add(mns);
-        c2.children.Add(mns);
+        d1.children.Add(mns);
+        d2.children.Add(mns);
         lastNode = mns;
     }
 
@@ -303,9 +346,20 @@ public class WorldMapScript : MonoBehaviour
         current.active = false;
         current.CompleteNode();
 
+        ResetOnNodeComplete();
+
         if (current == lastNode)
         {
             CompleteMap();
+        }
+    }
+
+    public void ResetOnNodeComplete()
+    {
+        MainManager.Instance.playerData.undosLeft = MainManager.Instance.playerData.undoResetAmount;
+        if (MainManager.Instance.playerData.difficulty <= 1)
+        {
+            MainManager.Instance.playerData.retriesLeft = MainManager.Instance.playerData.retryResetAmount;
         }
     }
 

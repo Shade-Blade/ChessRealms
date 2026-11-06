@@ -32,6 +32,23 @@ public class TrashCanScript : MonoBehaviour
         forbidden = true;
     }
 
+    public void Hide()
+    {
+        //wack looking iteration
+        foreach (Transform child in transform)
+        {
+            child.gameObject.SetActive(false);
+        }
+    }
+    public void Show()
+    {
+        //wack looking iteration
+        foreach (Transform child in transform)
+        {
+            child.gameObject.SetActive(true);
+        }
+    }
+
     public void Update()
     {
         if (!active)

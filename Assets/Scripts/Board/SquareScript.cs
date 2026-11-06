@@ -23,6 +23,8 @@ public class SquareScript : MonoBehaviour
     public GameObject windDelta;
     public SpriteRenderer windArrow;
     public SpriteRenderer squareEffect;
+    public TMPro.TextMeshPro rankLabel;
+    public TMPro.TextMeshPro fileLabel;
 
     public Color whiteColor;
     public Color blackColor;
@@ -63,6 +65,22 @@ public class SquareScript : MonoBehaviour
         this.y = y;
 
         image.color = isBlack ? blackColor : whiteColor;
+        rankLabel.color = isBlack ? whiteColor : blackColor;
+        fileLabel.color = isBlack ? whiteColor : blackColor;
+        if (x == 7)
+        {
+            rankLabel.text = (y + 1).ToString();
+        } else
+        {
+            rankLabel.text = "";
+        }
+        if (y == 0)
+        {
+            fileLabel.text = FileToLetter(x).ToString();
+        } else
+        {
+            fileLabel.text = "";
+        }
         this.sq = sq;
     }
 
@@ -96,6 +114,9 @@ public class SquareScript : MonoBehaviour
         if (sq.type == Square.SquareType.Normal)
         {
             image.color = isBlack ? bs.squareColorBlack : bs.squareColorWhite;
+            //note: square colors should contrast each other enough that I don't need to add bonus contrast to the text
+            rankLabel.color = Color.Lerp(bs.squareColorWhite, bs.squareColorBlack, isBlack ? 0f : 1f).linear;
+            fileLabel.color = Color.Lerp(bs.squareColorWhite, bs.squareColorBlack, isBlack ? 0f : 1f).linear;
         }
 
         for (int i = 0; i < auraListSprites.Count; i++)
@@ -530,15 +551,15 @@ public class SquareScript : MonoBehaviour
         {
             if (czhWhite)
             {
-                moveHighlight.color = new Color(0.6f, 0.6f, 1f, 0.5f);
+                moveHighlight.color = new Color(0.6f, 0.6f, 1f, 0.25f);
             }
 
             if (czhBlack)
             {
-                moveHighlight.color = new Color(1f, 0.6f, 0.6f, 0.5f);
+                moveHighlight.color = new Color(1f, 0.6f, 0.6f, 0.25f);
                 if (czhWhite)
                 {
-                    moveHighlight.color = new Color(1f, 0.6f, 1f, 0.5f);
+                    moveHighlight.color = new Color(1f, 0.6f, 1f, 0.4f);
                 }
             }
         }

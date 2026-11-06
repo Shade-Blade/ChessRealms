@@ -30,8 +30,8 @@ public class SetupBoardScript : BoardScript
         //Note: this is a board where black has nothing
         //Hidden enemy modifier so that it doesn't block your moves due to King Capture
         //(Because the logic of setup moves forbids King Capture)
-        //Can't delete that logic because white king should not be blocked
-        board.Setup(oldArmy, new uint[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, Board.PlayerModifier.None, Board.EnemyModifier.Hidden);
+        //Can't delete that logic because white king should not be deleted
+        board.Setup(oldArmy, new uint[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, Board.PlayerModifier.None, Board.PlayerModifierB.None, Board.EnemyModifier.Hidden, Board.EnemyModifierB.None);
 
         for (int i = 0; i < 16; i++)
         {
@@ -73,7 +73,7 @@ public class SetupBoardScript : BoardScript
         return;
     }
 
-    public override void FixBoardBasedOnPosition()
+    public override void FixBoardBasedOnPosition(bool updateOutlinePieces = true)
     {
         //To fix wack bugs I should just refresh the entire piece list anyway?
         for (int i = 0; i < pieces.Count; i++)

@@ -14,6 +14,7 @@ public class ConsumableBadgePanelScript : MonoBehaviour
     public GameObject badgeTemplate;
 
     public BoardScript bs;
+    public TrashCanScript trashCan;
 
     public List<SpriteRenderer> colorListA;
     public List<SpriteRenderer> colorListB;
@@ -34,6 +35,15 @@ public class ConsumableBadgePanelScript : MonoBehaviour
             {
                 badges[i].bs = bs;
             }
+        }
+
+        if (bs is SetupBoardScript)
+        {
+            trashCan.Show();
+        }
+        if (bs is BattleBoardScript)
+        {
+            trashCan.Hide();
         }
     }
 
@@ -112,14 +122,14 @@ public class ConsumableBadgePanelScript : MonoBehaviour
     }
     public bool TryPlaceBadge(BadgeScript bs, int i)
     {
-        if (MainManager.Instance.playerData.badges[i] == 0)
+        if (MainManager.Instance.playerData.badges[i].pm == 0 && MainManager.Instance.playerData.badges[i].pmB == 0)
         {
             //Place it in the slot
             if (bs.badgeIndex >= 0)
             {
-                MainManager.Instance.playerData.badges[bs.badgeIndex] = 0;
+                MainManager.Instance.playerData.badges[bs.badgeIndex] = new Board.BadgeType();
             }
-            MainManager.Instance.playerData.badges[i] = bs.pm;
+            MainManager.Instance.playerData.badges[i] = bs.badgeType;
             return true;
         }
         else
@@ -128,7 +138,7 @@ public class ConsumableBadgePanelScript : MonoBehaviour
             if (bs.badgeIndex >= 0)
             {
                 MainManager.Instance.playerData.badges[bs.badgeIndex] = MainManager.Instance.playerData.badges[i];
-                MainManager.Instance.playerData.badges[i] = bs.pm;
+                MainManager.Instance.playerData.badges[i] = bs.badgeType;
                 return true;
             }
             else
@@ -145,14 +155,14 @@ public class ConsumableBadgePanelScript : MonoBehaviour
         MainManager.Instance.playerData.consumablesDisabled[cs.consumableIndex] = false;
 
         //Todo: Consumable data table to determine what consumables cost
-        MainManager.Instance.playerData.coins += Board.GetConsumableCost(cs.cmt);
+        MainManager.Instance.playerData.coins += Board.GetConsumableCost(cs.cmt) / 2;
     }
     public void TryDeleteBadge(BadgeScript bs)
     {
-        MainManager.Instance.playerData.badges[bs.badgeIndex] = 0;
+        MainManager.Instance.playerData.badges[bs.badgeIndex] = new Board.BadgeType();
 
         //Todo: Badge data table to determine what badges cost
-        MainManager.Instance.playerData.coins += Board.GetPlayerModifierCost(bs.pm);
+        MainManager.Instance.playerData.coins += Board.GetPlayerModifierCost(bs.badgeType) / 2;
     }
 
     public void FixInventory()
@@ -190,7 +200,7 @@ public class ConsumableBadgePanelScript : MonoBehaviour
         //make the ones in the correct slots
         for (int i = 0; i < MainManager.Instance.playerData.badges.Length; i++)
         {
-            if (MainManager.Instance.playerData.badges[i] != 0)
+            if (MainManager.Instance.playerData.badges[i].pm != 0 || MainManager.Instance.playerData.badges[i].pmB != 0)
             {
                 //make a consumable
                 GameObject go = Instantiate(badgeTemplate, badgeSlots[i].transform);

@@ -105,7 +105,7 @@ public class PieceMovePanelScript : MonoBehaviour
         pieceInfoText.text = text;
     }
 
-    public void SetBadge(Board.PlayerModifier pm)
+    public void SetBadge(Board.BadgeType pm)
     {
         ResetAll();
         pieceImageSprite.sprite = Text_BadgeSprite.GetBadgeSprite(pm);
@@ -308,13 +308,16 @@ public class PieceMovePanelScript : MonoBehaviour
             }
             SetSingleEntry(mgie, pte, false);
         }
-        foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
+        if (!pte.notReallyEnhanced)
         {
-            if (MoveGeneratorInfoEntry.GetSpecialMoveText(mgie.atom) != null && MoveGeneratorInfoEntry.GetSpecialMoveText(mgie.atom).Length > 0)
+            foreach (MoveGeneratorInfoEntry mgie in pte.enhancedMoveInfo)
             {
-                moveText += MoveGeneratorInfoEntry.GetSpecialMoveText(mgie.atom) + "\n";
+                if (MoveGeneratorInfoEntry.GetSpecialMoveText(mgie.atom) != null && MoveGeneratorInfoEntry.GetSpecialMoveText(mgie.atom).Length > 0)
+                {
+                    moveText += MoveGeneratorInfoEntry.GetSpecialMoveText(mgie.atom) + "\n";
+                }
+                SetSingleEntry(mgie, pte, true);
             }
-            SetSingleEntry(mgie, pte, true);
         }
 
         List<Move.SpecialType> moveTypes = new List<SpecialType>();
@@ -491,7 +494,7 @@ public class PieceMovePanelScript : MonoBehaviour
         {
             bottomText = "[" + GlobalPieceManager.GetPieceClassEntry(pte.pieceClass).name + "]";
         }
-        bottomText += " - [" + (pte.promotionType == PieceType.Null ? "NonPawn" : "Pawnlike") + "]";
+        bottomText += " - [" + (pte.promotionType == PieceType.Null ? "Champion" : "Minion") + "]";
         pieceClassText.text = bottomText;
     }
 
@@ -724,7 +727,10 @@ public class PieceMovePanelScript : MonoBehaviour
 
                 //(b.globalData.enemyModifier & Board.EnemyModifier.Xyloid) != 0
                 //currently there are no other ways for a king to have bonusmove so I'm removing it for now
-                if (pte.type == Piece.PieceType.King)
+                //if (pte.type == Piece.PieceType.King)
+
+                //only source of king rook unlimited is Xyloid currently
+                if (mgie.atom == MoveGeneratorAtom.R && mgie.range == 0 && mgie.rangeType == RangeType.Normal && pte.pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS)
                 {
                     specialType = Move.SpecialType.PlantMove;
                 }
@@ -1494,6 +1500,44 @@ public class PieceMovePanelScript : MonoBehaviour
                             GenerateOffsetRay(mgie, specialType, spi, 0, 0, -ch, -cl);
                         }
                     }
+                }
+                break;
+            case MoveGeneratorAtom.Range:
+                //cover all range X squares
+                GetSquare(0, mgie.x).Set(specialType, spi);
+                MakeTrail(0, 0, 0, mgie.x, specialType);
+                GetSquare(0, -mgie.x).Set(specialType, spi);
+                MakeTrail(0, 0, 0, -mgie.x, specialType);
+                GetSquare(mgie.x, 0).Set(specialType, spi);
+                MakeTrail(0, 0, mgie.x, 0, specialType);
+                GetSquare(-mgie.x, 0).Set(specialType, spi);
+                MakeTrail(0, 0, -mgie.x, 0, specialType);
+                GetSquare(mgie.x, mgie.x).Set(specialType, spi);
+                MakeTrail(0, 0, mgie.x, mgie.x, specialType);
+                GetSquare(mgie.x, -mgie.x).Set(specialType, spi);
+                MakeTrail(0, 0, mgie.x, -mgie.x, specialType);
+                GetSquare(-mgie.x, mgie.x).Set(specialType, spi);
+                MakeTrail(0, 0, -mgie.x, mgie.x, specialType);
+                GetSquare(-mgie.x, -mgie.x).Set(specialType, spi);
+                MakeTrail(0, 0, -mgie.x, -mgie.x, specialType);
+                for (int i = 1; i < mgie.x; i++)
+                {
+                    GetSquare(i, mgie.x).Set(specialType, spi);
+                    MakeTrail(0, 0, i, mgie.x, specialType);
+                    GetSquare(i, -mgie.x).Set(specialType, spi);
+                    MakeTrail(0, 0, i, -mgie.x, specialType);
+                    GetSquare(mgie.x,i).Set(specialType, spi);
+                    MakeTrail(0, 0, mgie.x, i, specialType);
+                    GetSquare(-mgie.x,i).Set(specialType, spi);
+                    MakeTrail(0, 0, -mgie.x, i, specialType);
+                    GetSquare(-i, mgie.x).Set(specialType, spi);
+                    MakeTrail(0, 0, -i, mgie.x, specialType);
+                    GetSquare(-i, -mgie.x).Set(specialType, spi);
+                    MakeTrail(0, 0, -i, -mgie.x, specialType);
+                    GetSquare(mgie.x, -i).Set(specialType, spi);
+                    MakeTrail(0, 0, mgie.x, -i, specialType);
+                    GetSquare(-mgie.x, -i).Set(specialType, spi);
+                    MakeTrail(0, 0,  -mgie.x, -i, specialType);
                 }
                 break;
             case MoveGeneratorAtom.Castling:

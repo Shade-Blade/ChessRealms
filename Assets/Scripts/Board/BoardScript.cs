@@ -11,12 +11,14 @@ public class BoardScript : MonoBehaviour
 
     public GameObject squareTemplate;
     public GameObject pieceTemplate;
+    public GameObject outlinePieceTemplate;
 
     public GameObject squareHolder;
     public GameObject pieceHolder;
 
     public List<SquareScript> squares;
     public List<PieceScript> pieces;
+    public List<OutlinePieceScript> outlinePieces;
 
     public int realHoverX;
     public int realHoverY;
@@ -192,7 +194,7 @@ public class BoardScript : MonoBehaviour
         selectedBadge = bs;
         if (pmps != null)
         {
-            pmps.SetBadge(bs.pm);
+            pmps.SetBadge(bs.badgeType);
         }
     }
 
@@ -305,7 +307,7 @@ public class BoardScript : MonoBehaviour
         TrySetupMove(ps, x, y, newX, newY);
     }
 
-    public virtual void FixBoardBasedOnPosition()
+    public virtual void FixBoardBasedOnPosition(bool updateOutlinePieces = true)
     {
         //To fix wack bugs I should just refresh the entire piece list anyway?
         for (int i = 0; i < pieces.Count; i++)

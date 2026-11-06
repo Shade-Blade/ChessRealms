@@ -15,6 +15,8 @@ public class BattleBoardScript : BoardScript
     public GameObject battleWinPanelTemplate;
     public GameObject battleLosePanelTemplate;
     public GameObject arrowTemplate;
+    public GameObject checkXTemplate;
+    public GameObject relayTrailTemplate;
 
     public List<uint> moveList;
     public Dictionary<uint, MoveMetadata> moveMetadata;
@@ -22,7 +24,10 @@ public class BattleBoardScript : BoardScript
 
     public List<uint> enemyMoveList;
     public Dictionary<uint, MoveMetadata> enemyMoveMetadata;
-    public MoveTrailScript illegalMoveTrail;
+    public List<GameObject> illegalOtherObjects;
+    public List<MoveTrailScript> illegalMoveTrails;
+
+    public List<GameObject> newMoveTrails;
 
     MoveBitTable mbtWhite;
     MoveBitTable mbtWhiteInverse;
@@ -30,7 +35,8 @@ public class BattleBoardScript : BoardScript
     MoveBitTable mbtBlackInverse;
 
     //
-    public MoveTrailScript checkMoveTrail;
+    public List<GameObject> checkOtherObjects;
+    public List<MoveTrailScript> checkMoveTrails;
     public bool onlyConsumableMoves;
 
     public List<MoveTrailScript> extraMoveTrails;
@@ -70,14 +76,14 @@ public class BattleBoardScript : BoardScript
     public bool rightClick;
     public ArrowScript arrow;
 
-    public static BattleBoardScript CreateBoard(uint[] army, Board.PlayerModifier pm, Board.EnemyModifier em, Piece.PieceClass pieceClass)
+    public static BattleBoardScript CreateBoard(uint[] army, Board.PlayerModifier pm, Board.PlayerModifierB pmB, Board.EnemyModifier em, Board.EnemyModifierB emB, Piece.PieceClass pieceClass)
     {
         GameObject go = Instantiate(Resources.Load<GameObject>("Board/BattleBoardTemplate"));
         BattleBoardScript bbs = go.GetComponent<BattleBoardScript>();
 
         bbs.MakeBoard();
         bbs.InitializeAI();
-        bbs.ResetBoard(MainManager.Instance.playerData.army, army, pm, em, pieceClass);
+        bbs.ResetBoard(MainManager.Instance.playerData.army, army, pm, pmB, em, emB, pieceClass);
         bbs.StartAnimatingStartAnimation();
         bbs.animationSpeed = MainManager.Instance.playerData.animationSpeed;
         return bbs;
@@ -120,7 +126,7 @@ public class BattleBoardScript : BoardScript
             squares[i].czhBlack = false;
             squares[i].Setup(i & 7, i >> 3, board.GetSquareAtCoordinate(i & 7, i >> 3));
         }
-        RegenerateMoveList();
+        RegenerateMoveList(false);
         FixBoardBasedOnPosition();
         historyList = new List<Board>();
         historyList.Add(new Board(board));
@@ -149,20 +155,20 @@ public class BattleBoardScript : BoardScript
         }
         chessAI.InitAI(difficulty);
     }
-    public void ResetBoard(Piece.PieceType[] army, Board.PlayerModifier pm, Board.EnemyModifier em)
+    public void ResetBoard(Piece.PieceType[] army, Board.PlayerModifier pm, Board.PlayerModifierB pmB, Board.EnemyModifier em, Board.EnemyModifierB emB, Piece.PieceClass pieceClass)
     {
         DestroyLastMovedTrail();
         whiteIsAI = false;  //so you can make your own move
         ResetSelected();
         board = new Board();
-        board.Setup(army, pm, em);
+        board.Setup(army, pm, pmB, em, emB, pieceClass);
         for (int i = 0; i < squares.Count; i++)
         {
             squares[i].czhWhite = false;
             squares[i].czhBlack = false;
             squares[i].Setup(i & 7, i >> 3, board.GetSquareAtCoordinate(i & 7, i >> 3));
         }
-        RegenerateMoveList();
+        RegenerateMoveList(false);
         FixBoardBasedOnPosition();
         historyList = new List<Board>();
         historyList.Add(new Board(board));
@@ -191,21 +197,21 @@ public class BattleBoardScript : BoardScript
         }
         chessAI.InitAI(difficulty);
     }
-    public void ResetBoard(uint[] warmy, uint[] barmy, Board.PlayerModifier pm, Board.EnemyModifier em)
+    public void ResetBoard(uint[] warmy, uint[] barmy, Board.PlayerModifier pm, Board.PlayerModifierB pmB, Board.EnemyModifier em, Board.EnemyModifierB emB)
     {
         Debug.Log("Make board");
         DestroyLastMovedTrail();
         whiteIsAI = false;  //so you can make your own move
         ResetSelected();
         board = new Board();
-        board.Setup(warmy, barmy, pm, em);
+        board.Setup(warmy, barmy, pm, pmB, em, emB);
         for (int i = 0; i < squares.Count; i++)
         {
             squares[i].czhWhite = false;
             squares[i].czhBlack = false;
             squares[i].Setup(i & 7, i >> 3, board.GetSquareAtCoordinate(i & 7, i >> 3));
         }
-        RegenerateMoveList();
+        RegenerateMoveList(false);
         FixBoardBasedOnPosition();
         historyList = new List<Board>();
         historyList.Add(new Board(board));
@@ -234,11 +240,11 @@ public class BattleBoardScript : BoardScript
         }
         chessAI.InitAI(difficulty);
     }
-    public void ResetBoard(uint[] warmy, uint[] barmy, Board.PlayerModifier pm, Board.EnemyModifier em, Piece.PieceClass pieceClass)
+    public void ResetBoard(uint[] warmy, uint[] barmy, Board.PlayerModifier pm, Board.PlayerModifierB pmB, Board.EnemyModifier em, Board.EnemyModifierB emB, Piece.PieceClass pieceClass)
     {
         if (pieceClass == PieceClass.None)
         {
-            ResetBoard(warmy, barmy, pm, em);
+            ResetBoard(warmy, barmy, pm, pmB, em, emB);
             return;
         }
 
@@ -247,14 +253,14 @@ public class BattleBoardScript : BoardScript
         whiteIsAI = false;  //so you can make your own move
         ResetSelected();
         board = new Board();
-        board.Setup(warmy, barmy, pm, em, pieceClass);
+        board.Setup(warmy, barmy, pm, pmB, em, emB, pieceClass);
         for (int i = 0; i < squares.Count; i++)
         {
             squares[i].czhWhite = false;
             squares[i].czhBlack = false;
             squares[i].Setup(i & 7, i >> 3, board.GetSquareAtCoordinate(i & 7, i >> 3));
         }
-        RegenerateMoveList();
+        RegenerateMoveList(false);
         FixBoardBasedOnPosition();
         historyList = new List<Board>();
         historyList.Add(new Board(board));
@@ -301,7 +307,7 @@ public class BattleBoardScript : BoardScript
                 moveThinkTime = 2;
                 break;
             case 5:
-                moveThinkTime = 6;
+                moveThinkTime = 5;
                 break;
         }
         chessAI.SetDifficulty(difficulty);
@@ -338,13 +344,15 @@ public class BattleBoardScript : BoardScript
             sc.transform.position = GetSpritePositionFromCoordinates(subX, subY, 0);
         }
 
-        RegenerateMoveList();
+        RegenerateMoveList(false);
 
         //make pieces
         pieces = new List<PieceScript>();
+        outlinePieces = new List<OutlinePieceScript>();
         for (int i = 0; i < 64; i++)
         {
             pieces.Add(null);
+            outlinePieces.Add(null);
         }
         FixBoardBasedOnPosition();
     }
@@ -458,7 +466,7 @@ public class BattleBoardScript : BoardScript
 
         if (pmps != null)
         {
-            pmps.SetText(selectedConsumable.text.text);
+            pmps.SetConsumable(selectedConsumable.cmt);
         }
     }
     public override void SelectPiece(PieceScript piece)
@@ -631,10 +639,16 @@ public class BattleBoardScript : BoardScript
         }
 
         onlyConsumableMoves = false;
-        if (checkMoveTrail != null)
+        for (int i = 0; i < checkMoveTrails.Count; i++)
         {
-            Destroy(checkMoveTrail.gameObject);
+            Destroy(checkMoveTrails[i].gameObject);
         }
+        checkMoveTrails.Clear();
+        for (int i = 0; i < checkOtherObjects.Count; i++)
+        {
+            Destroy(checkOtherObjects[i]);
+        }
+        checkOtherObjects.Clear();
 
         if (extraMoveTrails != null)
         {
@@ -651,10 +665,17 @@ public class BattleBoardScript : BoardScript
     public void DestroyIllegalTrail()
     {
         //destroy when you click on a piece
-        if (illegalMoveTrail != null)
+        for (int i = 0; i < illegalMoveTrails.Count; i++)
         {
-            Destroy(illegalMoveTrail.gameObject);
+            Destroy(illegalMoveTrails[i].gameObject);
         }
+        illegalMoveTrails.Clear();
+        for (int i = 0; i < illegalOtherObjects.Count; i++)
+        {
+            Destroy(illegalOtherObjects[i]);
+        }
+        illegalOtherObjects.Clear();
+        UpdateOutlinePieces();
     }
     public override void ResetSelected(bool forceDeselect = true)
     {
@@ -676,6 +697,8 @@ public class BattleBoardScript : BoardScript
         if (board.GetLastMove() != 0 && !Move.IsConsumableMove(board.GetLastMove()))
         {
             bool isGiant = (GlobalPieceManager.GetPieceTableEntry(board.GetLastMovedPiece()).piecePropertyB & PiecePropertyB.Giant) != 0;
+            bool isTall = (GlobalPieceManager.GetPieceTableEntry(board.GetLastMovedPiece()).piecePropertyB & PiecePropertyB.Tall) != 0;
+            bool isWide = (GlobalPieceManager.GetPieceTableEntry(board.GetLastMovedPiece()).piecePropertyB & PiecePropertyB.Wide) != 0;
 
             int fromX = Move.GetFromX(board.GetLastMove());
             int fromY = Move.GetFromY(board.GetLastMove());
@@ -693,6 +716,14 @@ public class BattleBoardScript : BoardScript
                 squares[toX + (toY + 1) * 8].SetLastMovedSquare();
                 squares[fromX + 1 + (fromY + 1) * 8].SetLastMovedSquare();
                 squares[toX + 1 + (toY + 1) * 8].SetLastMovedSquare();
+            } else if (isTall)
+            {
+                squares[fromX + (fromY + 1) * 8].SetLastMovedSquare();
+                squares[toX + (toY + 1) * 8].SetLastMovedSquare();
+            } else if (isWide)
+            {
+                squares[fromX + 1 + fromY * 8].SetLastMovedSquare();
+                squares[toX + 1 + toY * 8].SetLastMovedSquare();
             }
         }
 
@@ -780,30 +811,83 @@ public class BattleBoardScript : BoardScript
             {
                 Destroy(lastMoveTrail.gameObject);
             }
-            if (illegalMoveTrail != null)
+            for (int i = 0; i < illegalMoveTrails.Count; i++)
             {
-                Destroy(illegalMoveTrail.gameObject);
+                Destroy(illegalMoveTrails[i].gameObject);
             }
+            illegalMoveTrails.Clear();
+            for (int i = 0; i < illegalOtherObjects.Count; i++)
+            {
+                Destroy(illegalOtherObjects[i]);
+            }
+            illegalOtherObjects.Clear();
             onlyConsumableMoves = false;
-            if (checkMoveTrail != null)
+            for (int i = 0; i < checkMoveTrails.Count; i++)
             {
-                Destroy(checkMoveTrail.gameObject);
+                Destroy(checkMoveTrails[i].gameObject);
             }
+            checkMoveTrails.Clear();
+            for (int i = 0; i < checkOtherObjects.Count; i++)
+            {
+                Destroy(checkOtherObjects[i]);
+            }
+            checkOtherObjects.Clear();
             Board checkCopy = new Board(board);
             checkCopy.ApplyNullMove();
-            (uint checkMove, List<MoveMetadata> moveTrailCheck) = Board.FindKingCaptureMovePath(ref checkCopy);
-            if (checkMove != 0)
+            (List<uint> checkMoves, List<List<MoveMetadata>> moveTrailChecks) = Board.FindKingCaptureMovePaths(ref checkCopy);
+            if (checkMoves.Count > 0)
             {
-                checkMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
-                checkMoveTrail.Setup(Move.GetFromX(checkMove), Move.GetFromY(checkMove), moveTrailCheck);
-                checkMoveTrail.SetColorMoveCheck();
-                if (!checkCopy.blackToMove)
+                //if the null move also kills the king, don't spawn a ton of trails
+                Board checkCopyB = new Board(checkCopy);
+                checkCopyB.ApplyNullMove();
+                if (!checkCopyB.CheckForKings())
                 {
-                    checkMoveTrail.SetColorLight();
+                    ulong king = 0;
+                    if (checkCopy.blackToMove)
+                    {
+                        king = checkCopyB.globalData.bitboard_king & checkCopyB.globalData.bitboard_piecesWhite;
+                    }
+                    else
+                    {
+                        king = checkCopyB.globalData.bitboard_king & checkCopyB.globalData.bitboard_piecesBlack;
+                    }
+                    while (king != 0)
+                    {
+                        int i = MainManager.PopBitboardLSB1(king, out king);
+                        int kx = i & 7;
+                        int ky = (i >> 3);
+
+                        GameObject checkAllIndicator = Instantiate(checkXTemplate, transform);
+                        SpriteRenderer checkAllSprite = checkAllIndicator.GetComponent<SpriteRenderer>();
+                        if (!checkCopy.blackToMove)
+                        {
+                            checkAllSprite.color = new Color(0.75f, 0.5f, 0.5f, 0.5f);
+                        }
+                        else
+                        {
+                            checkAllSprite.color = new Color(0.25f, 0f, 0f, 0.5f);
+                        }
+                        checkAllIndicator.transform.position = BoardScript.GetSpritePositionFromCoordinates(kx, ky, -0.7f);
+                        checkOtherObjects.Add(checkAllIndicator);
+                    }
                 }
                 else
                 {
-                    checkMoveTrail.SetColorDark();
+                    for (int i = 0; i < checkMoves.Count; i++)
+                    {
+                        MoveTrailScript checkMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+                        checkMoveTrail.Setup(Move.GetFromX(checkMoves[i]), Move.GetFromY(checkMoves[i]), moveTrailChecks[i]);
+                        checkMoveTrail.SetColorMoveCheck();
+                        if (!checkCopy.blackToMove)
+                        {
+                            checkMoveTrail.SetColorLight();
+                        }
+                        else
+                        {
+                            checkMoveTrail.SetColorDark();
+                        }
+                        checkMoveTrails.Add(checkMoveTrail);
+                    }
                 }
             }
 
@@ -874,7 +958,7 @@ public class BattleBoardScript : BoardScript
                     winnerPA = PieceAlignment.Null;
                     Debug.Log("Draw with special condition");
                     gameOver = true;
-                    LoseBattle();
+                    DrawBattle();
                 }
             }
 
@@ -907,22 +991,58 @@ public class BattleBoardScript : BoardScript
                 //Illegal move failsafe?
                 awaitingMove = false;
 
-                (uint refMove, List<MoveMetadata> illegalPath) = Board.MoveIllegalByCheckFindRefutationPath(ref board, move);
-                Debug.Log("Move is illegal because of " + Move.ConvertToString(refMove));
+                (List<uint> refMoves, List<List<MoveMetadata>> illegalPaths) = Board.MoveIllegalByCheckFindRefutationPaths(ref board, move);
+                Debug.Log("Move is illegal because of " + Move.ConvertToString(refMoves[0]));
 
-                if (illegalMoveTrail != null)
+                for (int i = 0; i < illegalMoveTrails.Count; i++)
                 {
-                    Destroy(illegalMoveTrail.gameObject);
+                    Destroy(illegalMoveTrails[i].gameObject);
                 }
-                if (illegalPath != null)
+                illegalMoveTrails.Clear();
+                for (int i = 0; i < illegalOtherObjects.Count; i++)
                 {
-                    illegalMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
-                    illegalMoveTrail.SetColorMoveIllegal();
-                    illegalMoveTrail.Setup(Move.GetFromX(refMove), Move.GetFromY(refMove), illegalPath);
-                    //Debug.Log("Make illegal path");
+                    Destroy(illegalOtherObjects[i]);
+                }
+                illegalOtherObjects.Clear();
+                Board checkCopyB = new Board(board);
+                checkCopyB.ApplyMove(move);
+                checkCopyB.ApplyNullMove();
+                if (!checkCopyB.CheckForKings())
+                {
+                    ulong king = 0;
+                    if (checkCopyB.GetKingCaptureWinner() != PieceAlignment.White)
+                    {
+                        king |= board.globalData.bitboard_king & board.globalData.bitboard_piecesWhite;
+                    }
+                    else if (checkCopyB.GetKingCaptureWinner() != PieceAlignment.Black)
+                    {
+                        king |= board.globalData.bitboard_king & board.globalData.bitboard_piecesBlack;
+                    }
+                    while (king != 0)
+                    {
+                        int i = MainManager.PopBitboardLSB1(king, out king);
+                        int kx = i & 7;
+                        int ky = (i >> 3);
 
-                    //this doesn't trigger bonus move so this doesn't need a wacky check
-                    illegalMoveTrail.SetColorDark();
+                        GameObject checkAllIndicator = Instantiate(checkXTemplate, transform);
+                        SpriteRenderer checkAllSprite = checkAllIndicator.GetComponent<SpriteRenderer>();
+                        checkAllSprite.color = new Color(0.3f, 0.15f, 0f, 0.5f);
+                        checkAllIndicator.transform.position = BoardScript.GetSpritePositionFromCoordinates(kx, ky, -0.7f);
+                        illegalOtherObjects.Add(checkAllIndicator);
+                    }
+                } else
+                {
+                    for (int i = 0; i < refMoves.Count; i++)
+                    {
+                        MoveTrailScript illegalMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+                        illegalMoveTrail.SetColorMoveIllegal();
+                        illegalMoveTrail.Setup(Move.GetFromX(refMoves[i]), Move.GetFromY(refMoves[i]), illegalPaths[i]);
+                        //Debug.Log("Make illegal path");
+
+                        //this doesn't trigger bonus move so this doesn't need a wacky check
+                        illegalMoveTrail.SetColorDark();
+                        illegalMoveTrails.Add(illegalMoveTrail);
+                    }
                 }
 
                 /*
@@ -942,6 +1062,49 @@ public class BattleBoardScript : BoardScript
                 */
 
                 FixBoardBasedOnPosition();
+                //It is possible for the piece that makes the move illegal is different
+                //UpdateOutlinePieces();
+
+                //DestroyOutlinePieces();
+                Board copyBoard = new Board();
+                copyBoard.CopyOverwrite(board);
+                copyBoard.ApplyMove(move);
+
+                //rebuild outline pieces
+                for (int i = 0; i < 64; i++)
+                {
+                    uint piece = board.pieces[i];
+                    uint newpiece = copyBoard.pieces[i];
+
+                    int xb = i & 7;
+                    int yb = (i & 56) >> 3;
+
+                    //There exist pieces that will move even if the mover does nothing
+                    //Create outline pieces for this
+                    if (Piece.GetPieceType(piece) != Piece.GetPieceType(newpiece))
+                    {
+                        Piece.PieceType pt = Piece.GetPieceType(newpiece);
+                        PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pt);
+
+                        if (pt != PieceType.Null)
+                        {
+                            Color newColor;// = Piece.GetPieceColor(Piece.GetPieceAlignment(newpiece));
+                            if (!copyBoard.blackToMove)
+                            {
+                                newColor = new Color(0.8f, 0.65f, 0.5f, 0.5f);
+                            }
+                            else
+                            {
+                                newColor = new Color(0.3f, 0.15f, 0, 0.5f);
+                            }
+                            if (outlinePieces[x + (y << 3)] != null)
+                            {
+                                Destroy(outlinePieces[x + (y << 3)].gameObject);
+                            }
+                            SpawnOutlinePiece(newpiece, xb, yb, newColor, -0.02f);
+                        }
+                    }
+                }
             }
         }
     }
@@ -998,15 +1161,27 @@ public class BattleBoardScript : BoardScript
             {
                 Destroy(lastMoveTrail.gameObject);
             }
-            if (illegalMoveTrail != null)
+            for (int i = 0; i < illegalMoveTrails.Count; i++)
             {
-                Destroy(illegalMoveTrail.gameObject);
+                Destroy(illegalMoveTrails[i].gameObject);
             }
+            illegalMoveTrails.Clear();
+            for (int i = 0; i < illegalOtherObjects.Count; i++)
+            {
+                Destroy(illegalOtherObjects[i]);
+            }
+            illegalOtherObjects.Clear();
             onlyConsumableMoves = false;
-            if (checkMoveTrail != null)
+            for (int i = 0; i < checkMoveTrails.Count; i++)
             {
-                Destroy(checkMoveTrail.gameObject);
+                Destroy(checkMoveTrails[i].gameObject);
             }
+            checkMoveTrails.Clear();
+            for (int i = 0; i < checkOtherObjects.Count; i++)
+            {
+                Destroy(checkOtherObjects[i]);
+            }
+            checkOtherObjects.Clear();
 
             if (extraMoveTrails != null)
             {
@@ -1187,30 +1362,80 @@ public class BattleBoardScript : BoardScript
                 }
             }
 
-            if (illegalMoveTrail != null)
+            for (int i = 0; i < illegalMoveTrails.Count; i++)
             {
-                Destroy(illegalMoveTrail.gameObject);
+                Destroy(illegalMoveTrails[i].gameObject);
             }
+            illegalMoveTrails.Clear();
+            for (int i = 0; i < illegalOtherObjects.Count; i++)
+            {
+                Destroy(illegalOtherObjects[i]);
+            }
+            illegalOtherObjects.Clear();
             onlyConsumableMoves = false;
-            if (checkMoveTrail != null)
+            for (int i = 0; i < checkMoveTrails.Count; i++)
             {
-                Destroy(checkMoveTrail.gameObject);
+                Destroy(checkMoveTrails[i].gameObject);
             }
+            checkMoveTrails.Clear();
+            for (int i = 0; i < checkOtherObjects.Count; i++)
+            {
+                Destroy(checkOtherObjects[i]);
+            }
+            checkOtherObjects.Clear();
             Board checkCopy = new Board(board);
             checkCopy.ApplyNullMove();
-            (uint checkMove, List<MoveMetadata> moveTrailCheck) = Board.FindKingCaptureMovePath(ref checkCopy);
-            if (checkMove != 0)
+            (List<uint> checkMoves, List<List<MoveMetadata>> moveTrailChecks) = Board.FindKingCaptureMovePaths(ref checkCopy);
+            if (checkMoves.Count > 0)
             {
-                checkMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
-                checkMoveTrail.Setup(Move.GetFromX(checkMove), Move.GetFromY(checkMove), moveTrailCheck);
-                checkMoveTrail.SetColorMoveCheck();
-                if (!checkCopy.blackToMove)
+                Board checkCopyB = new Board(checkCopy);
+                checkCopyB.ApplyNullMove();
+                if (!checkCopyB.CheckForKings())
                 {
-                    checkMoveTrail.SetColorLight();
-                }
-                else
+                    ulong king = 0;
+                    if (checkCopy.blackToMove)
+                    {
+                        king = checkCopyB.globalData.bitboard_king & checkCopyB.globalData.bitboard_piecesWhite;
+                    } else
+                    {
+                        king = checkCopyB.globalData.bitboard_king & checkCopyB.globalData.bitboard_piecesBlack;
+                    }
+                    while (king != 0)
+                    {
+                        int i = MainManager.PopBitboardLSB1(king, out king);
+                        int kx = i & 7;
+                        int ky = (i >> 3);
+
+                        GameObject checkAllIndicator = Instantiate(checkXTemplate, transform);
+                        SpriteRenderer checkAllSprite = checkAllIndicator.GetComponent<SpriteRenderer>();
+                        if (!checkCopy.blackToMove)
+                        {
+                            checkAllSprite.color = new Color(0.75f, 0.5f, 0.5f, 0.5f);
+                        }
+                        else
+                        {
+                            checkAllSprite.color = new Color(0.25f, 0f, 0f, 0.5f);
+                        }
+                        checkAllIndicator.transform.position = BoardScript.GetSpritePositionFromCoordinates(kx, ky, -0.7f);
+                        checkOtherObjects.Add(checkAllIndicator);
+                    }
+                } else
                 {
-                    checkMoveTrail.SetColorDark();
+                    for (int i = 0; i < checkMoves.Count; i++)
+                    {
+                        MoveTrailScript checkMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+                        checkMoveTrail.Setup(Move.GetFromX(checkMoves[i]), Move.GetFromY(checkMoves[i]), moveTrailChecks[i]);
+                        checkMoveTrail.SetColorMoveCheck();
+                        if (!checkCopy.blackToMove)
+                        {
+                            checkMoveTrail.SetColorLight();
+                        }
+                        else
+                        {
+                            checkMoveTrail.SetColorDark();
+                        }
+                        checkMoveTrails.Add(checkMoveTrail);
+                    }
                 }
             }
 
@@ -1281,7 +1506,7 @@ public class BattleBoardScript : BoardScript
                     winnerPA = PieceAlignment.Null;
                     Debug.Log("Draw with special condition");
                     gameOver = true;
-                    LoseBattle();
+                    DrawBattle();
                 }
             }
 
@@ -1311,44 +1536,116 @@ public class BattleBoardScript : BoardScript
             //Illegal move failsafe?
             awaitingMove = false;
 
-            (uint refMove, List<MoveMetadata> illegalPath) = Board.MoveIllegalByCheckFindRefutationPath(ref board, move);
+            (List<uint> refMoves, List<List<MoveMetadata>> illegalPaths) = Board.MoveIllegalByCheckFindRefutationPaths(ref board, move);
             //Debug.Log("Move is illegal because of " + Move.ConvertToString(move));
 
-            string pathString = Move.PositionToString(Move.GetFromX(refMove), Move.GetFromY(refMove));
-            for (int i = 0; i < illegalPath.Count; i++)
+            for (int i = 0; i < illegalMoveTrails.Count; i++)
             {
-                if (illegalPath[i] == null)
+                Destroy(illegalMoveTrails[i].gameObject);
+            }
+            illegalMoveTrails.Clear();
+            for (int i = 0; i < illegalOtherObjects.Count; i++)
+            {
+                Destroy(illegalOtherObjects[i]);
+            }
+            illegalOtherObjects.Clear();
+            Board checkCopyB = new Board(board);
+            checkCopyB.ApplyMove(move);
+            checkCopyB.ApplyNullMove();
+            if (!checkCopyB.CheckForKings())
+            {
+                ulong king = 0;
+                if (checkCopyB.GetKingCaptureWinner() != PieceAlignment.White)
                 {
-                    pathString += " X";
+                    king |= board.globalData.bitboard_king & board.globalData.bitboard_piecesWhite;
                 }
-                else
+                else if (checkCopyB.GetKingCaptureWinner() != PieceAlignment.Black)
                 {
-                    pathString += " " + Move.PositionToString(illegalPath[i].x, illegalPath[i].y);
+                    king |= board.globalData.bitboard_king & board.globalData.bitboard_piecesBlack;
+                }
+                while (king != 0)
+                {
+                    int i = MainManager.PopBitboardLSB1(king, out king);
+                    int kx = i & 7;
+                    int ky = (i >> 3);
+
+                    GameObject checkAllIndicator = Instantiate(checkXTemplate, transform);
+                    SpriteRenderer checkAllSprite = checkAllIndicator.GetComponent<SpriteRenderer>();
+                    checkAllSprite.color = new Color(0.3f, 0.15f, 0f, 0.5f);
+                    checkAllIndicator.transform.position = BoardScript.GetSpritePositionFromCoordinates(kx, ky, -0.7f);
+                    illegalOtherObjects.Add(checkAllIndicator);
+                }
+                FixBoardBasedOnPosition();
+            } else
+            {
+                ulong refuterBitboard = 0;
+                for (int i = 0; i < refMoves.Count; i++)
+                {
+                    refuterBitboard |= (1uL << Move.GetFromXYInt(refMoves[i]));
+                    MoveTrailScript illegalMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+                    illegalMoveTrail.SetColorMoveIllegal();
+
+                    //dumb way to check stuff but ehh
+                    Board checkRefutationCopy = new Board(board);
+                    checkRefutationCopy.ApplyMove(move);
+                    if (!checkRefutationCopy.blackToMove)
+                    {
+                        illegalMoveTrail.SetColorLight();
+                    }
+                    else
+                    {
+                        illegalMoveTrail.SetColorDark();
+                    }
+                    illegalMoveTrail.Setup(Move.GetFromX(refMoves[i]), Move.GetFromY(refMoves[i]), illegalPaths[i]);
+                    illegalMoveTrails.Add(illegalMoveTrail);
+                }
+                FixBoardBasedOnPosition();
+                //It is possible for the piece that makes the move illegal is different
+                //UpdateOutlinePieces();
+
+                //DestroyOutlinePieces();
+                Board copyBoard = new Board();
+                copyBoard.CopyOverwrite(board);
+                copyBoard.ApplyMove(move);
+
+                //rebuild outline pieces
+                while (refuterBitboard != 0)
+                {
+                    int i = MainManager.PopBitboardLSB1(refuterBitboard, out refuterBitboard);
+
+                    uint piece = board.pieces[i];
+                    uint newpiece = copyBoard.pieces[i];
+
+                    int xb = i & 7;
+                    int yb = (i & 56) >> 3;
+
+                    //There exist pieces that will move even if the mover does nothing
+                    //Create outline pieces for this
+                    if (Piece.GetPieceType(piece) != Piece.GetPieceType(newpiece))
+                    {
+                        Piece.PieceType pt = Piece.GetPieceType(newpiece);
+                        PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pt);
+
+                        if (pt != PieceType.Null)
+                        {
+                            Color newColor;// = Piece.GetPieceColor(Piece.GetPieceAlignment(newpiece));
+                            if (!copyBoard.blackToMove)
+                            {
+                                newColor = new Color(0.8f, 0.65f, 0.5f, 0.5f);
+                            }
+                            else
+                            {
+                                newColor = new Color(0.3f, 0.15f, 0, 0.5f);
+                            }
+                            if (outlinePieces[x + (y << 3)] != null)
+                            {
+                                Destroy(outlinePieces[x + (y << 3)].gameObject);
+                            }
+                            SpawnOutlinePiece(newpiece, xb, yb, newColor, -0.02f);
+                        }
+                    }
                 }
             }
-            Debug.Log("Refutation " + Move.ConvertToString(move) + " move path: " + pathString);
-
-            if (illegalMoveTrail != null)
-            {
-                Destroy(illegalMoveTrail.gameObject);
-            }
-            illegalMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
-            illegalMoveTrail.SetColorMoveIllegal();
-
-            //dumb way to check stuff but ehh
-            Board checkRefutationCopy = new Board(board);
-            checkRefutationCopy.ApplyMove(move);
-            if (!checkRefutationCopy.blackToMove)
-            {
-                illegalMoveTrail.SetColorLight();
-            }
-            else
-            {
-                illegalMoveTrail.SetColorDark();
-            }
-            illegalMoveTrail.Setup(Move.GetFromX(refMove), Move.GetFromY(refMove), illegalPath);
-
-            FixBoardBasedOnPosition();
         }
     }
 
@@ -1388,7 +1685,7 @@ public class BattleBoardScript : BoardScript
                 Debug.LogError("AI failed to move for some reason");
                 gameOver = true;
                 drawError = true;
-                LoseBattle();
+                DrawBattle();
             }
             return;
         }
@@ -1397,7 +1694,7 @@ public class BattleBoardScript : BoardScript
         if (checkMove == 0 || !Board.IsMoveLegal(ref board, checkMove, true))
         {
             //Error
-            Debug.LogError("Black AI attempted an illegal move, retrying");
+            Debug.LogError("Black AI attempted an illegal move (" + Move.ConvertToStringMinimal(aiMove) + "), retrying");
             //MainManager.PrintBitboard(board.globalData.bitboard_piecesBlack);
             //MainManager.PrintBitboard(board.globalData.bitboard_piecesBlackAdjacent);
             //Debug.LogError(board.globalData.bitboard_piecesBlack + " " + board.globalData.bitboard_piecesBlackAdjacent);
@@ -1423,6 +1720,8 @@ public class BattleBoardScript : BoardScript
         {
             moveTrail = moveMetadata[Move.RemoveNonLocation(aiMove)].TracePath(Move.GetFromX(aiMove), Move.GetFromY(aiMove), Move.GetDir(aiMove));
         }
+
+        board.InvariantTest();
 
         ResetSelected();
         board.ApplyMove(aiMove, boardUpdateMetadata);
@@ -1472,30 +1771,82 @@ public class BattleBoardScript : BoardScript
             lastMoveTrail.SetColorDark();
         }
 
-        if (illegalMoveTrail != null)
+        for (int i = 0; i < illegalMoveTrails.Count; i++)
         {
-            Destroy(illegalMoveTrail.gameObject);
+            Destroy(illegalMoveTrails[i].gameObject);
         }
+        illegalMoveTrails.Clear();
+        for (int i = 0; i < illegalOtherObjects.Count; i++)
+        {
+            Destroy(illegalOtherObjects[i]);
+        }
+        illegalOtherObjects.Clear();
         onlyConsumableMoves = false;
-        if (checkMoveTrail != null)
+        for (int i = 0; i < checkMoveTrails.Count; i++)
         {
-            Destroy(checkMoveTrail.gameObject);
+            Destroy(checkMoveTrails[i].gameObject);
         }
+        checkMoveTrails.Clear();
+        for (int i = 0; i < checkOtherObjects.Count; i++)
+        {
+            Destroy(checkOtherObjects[i]);
+        }
+        checkOtherObjects.Clear();
         Board checkCopy = new Board(board);
         checkCopy.ApplyNullMove();
-        (uint checkMoveB, List<MoveMetadata> moveTrailCheck) = Board.FindKingCaptureMovePath(ref checkCopy);
-        if (checkMoveB != 0)
+        (List<uint> checkMoves, List<List<MoveMetadata>> moveTrailChecks) = Board.FindKingCaptureMovePaths(ref checkCopy);
+        if (checkMoves.Count > 0)
         {
-            checkMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
-            checkMoveTrail.Setup(Move.GetFromX(checkMoveB), Move.GetFromY(checkMoveB), moveTrailCheck);
-            checkMoveTrail.SetColorMoveCheck();
-            if (!checkCopy.blackToMove)
+            Board checkCopyB = new Board(checkCopy);
+            checkCopyB.ApplyNullMove();
+            if (!checkCopyB.CheckForKings())
             {
-                checkMoveTrail.SetColorLight();
+                ulong king = 0;
+                if (checkCopy.blackToMove)
+                {
+                    king = checkCopyB.globalData.bitboard_king & checkCopyB.globalData.bitboard_piecesWhite;
+                }
+                else
+                {
+                    king = checkCopyB.globalData.bitboard_king & checkCopyB.globalData.bitboard_piecesBlack;
+                }
+                while (king != 0)
+                {
+                    int i = MainManager.PopBitboardLSB1(king, out king);
+                    int kx = i & 7;
+                    int ky = (i >> 3);
+
+                    GameObject checkAllIndicator = Instantiate(checkXTemplate, transform);
+                    SpriteRenderer checkAllSprite = checkAllIndicator.GetComponent<SpriteRenderer>();
+                    if (!checkCopy.blackToMove)
+                    {
+                        checkAllSprite.color = new Color(0.75f, 0.5f, 0.5f, 0.5f);
+                    }
+                    else
+                    {
+                        checkAllSprite.color = new Color(0.25f, 0f, 0f, 0.5f);
+                    }
+                    checkAllIndicator.transform.position = BoardScript.GetSpritePositionFromCoordinates(kx, ky, -0.7f);
+                    checkOtherObjects.Add(checkAllIndicator);
+                }
             }
             else
             {
-                checkMoveTrail.SetColorDark();
+                for (int i = 0; i < checkMoves.Count; i++)
+                {
+                    MoveTrailScript checkMoveTrail = Instantiate(moveTrailTemplate, transform).GetComponent<MoveTrailScript>();
+                    checkMoveTrail.Setup(Move.GetFromX(checkMoves[i]), Move.GetFromY(checkMoves[i]), moveTrailChecks[i]);
+                    checkMoveTrail.SetColorMoveCheck();
+                    if (!checkCopy.blackToMove)
+                    {
+                        checkMoveTrail.SetColorLight();
+                    }
+                    else
+                    {
+                        checkMoveTrail.SetColorDark();
+                    }
+                    checkMoveTrails.Add(checkMoveTrail);
+                }
             }
         }
 
@@ -1571,7 +1922,7 @@ public class BattleBoardScript : BoardScript
                 winnerPA = PieceAlignment.Null;
                 Debug.Log("Draw with special condition");
                 gameOver = true;
-                LoseBattle();
+                DrawBattle();
                 return;
             }
         }
@@ -1604,6 +1955,32 @@ public class BattleBoardScript : BoardScript
         }
     }
 
+    public void TryRetry()
+    {
+        //if you already won you can't retry
+        if (FindObjectOfType<BattleWinPanelScript>() != null)
+        {
+            return;
+        }
+
+        if (MainManager.Instance.playerData.retriesLeft < PlayerData.INFINITE_UNDOS)
+        {
+            MainManager.Instance.playerData.retriesLeft--;
+        }
+        MainManager.Instance.playerData.undosLeft = MainManager.Instance.playerData.undoResetAmount;
+        FindObjectOfType<OverworldScript>().ReturnFromNode(false);
+        //destroy lose panel
+        BattleLosePanelScript losePanel = FindObjectOfType<BattleLosePanelScript>();
+        if (losePanel != null)
+        {
+            Destroy(losePanel.gameObject);
+        }
+        BattleDrawPanelScript drawPanel = FindObjectOfType<BattleDrawPanelScript>();
+        if (drawPanel != null)
+        {
+            Destroy(drawPanel.gameObject);
+        }
+    }
     public void UndoReset()
     {
         if (historyIndex == 0)
@@ -1621,22 +1998,37 @@ public class BattleBoardScript : BoardScript
             chessAI.HashFromScratch(historyList[0])
         };
         DestroyLastMovedTrail();    //it is annoying to get the correct trail so I'll just destroy it 
-        RegenerateMoveList();
+        RegenerateMoveList(true);
         ResetSelected();
         FixBoardBasedOnPosition();
     }
     public void DoubleUndo()
     {
-        if (historyIndex <= 0)
+        //only undo if undoing is possible and it is your turn
+        if (historyIndex <= 0 || board.blackToMove)
         {
             return;
         }
-        MainManager.Instance.playerData.undosLeft--;
+        //if you already won you can't undo
+        if (FindObjectOfType<BattleWinPanelScript>() != null)
+        {
+            return;
+        }
+
+        if (MainManager.Instance.playerData.undosLeft < PlayerData.INFINITE_UNDOS)
+        {
+            MainManager.Instance.playerData.undosLeft--;
+        }
 
         BattleLosePanelScript losePanel = FindObjectOfType<BattleLosePanelScript>();
         if (losePanel != null)
         {
             Destroy(losePanel.gameObject);
+        }
+        BattleDrawPanelScript drawPanel = FindObjectOfType<BattleDrawPanelScript>();
+        if (drawPanel != null)
+        {
+            Destroy(drawPanel.gameObject);
         }
 
         /*
@@ -1728,11 +2120,19 @@ public class BattleBoardScript : BoardScript
         FixBoardBasedOnPosition();
     }
 
-    public override void FixBoardBasedOnPosition()
+    public override void FixBoardBasedOnPosition(bool updateOutlinePieces = true)
     {
         //To fix wack bugs I should just refresh the entire piece list anyway?
         for (int i = 0; i < pieces.Count; i++)
         {
+            if (updateOutlinePieces)
+            {
+                if (outlinePieces[i] != null)
+                {
+                    Destroy(outlinePieces[i]);
+                }
+                outlinePieces[i] = null;
+            }
             if (pieces[i] != null)
             {
                 Destroy(pieces[i].gameObject);
@@ -1760,10 +2160,44 @@ public class BattleBoardScript : BoardScript
                 continue;
             }
 
+            if ((GlobalPieceManager.GetPieceTableEntry(board.pieces[i]) == null)) {
+                Debug.LogError("Found null piece: " + board.pieces[i]);
+                continue;
+            }
+
             if ((GlobalPieceManager.GetPieceTableEntry(board.pieces[i]).piecePropertyB & PiecePropertyB.TrueShiftImmune) != 0)
             {
                 relayableBitboard &= ~(1uL << i);
             }
+        }
+
+        //this is hacky but when you go back you lose the coins from getting the treasures
+        int bronzeSpawned = 0;
+        int silverSpawned = 0;
+        int goldSpawned = 0;
+        Square[] oldSquares = new Square[64];
+        for (int i = 0; i < pieces.Count; i++)
+        {
+            oldSquares[i] = squares[i].sq;
+
+            if (oldSquares[i].type != Square.SquareType.BronzeTreasure && board.globalData.squares[i].type == Square.SquareType.BronzeTreasure)
+            {
+                bronzeSpawned++;
+            }
+            if (oldSquares[i].type != Square.SquareType.SilverTreasure && board.globalData.squares[i].type == Square.SquareType.SilverTreasure)
+            {
+                silverSpawned++;
+            }
+            if (oldSquares[i].type != Square.SquareType.GoldTreasure && board.globalData.squares[i].type == Square.SquareType.GoldTreasure)
+            {
+                goldSpawned++;
+            }
+        }
+        MainManager.Instance.playerData.coins -= 2 * bronzeSpawned;
+        MainManager.Instance.playerData.coins -= 4 * silverSpawned;
+        if (goldSpawned > 0)
+        {
+            MainManager.Instance.playerData.coins -= 6;
         }
 
         //fix the pieces to match the board state
@@ -1892,21 +2326,41 @@ public class BattleBoardScript : BoardScript
                         break;
                 }
 
-                if (Piece.GetPieceType(board.pieces[i]) == PieceType.King && Piece.GetPieceAlignment(board.pieces[i]) == PieceAlignment.Black)
+                if (GlobalPieceManager.GetPieceTableEntry(board.pieces[i]).pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS)
                 {
-                    if ((board.globalData.enemyModifier & Board.EnemyModifier.Fusion) != 0)
+                    if (Piece.GetPieceAlignment(board.pieces[i]) == PieceAlignment.Black)
                     {
-                        switch (Piece.GetPieceAlignment(ps.piece))
+                        if ((board.globalData.enemyModifier & Board.EnemyModifier.Fusion) != 0)
                         {
-                            case PieceAlignment.White:
-                                ps.relayDefenders |= mbtWhite.Get(i) & whiteBitboard;
-                                break;
-                            case PieceAlignment.Black:
-                                ps.relayDefenders |= mbtBlack.Get(i) & blackBitboard;
-                                break;
-                            case PieceAlignment.Neutral:
-                            case PieceAlignment.Crystal:
-                                break;
+                            switch (Piece.GetPieceAlignment(ps.piece))
+                            {
+                                case PieceAlignment.White:
+                                    ps.relayDefenders |= mbtWhite.Get(i) & whiteBitboard;
+                                    break;
+                                case PieceAlignment.Black:
+                                    ps.relayDefenders |= mbtBlack.Get(i) & blackBitboard;
+                                    break;
+                                case PieceAlignment.Neutral:
+                                case PieceAlignment.Crystal:
+                                    break;
+                            }
+                        }
+                    } else if (Piece.GetPieceAlignment(board.pieces[i]) == PieceAlignment.White)
+                    {
+                        if ((board.globalData.playerModifier & Board.PlayerModifier.RelayKing) != 0)
+                        {
+                            switch (Piece.GetPieceAlignment(ps.piece))
+                            {
+                                case PieceAlignment.White:
+                                    ps.relayAttacked |= mbtWhite.Get(i) & whiteBitboard & relayableBitboard;
+                                    break;
+                                case PieceAlignment.Black:
+                                    ps.relayAttacked |= mbtBlack.Get(i) & blackBitboard & relayableBitboard;
+                                    break;
+                                case PieceAlignment.Neutral:
+                                case PieceAlignment.Crystal:
+                                    break;
+                            }
                         }
                     }
                 }
@@ -1957,14 +2411,14 @@ public class BattleBoardScript : BoardScript
                             continue;
                         }
 
-                        if (Piece.GetPieceType(pieces[er].piece) == PieceType.King)
+                        if (GlobalPieceManager.GetPieceTableEntry(pieces[er].piece).pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS)
                         {
                             continue;
                         }
 
                         pieces[er].relayDefenders |= (1uL << er);
                     }
-                } 
+                }
 
                 if (((1uL << i) & relayableBitboard) != 0)
                 {
@@ -1976,7 +2430,7 @@ public class BattleBoardScript : BoardScript
                         int ai = MainManager.PopBitboardLSB1(relayTest, out relayTest);
                         ulong bitIndex = 1uL << ai;
 
-                        if (kindness || (GlobalPieceManager.GetPieceTableEntry(board.pieces[ai]).pieceProperty & PieceProperty.Relay) != 0)
+                        if (kindness || (GlobalPieceManager.GetPieceTableEntry(board.pieces[ai]).pieceProperty & PieceProperty.Relay) != 0 || (Piece.GetPieceAlignment(board.pieces[i]) == PieceAlignment.White && ((board.globalData.playerModifier & Board.PlayerModifier.RelayKing) != 0 && GlobalPieceManager.GetPieceTableEntry(board.pieces[ai]).pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS)))
                         {
                             ps.relayDefenders |= bitIndex;
                         }
@@ -1997,7 +2451,7 @@ public class BattleBoardScript : BoardScript
                     }
                 }
 
-                ps.UpdateRelay();
+                ps.UpdatePieceLines();
             }
 
             //reset color anyway
@@ -2005,6 +2459,11 @@ public class BattleBoardScript : BoardScript
             {
                 pieces[i].ResetColor();
             }
+        }
+
+        if (updateOutlinePieces)
+        {
+            UpdateOutlinePieces();
         }
 
         //find weird pieces
@@ -2025,7 +2484,92 @@ public class BattleBoardScript : BoardScript
                 Destroy(psList[i].gameObject);
             }
         }
+
+        if (updateOutlinePieces)
+        {
+            pieceSet = new HashSet<GameObject>();
+            for (int i = 0; i < outlinePieces.Count; i++)
+            {
+                if (outlinePieces[i] != null)
+                {
+                    pieceSet.Add(outlinePieces[i].gameObject);
+                }
+            }
+
+            OutlinePieceScript[] opsList = pieceHolder.GetComponentsInChildren<OutlinePieceScript>();
+            for (int i = 0; i < opsList.Length; i++)
+            {
+                if (!pieceSet.Contains(opsList[i].gameObject))
+                {
+                    Destroy(opsList[i].gameObject);
+                }
+            }
+        }
     }
+
+    public void UpdateOutlinePieces()
+    {
+        DestroyOutlinePieces();
+
+        Board copyBoard = new Board();
+        copyBoard.CopyOverwrite(board);
+        //covers moves that apply at the end of player turn and end of enemy turn
+        copyBoard.ApplyNullMove();
+        copyBoard.ApplyNullMove();
+
+        //rebuild outline pieces
+        for (int i = 0; i < 64; i++)
+        {
+            uint piece = board.pieces[i];
+            uint newpiece = copyBoard.pieces[i];
+
+            int x = i & 7;
+            int y = (i & 56) >> 3;
+
+            //There exist pieces that will move even if the mover does nothing
+            //Create outline pieces for this
+            if (Piece.GetPieceType(piece) != Piece.GetPieceType(newpiece))
+            {
+                Piece.PieceType pt = Piece.GetPieceType(newpiece);
+                PieceTableEntry pte = GlobalPieceManager.GetPieceTableEntry(pt);
+
+                if (pt != PieceType.Null)
+                {
+                    SpawnOutlinePiece(newpiece, x, y, null);
+                }
+            }
+        }
+    }
+    public void DestroyOutlinePieces()
+    {
+        for (int i = 0; i < outlinePieces.Count; i++)
+        {
+            if (outlinePieces[i] != null)
+            {
+                Destroy(outlinePieces[i]);
+            }
+            outlinePieces[i] = null;
+        }
+
+        HashSet<GameObject> pieceSet = new HashSet<GameObject>();
+        for (int i = 0; i < outlinePieces.Count; i++)
+        {
+            if (outlinePieces[i] != null)
+            {
+                pieceSet.Add(outlinePieces[i].gameObject);
+            }
+        }
+
+        OutlinePieceScript[] opsList = pieceHolder.GetComponentsInChildren<OutlinePieceScript>();
+        for (int i = 0; i < opsList.Length; i++)
+        {
+            if (!pieceSet.Contains(opsList[i].gameObject))
+            {
+                Destroy(opsList[i].gameObject);
+            }
+        }
+    }
+
 
     public void WinBattle()
     {
@@ -2033,6 +2577,15 @@ public class BattleBoardScript : BoardScript
         GameObject go = Instantiate(battleWinPanelTemplate, MainManager.Instance.canvas.transform);
         go.GetComponent<BattleWinPanelScript>().bs = this;
         go.GetComponent<BattleWinPanelScript>().Setup(vt);
+    }
+    public void DrawBattle()
+    {
+        //The Draw screen gives you a free Retry (but that is your only option)
+        //Better hope that whatever fluke wackiness caused the draw doesn't happen again
+        Board.VictoryType vt = board.GetVictoryType();
+        GameObject go = Instantiate(battleLosePanelTemplate, MainManager.Instance.canvas.transform);
+        go.GetComponent<BattleDrawPanelScript>().bs = this;
+        go.GetComponent<BattleDrawPanelScript>().Setup(vt);
     }
     public void LoseBattle()
     {
@@ -2042,6 +2595,16 @@ public class BattleBoardScript : BoardScript
         go.GetComponent<BattleLosePanelScript>().Setup(vt);
     }
 
+    public void SpawnOutlinePiece(uint piece, int x, int y, Color? color = null, float offset = 0)
+    {
+        int i = x + (y << 3);
+        GameObject go = Instantiate(outlinePieceTemplate, pieceHolder.transform);
+        go.name = "Outline Piece " + i % 8 + " " + i / 8;
+        OutlinePieceScript ops = go.GetComponent<OutlinePieceScript>();
+        ops.bs = this;
+        outlinePieces[i] = ops;
+        ops.Setup(piece, x, y, color, offset);
+    }
     public IEnumerator AnimatePieceSpawn(uint piece, int ofx, int ofy, int otx, int oty)
     {
         //Spawn a piece
@@ -2491,9 +3054,23 @@ public class BattleBoardScript : BoardScript
         {
             if (pieces[i] != null)
             {
-                pieces[i].ResetRelay();
+                pieces[i].ResetPieceLines();
             }
         }
+
+        if (outlinePieces != null)
+        {
+            for (int i = 0; i < outlinePieces.Count; i++)
+            {
+                if (outlinePieces[i] != null)
+                {
+                    Destroy(outlinePieces[i].gameObject);
+                }
+            }
+            //outlinePieces.Clear();
+        }
+        DestroyLastMovedTrail();
+        DestroyIllegalTrail();
 
         if (animationSpeed < 10000)
         {
@@ -2588,6 +3165,10 @@ public class BattleBoardScript : BoardScript
         {
             animating = true;
             animCoroutine = StartCoroutine(AnimateBoardUpdate(move, lastMoveStationary, moveTrail, boardUpdateMetadata));
+        } else
+        {
+            //?
+            FixBoardBasedOnPosition();
         }
     }
 
@@ -2721,7 +3302,15 @@ public class BattleBoardScript : BoardScript
             }
             else
             {
-                PieceScript pieceActive = pieces[fx + (fy << 3)];
+                PieceScript pieceActive;
+                bool isConsumableMove = Move.IsConsumableMove(move);
+                if (isConsumableMove)
+                {
+                    pieceActive = null;
+                } else
+                {
+                    pieceActive = pieces[fx + (fy << 3)];
+                }
 
                 //Events that apply to the last moved piece need to be handled in a special way (because it might move on top of a piece to capture but there are events that apply to it vs the piece that was there before)
                 //The events that apply to the last moved that aren't handled by the last moved bool should end up in this case
@@ -2773,23 +3362,47 @@ public class BattleBoardScript : BoardScript
                     case BoardUpdateMetadata.BoardUpdateType.Particle_Circle:
                     case BoardUpdateMetadata.BoardUpdateType.Particle_Fan:
                         BlastParticleScript bps = Instantiate(blastParticleTemplate, transform).GetComponent<BlastParticleScript>();
-                        switch (boardUpdateMetadata[i].type)
+                        if (isConsumableMove)
                         {
-                            case BoardUpdateMetadata.BoardUpdateType.Particle_Fire:
-                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Fire, 18f / animationSpeed);
-                                break;
-                            case BoardUpdateMetadata.BoardUpdateType.Particle_Snowflake:
-                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Snowflake, 18f / animationSpeed);
-                                break;
-                            case BoardUpdateMetadata.BoardUpdateType.Particle_Spiral:
-                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Spiral, 18f / animationSpeed);
-                                break;
-                            case BoardUpdateMetadata.BoardUpdateType.Particle_Circle:
-                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Circle, 18f / animationSpeed);
-                                break;
-                            case BoardUpdateMetadata.BoardUpdateType.Particle_Fan:
-                                bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Fan, 18f / animationSpeed);
-                                break;
+                            switch (boardUpdateMetadata[i].type)
+                            {
+                                case BoardUpdateMetadata.BoardUpdateType.Particle_Fire:
+                                    bps.Setup(Piece.PieceAlignment.White, BlastParticleScript.ParticleSprite.Fire, 18f / animationSpeed);
+                                    break;
+                                case BoardUpdateMetadata.BoardUpdateType.Particle_Snowflake:
+                                    bps.Setup(Piece.PieceAlignment.White, BlastParticleScript.ParticleSprite.Snowflake, 18f / animationSpeed);
+                                    break;
+                                case BoardUpdateMetadata.BoardUpdateType.Particle_Spiral:
+                                    bps.Setup(Piece.PieceAlignment.White, BlastParticleScript.ParticleSprite.Spiral, 18f / animationSpeed);
+                                    break;
+                                case BoardUpdateMetadata.BoardUpdateType.Particle_Circle:
+                                    bps.Setup(Piece.PieceAlignment.White, BlastParticleScript.ParticleSprite.Circle, 18f / animationSpeed);
+                                    break;
+                                case BoardUpdateMetadata.BoardUpdateType.Particle_Fan:
+                                    bps.Setup(Piece.PieceAlignment.White, BlastParticleScript.ParticleSprite.Fan, 18f / animationSpeed);
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            switch (boardUpdateMetadata[i].type)
+                            {
+                                case BoardUpdateMetadata.BoardUpdateType.Particle_Fire:
+                                    bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Fire, 18f / animationSpeed);
+                                    break;
+                                case BoardUpdateMetadata.BoardUpdateType.Particle_Snowflake:
+                                    bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Snowflake, 18f / animationSpeed);
+                                    break;
+                                case BoardUpdateMetadata.BoardUpdateType.Particle_Spiral:
+                                    bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Spiral, 18f / animationSpeed);
+                                    break;
+                                case BoardUpdateMetadata.BoardUpdateType.Particle_Circle:
+                                    bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Circle, 18f / animationSpeed);
+                                    break;
+                                case BoardUpdateMetadata.BoardUpdateType.Particle_Fan:
+                                    bps.Setup(Piece.GetPieceAlignment(pieces[fx + (fy << 3)].piece), BlastParticleScript.ParticleSprite.Fan, 18f / animationSpeed);
+                                    break;
+                            }
                         }
                         bps.transform.position = GetSpritePositionFromCoordinates(tx, ty, -2f);
                         break;
@@ -2822,10 +3435,18 @@ public class BattleBoardScript : BoardScript
             squares[i].czhHighlight = controlZoneHighlight;
             squares[i].ResetDotColor();
         }
+
+        for (int i = 0; i < newMoveTrails.Count; i++)
+        {
+            newMoveTrails[i].SetActive(controlZoneHighlight);
+        }
     }
 
-    public void RegenerateMoveList()
+    public void RegenerateMoveList(bool showAttackDifferences = true)
     {
+        MoveBitTable pastMBTBlack = mbtBlack.Copy();
+        MoveBitTable pastMBTWhite = mbtWhite.Copy();
+
         for (int i = 0; i < squares.Count; i++)
         {
             squares[i].czhWhite = false;
@@ -2914,6 +3535,125 @@ public class BattleBoardScript : BoardScript
             if (controlZoneHighlight)
             {
                 squares[i].czhHighlight = true;
+            }
+        }
+
+        if (showAttackDifferences)
+        {
+            MoveBitTable differenceWhite = mbtWhite.Copy();
+            MoveBitTable differenceBlack = mbtBlack.Copy();
+
+            //note that moves possible last turn that are not possible now are not shown
+            differenceWhite.Subtract(pastMBTWhite);
+            differenceBlack.Subtract(pastMBTBlack);
+
+            for (int i = 0; i < newMoveTrails.Count; i++)
+            {
+                Destroy(newMoveTrails[i].gameObject);
+            }
+            newMoveTrails.Clear();
+
+            for (int s = 0; s < 64; s++)
+            {
+                ulong newbitboard = differenceWhite.Get(s);
+                ulong newbitboardAlly = newbitboard & board.globalData.bitboard_piecesWhite;
+                ulong newbitboardEnemy = newbitboard & (board.globalData.bitboard_pieces & ~board.globalData.bitboard_piecesWhite);
+                while (newbitboardAlly != 0)
+                {
+                    int i = MainManager.PopBitboardLSB1(newbitboardAlly, out newbitboardAlly);
+
+                    GameObject relayTrail = Instantiate(relayTrailTemplate, transform);
+                    LineRenderer relayTrailLine = relayTrail.GetComponent<LineRenderer>();
+                    relayTrailLine.startColor = new Color(0.6f, 0.6f, 1f, 0.5f);
+                    relayTrailLine.endColor = new Color(0.4f, 0.4f, 1f, 0.5f);
+                    relayTrailLine.startWidth = 0.08f;
+                    relayTrailLine.endWidth = 0.03f;
+
+                    Vector3 posA = BoardScript.GetSpritePositionFromCoordinates(s & 7, s >> 3, -0.9f);
+                    Vector3 posB = BoardScript.GetSpritePositionFromCoordinates(i & 7, i >> 3, -0.9f);
+                    List<Vector3> pointList = new List<Vector3>();
+                    pointList.Add(posA);
+                    //MoveTrailScript.AddLeaperSegment(pointList, posA, posB);
+                    pointList.Add(posB);
+
+                    relayTrailLine.positionCount = pointList.Count;
+                    relayTrailLine.SetPositions(pointList.ToArray());
+                    relayTrailLine.gameObject.SetActive(controlZoneHighlight);
+                    newMoveTrails.Add(relayTrailLine.gameObject);
+                }
+                while (newbitboardEnemy != 0)
+                {
+                    int i = MainManager.PopBitboardLSB1(newbitboardEnemy, out newbitboardEnemy);
+
+                    GameObject relayTrail = Instantiate(relayTrailTemplate, transform);
+                    LineRenderer relayTrailLine = relayTrail.GetComponent<LineRenderer>();
+                    relayTrailLine.startColor = new Color(1f, 0.6f, 0.6f, 0.5f);
+                    relayTrailLine.endColor = new Color(1f, 0.4f, 0.4f, 0.5f);
+                    relayTrailLine.startWidth = 0.08f;
+                    relayTrailLine.endWidth = 0.03f;
+
+                    Vector3 posA = BoardScript.GetSpritePositionFromCoordinates(s & 7, s >> 3, -0.9f);
+                    Vector3 posB = BoardScript.GetSpritePositionFromCoordinates(i & 7, i >> 3, -0.9f);
+                    List<Vector3> pointList = new List<Vector3>();
+                    pointList.Add(posA);
+                    //MoveTrailScript.AddLeaperSegment(pointList, posA, posB);
+                    pointList.Add(posB);
+
+                    relayTrailLine.positionCount = pointList.Count;
+                    relayTrailLine.SetPositions(pointList.ToArray());
+                    relayTrailLine.gameObject.SetActive(controlZoneHighlight);
+                    newMoveTrails.Add(relayTrailLine.gameObject);
+                }
+
+                newbitboard = differenceBlack.Get(s);
+                newbitboardAlly = newbitboard & board.globalData.bitboard_piecesBlack;
+                newbitboardEnemy = newbitboard & (board.globalData.bitboard_pieces & ~board.globalData.bitboard_piecesBlack);
+                while (newbitboardAlly != 0)
+                {
+                    int i = MainManager.PopBitboardLSB1(newbitboardAlly, out newbitboardAlly);
+
+                    GameObject relayTrail = Instantiate(relayTrailTemplate, transform);
+                    LineRenderer relayTrailLine = relayTrail.GetComponent<LineRenderer>();
+                    relayTrailLine.startColor = new Color(0f, 0f, 0.6f, 0.5f);
+                    relayTrailLine.endColor = new Color(0f, 0f, 0.4f, 0.5f);
+                    relayTrailLine.startWidth = 0.08f;
+                    relayTrailLine.endWidth = 0.03f;
+
+                    Vector3 posA = BoardScript.GetSpritePositionFromCoordinates(s & 7, s >> 3, -0.9f);
+                    Vector3 posB = BoardScript.GetSpritePositionFromCoordinates(i & 7, i >> 3, -0.9f);
+                    List<Vector3> pointList = new List<Vector3>();
+                    pointList.Add(posA);
+                    //MoveTrailScript.AddLeaperSegment(pointList, posA, posB);
+                    pointList.Add(posB);
+
+                    relayTrailLine.positionCount = pointList.Count;
+                    relayTrailLine.SetPositions(pointList.ToArray());
+                    relayTrailLine.gameObject.SetActive(controlZoneHighlight);
+                    newMoveTrails.Add(relayTrailLine.gameObject);
+                }
+                while (newbitboardEnemy != 0)
+                {
+                    int i = MainManager.PopBitboardLSB1(newbitboardEnemy, out newbitboardEnemy);
+
+                    GameObject relayTrail = Instantiate(relayTrailTemplate, transform);
+                    LineRenderer relayTrailLine = relayTrail.GetComponent<LineRenderer>();
+                    relayTrailLine.startColor = new Color(0.6f, 0f, 0f, 0.5f);
+                    relayTrailLine.endColor = new Color(0.4f, 0f, 0f, 0.5f);
+                    relayTrailLine.startWidth = 0.08f;
+                    relayTrailLine.endWidth = 0.03f;
+
+                    Vector3 posA = BoardScript.GetSpritePositionFromCoordinates(s & 7, s >> 3, -0.9f);
+                    Vector3 posB = BoardScript.GetSpritePositionFromCoordinates(i & 7, i >> 3, -0.9f);
+                    List<Vector3> pointList = new List<Vector3>();
+                    pointList.Add(posA);
+                    //MoveTrailScript.AddLeaperSegment(pointList, posA, posB);
+                    pointList.Add(posB);
+
+                    relayTrailLine.positionCount = pointList.Count;
+                    relayTrailLine.SetPositions(pointList.ToArray());
+                    relayTrailLine.gameObject.SetActive(controlZoneHighlight);
+                    newMoveTrails.Add(relayTrailLine.gameObject);
+                }
             }
         }
     }
@@ -3034,13 +3774,14 @@ public class BattleBoardScript : BoardScript
             }
             else
             {
-                if (board.globalData.enemyModifier == 0)
-                {
-                    thinkingText.SetText("", true, true);
-                }
-                else
+                thinkingText.SetText("", true, true);
+                if (board.globalData.enemyModifier != 0)
                 {
                     thinkingText.SetText("<boss," + board.globalData.enemyModifier.ToString() + "> " + board.globalData.enemyModifier.ToString() + "<line><size,50%>" + Board.GetEnemyModifierDescription(board, board.globalData.enemyModifier) + "</size>", true, true);
+                }
+                if (board.globalData.enemyModifierB != 0)
+                {
+                    thinkingText.SetText("<boss," + board.globalData.enemyModifierB.ToString() + "> " + board.globalData.enemyModifierB.ToString() + "<line><size,50%>" + Board.GetEnemyModifierDescription(board, board.globalData.enemyModifierB) + "</size>", true, true);
                 }
             }
         }
@@ -3086,9 +3827,13 @@ public class BattleBoardScript : BoardScript
         }
         else
         {
-            if (checkMoveTrail != null)
+            if (checkMoveTrails.Count > 0 || checkOtherObjects.Count > 0)
             {
                 turnText.text += "\nCheck";
+                if (checkMoveTrails.Count > 1 && checkOtherObjects.Count == 0)
+                {
+                    turnText.text += " x " + checkMoveTrails.Count;
+                }
             }
         }
 
@@ -3170,10 +3915,11 @@ public class BattleBoardScript : BoardScript
                 {
                     whiteIsAI = false;
                     TryMove(pieces[bestX + bestY * 8], PieceAlignment.White, bestX, bestY, bestToX, bestToY);
-                    if (!animating)
-                    {
-                        FixBoardBasedOnPosition();
-                    }
+                    //no longer needed?
+                    //if (!animating)
+                    //{
+                    //    FixBoardBasedOnPosition();
+                    //}
                     moveDelay = moveDelayValue;
                     whiteIsAI = true;
                 }

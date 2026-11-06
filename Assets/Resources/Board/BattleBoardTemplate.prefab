@@ -133,10 +133,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   squareTemplate: {fileID: 2766149324201673735, guid: 812c53cd20389ea4cbe30ffa178981b9, type: 3}
   pieceTemplate: {fileID: 7872257274312544191, guid: 1f3f75d5a605199468bd014c49004afc, type: 3}
+  outlinePieceTemplate: {fileID: 7872257274312544191, guid: e020effcced9f1a4c89e8ef51cb053a1, type: 3}
   squareHolder: {fileID: 2255433947139563736}
   pieceHolder: {fileID: 8347418581554678011}
   squares: []
   pieces: []
+  outlinePieces: []
   realHoverX: 0
   realHoverY: 0
   hoverX: 0
@@ -212,8 +214,6 @@ MonoBehaviour:
       - type: 0
       - type: 0
       - type: 0
-      playerModifier: 0
-      enemyModifier: 0
       whitePerPlayerInfo:
         startPieceValueSumX2: 0
         startPieceCount: 0
@@ -253,6 +253,8 @@ MonoBehaviour:
       bitboard_piecesMirrored: 0
       bitboard_piecesWhiteAdjacent: 0
       bitboard_piecesBlackAdjacent: 0
+      bitboard_piecesWhiteAdjacentEx: 0
+      bitboard_piecesBlackAdjacentEx: 0
       bitboard_piecesWhiteAdjacent1: 0
       bitboard_piecesBlackAdjacent1: 0
       bitboard_piecesWhiteAdjacent2: 0
@@ -273,6 +275,8 @@ MonoBehaviour:
       bitboard_immuneNaturalBlack: 0
       bitboard_immuneWhite: 0
       bitboard_immuneBlack: 0
+      exists_moverestrictauraWhite: 0
+      exists_moverestrictauraBlack: 0
       bitboard_bansheeWhite: 0
       bitboard_bansheeBlack: 0
       bitboard_attractorWhite: 0
@@ -364,11 +368,16 @@ MonoBehaviour:
   battleWinPanelTemplate: {fileID: 4522741887018891003, guid: 301c0b2e9a10c8c4e881d71018e51140, type: 3}
   battleLosePanelTemplate: {fileID: 4230754855850751269, guid: 57f0fb5836dceab4099ab46abfc82251, type: 3}
   arrowTemplate: {fileID: 1922048658244027206, guid: 4bed9e0f16af5d742a526a63d6b0c4d5, type: 3}
+  checkXTemplate: {fileID: 1922048658244027206, guid: 5766a0931ccd7c74a9da17af4a4f53df, type: 3}
+  relayTrailTemplate: {fileID: 307889686730510020, guid: 8c0f715623c275342807b65572cac46c, type: 3}
   moveList: 
   lastMoveTrail: {fileID: 0}
   enemyMoveList: 
-  illegalMoveTrail: {fileID: 0}
-  checkMoveTrail: {fileID: 0}
+  illegalOtherObjects: []
+  illegalMoveTrails: []
+  newMoveTrails: []
+  checkOtherObjects: []
+  checkMoveTrails: []
   onlyConsumableMoves: 0
   extraMoveTrails: []
   animating: 0

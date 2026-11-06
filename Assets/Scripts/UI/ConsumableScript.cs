@@ -154,7 +154,7 @@ public class ConsumableScript : MonoBehaviour, ISelectEventListener, IDragEventL
 
         if (trashCan != null && consumableIndex >= 0)
         {
-            trashCan.text.text = "Sell: $" + GetCost();
+            trashCan.text.text = "Sell: $" + (GetCost() / 2);
             trashCan.SetActive();
         }
         if (cps != null)

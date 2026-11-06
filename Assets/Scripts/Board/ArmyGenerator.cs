@@ -21,7 +21,7 @@ public static class ArmyGenerator
         return output;
     }
 
-    public static Piece.PieceType[] GenerateArmy(float targetNonKingValue, int pieceTypes, float lowPieceBias, float lowComplexityBias, Piece.PieceClass pieceClass, Board.EnemyModifier em)
+    public static Piece.PieceType[] GenerateArmy(float targetNonKingValue, int pieceTypes, float lowPieceBias, float lowComplexityBias, Piece.PieceClass pieceClass, Board.EnemyModifier em, Board.EnemyModifierB emB)
     {
         int typeValue = pieceTypes;
         float tryValue = targetNonKingValue;
@@ -30,7 +30,7 @@ public static class ArmyGenerator
 
         for (int i = 0; i < GlobalPieceManager.pieceTable.Length; i++)
         {
-            if (GlobalPieceManager.pieceTable[i] == null || GlobalPieceManager.pieceTable[i].type == Piece.PieceType.King || GlobalPieceManager.pieceTable[i].type == Piece.PieceType.Rock)
+            if (GlobalPieceManager.pieceTable[i] == null || GlobalPieceManager.pieceTable[i].pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS || GlobalPieceManager.pieceTable[i].pieceValueX2 == 0)
             {
                 continue;
             }
@@ -211,6 +211,10 @@ public static class ArmyGenerator
                 {
                     return pte.pieceValueX2 / 4;
                 }
+                if ((pte.piecePropertyB & PiecePropertyB.TwoSquare) != 0)
+                {
+                    return pte.pieceValueX2 / 2;
+                }
 
                 return pte.pieceValueX2;
             }
@@ -237,6 +241,11 @@ public static class ArmyGenerator
             if ((pteTarget.piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
             {
                 cumulativeCount += 4;
+                giantCount++;
+            }
+            else if ((pteTarget.piecePropertyB & Piece.PiecePropertyB.TwoSquare) != 0)
+            {
+                cumulativeCount += 2;
                 giantCount++;
             }
             else
@@ -268,6 +277,11 @@ public static class ArmyGenerator
                         cumulativeCount -= 4;
                         giantCount--;
                     }
+                    else if ((pteTarget.piecePropertyB & Piece.PiecePropertyB.TwoSquare) != 0)
+                    {
+                        cumulativeCount -= 2;
+                        giantCount--;
+                    }
                     else
                     {
                         cumulativeCount--;
@@ -295,6 +309,12 @@ public static class ArmyGenerator
                         cumulativeCount += 4;
                         giantCount++;
                     }
+                    else if ((pteTarget.piecePropertyB & Piece.PiecePropertyB.TwoSquare) != 0)
+                    {
+                        cumulativeCount += 2;
+                        giantCount++;
+                    }
+
                     else
                     {
                         cumulativeCount++;
@@ -317,6 +337,10 @@ public static class ArmyGenerator
             if ((pte.piecePropertyB & PiecePropertyB.Giant) != 0)
             {
                 score += 1000;
+            }
+            if ((pte.piecePropertyB & PiecePropertyB.TwoSquare) != 0)
+            {
+                score += 500;
             }
             return score;
         }
@@ -390,7 +414,7 @@ public static class ArmyGenerator
 
         //Don't put the king on the edge (especially bad for row size < 8, you can rush the king on the exposed side)
         iterations = 0;
-        while (rowSize > 2 && ((em & (Board.EnemyModifier.Hidden | Board.EnemyModifier.Numerous)) == 0) && (subArmy[rowSize - 2].type == Piece.PieceType.King || subArmy[rowSize - 1].type == Piece.PieceType.King))
+        while (rowSize > 2 && ((em & (Board.EnemyModifier.Hidden | Board.EnemyModifier.Numerous)) == 0) && (subArmy[rowSize - 2].pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS || subArmy[rowSize - 1].pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS))
         {
             subArmy = MainManager.ShuffleListSegments(subArmy, rowSize);
             iterations++;
@@ -530,6 +554,58 @@ public static class ArmyGenerator
                 rowPieces++;
                 pushIndex++;
             }
+            else if ((pte.piecePropertyB & PiecePropertyB.Tall) != 0)
+            {
+                if ((targetPos < 32) && army[targetPos] != PieceType.Null)
+                {
+                    pushIndex++;
+                    continue;
+                }
+                if ((targetPos + 8 < 32) && army[targetPos + 8] != PieceType.Null)
+                {
+                    pushIndex++;
+                    continue;
+                }
+
+                //place
+                army[targetPos] = pte.type;
+                army[targetPos + 8] = PieceType.Rock;
+                subArmy.RemoveAt(0);
+                rowPieces++;
+                pushIndex++;
+            }
+            else if ((pte.piecePropertyB & PiecePropertyB.Wide) != 0)
+            {
+                //Need to fit the giants in the given space efficiently
+                if (pushOrder[pushIndex] % 2 != 0 && giantCount >= 4)
+                {
+                    pushIndex++;
+                    continue;
+                }
+                if (pushOrder[pushIndex] % 8 == 7)
+                {
+                    pushIndex++;
+                    continue;
+                }
+
+                if ((targetPos < 32) && army[targetPos] != PieceType.Null)
+                {
+                    pushIndex++;
+                    continue;
+                }
+                if ((targetPos + 1 < 32) && army[targetPos + 1] != PieceType.Null)
+                {
+                    pushIndex++;
+                    continue;
+                }
+
+                //place
+                army[targetPos] = pte.type;
+                army[targetPos + 1] = PieceType.Rock;
+                subArmy.RemoveAt(0);
+                rowPieces++;
+                pushIndex++;
+            }
             else
             {
                 if (yLevel * 8 + pushOrder[pushIndex] > 32)
@@ -632,7 +708,7 @@ public static class ArmyGenerator
 
         for (int i = 0; i < GlobalPieceManager.pieceTable.Length; i++)
         {
-            if (GlobalPieceManager.pieceTable[i] == null || GlobalPieceManager.pieceTable[i].type == Piece.PieceType.King)
+            if (GlobalPieceManager.pieceTable[i] == null || GlobalPieceManager.pieceTable[i].pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS)
             {
                 continue;
             }
@@ -756,6 +832,13 @@ public static class ArmyGenerator
                     subsetTable.Add(piecePool[i]);
                 }
             }
+            else if ((piecePool[i].piecePropertyB & Piece.PiecePropertyB.TwoSquare) != 0)
+            {
+                if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 6f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 1.5f) && !reducedPool.Contains(piecePool[i]))
+                {
+                    subsetTable.Add(piecePool[i]);
+                }
+            }
             else
             {
                 if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 8f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 1.5f) && !reducedPool.Contains(piecePool[i]))
@@ -812,6 +895,13 @@ public static class ArmyGenerator
             if ((piecePool[i].piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
             {
                 if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 8f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 4f) && !reducedPool.Contains(piecePool[i]))
+                {
+                    subsetTable.Add(piecePool[i]);
+                }
+            }
+            else if ((piecePool[i].piecePropertyB & Piece.PiecePropertyB.TwoSquare) != 0)
+            {
+                if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 11f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 6f) && !reducedPool.Contains(piecePool[i]))
                 {
                     subsetTable.Add(piecePool[i]);
                 }
@@ -997,7 +1087,7 @@ public static class ArmyGenerator
 
         for (int i = 0; i < pieceList.Length; i++)
         {
-            if (GlobalPieceManager.GetPieceTableEntry(pieceList[i]) == null || pieceList[i] == Piece.PieceType.King || pieceList[i] == Piece.PieceType.Rock)
+            if (GlobalPieceManager.GetPieceTableEntry(pieceList[i]) == null || GlobalPieceManager.GetPieceTableEntry(pieceList[i]).pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS || GlobalPieceManager.GetPieceTableEntry(pieceList[i]).pieceValueX2 == 0)
             {
                 continue;
             }
@@ -1024,6 +1114,35 @@ public static class ArmyGenerator
             }
             */
             piecePool.Add(GlobalPieceManager.GetPieceTableEntry(pieceList[i]));
+        }
+
+        if (piecePool.Count == 0)
+        {
+            for (int i = 0; i < pieceList.Length; i++)
+            {
+                if (GlobalPieceManager.GetPieceTableEntry(pieceList[i]) == null || GlobalPieceManager.GetPieceTableEntry(pieceList[i]).pieceValueX2 >= GlobalPieceManager.KING_VALUE_BONUS || GlobalPieceManager.GetPieceTableEntry(pieceList[i]).pieceValueX2 == 0)
+                {
+                    continue;
+                }
+                if (pieceList[i] == Piece.PieceType.GeminiTwin || pieceList[i] == Piece.PieceType.MoonIllusion)
+                {
+                    continue;
+                }
+                if (GlobalPieceManager.GetPieceTableEntry(pieceList[i]).pieceValueX2 == 0)
+                {
+                    continue;
+                }
+
+                //Relax restriction on minimum cost
+
+                /*
+                if (pc == Piece.PieceClass.None || GlobalPieceManager.GetPieceTableEntry(pieceList[i]).pieceClass == pc)
+                {
+                    piecePool.Add(GlobalPieceManager.GetPieceTableEntry(pieceList[i]));
+                }
+                */
+                piecePool.Add(GlobalPieceManager.GetPieceTableEntry(pieceList[i]));
+            }
         }
 
         RandomTable<PieceTableEntry> pieceTable = new RandomTable<PieceTableEntry>(new List<PieceTableEntry>());
@@ -1122,6 +1241,13 @@ public static class ArmyGenerator
                     subsetTable.Add(piecePool[i]);
                 }
             }
+            else if ((piecePool[i].piecePropertyB & Piece.PiecePropertyB.TwoSquare) != 0)
+            {
+                if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 6f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 1.5f) && !reducedPool.Contains(piecePool[i]))
+                {
+                    subsetTable.Add(piecePool[i]);
+                }
+            }
             else
             {
                 if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 8f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 1.5f) && !reducedPool.Contains(piecePool[i]))
@@ -1178,6 +1304,13 @@ public static class ArmyGenerator
             if ((piecePool[i].piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
             {
                 if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 8f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 4f) && !reducedPool.Contains(piecePool[i]))
+                {
+                    subsetTable.Add(piecePool[i]);
+                }
+            }
+            else if ((piecePool[i].piecePropertyB & Piece.PiecePropertyB.TwoSquare) != 0)
+            {
+                if ((piecePool[i].pieceValueX2 / 2f) > (targetTotal / 11f) && (piecePool[i].pieceValueX2 / 2f) <= (targetTotal / 6f) && !reducedPool.Contains(piecePool[i]))
                 {
                     subsetTable.Add(piecePool[i]);
                 }
@@ -1343,6 +1476,10 @@ public static class ArmyGenerator
         if ((pte.piecePropertyB & Piece.PiecePropertyB.Giant) != 0)
         {
             tableValue *= 0.25f;
+        }
+        if ((pte.piecePropertyB & Piece.PiecePropertyB.TwoSquare) != 0)
+        {
+            tableValue *= 0.5f;
         }
 
         return tableValue;
